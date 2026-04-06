@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -8,7 +8,12 @@ import {
   IconButton,
   Alert,
 } from "@mui/material";
-import { Visibility, VisibilityOff, MailOutline, LockOutlined } from "@mui/icons-material";
+import {
+  Visibility,
+  VisibilityOff,
+  MailOutline,
+  LockOutlined,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
 export const Login = () => {
@@ -18,6 +23,9 @@ export const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const apiUrl = (
+    import.meta.env.VITE_API_URL ?? "http://localhost:3002"
+  ).replace(/\/$/, "");
 
   // ── Fonction de login ──
   const handleLogin = async () => {
@@ -26,7 +34,7 @@ export const Login = () => {
 
     try {
       // 1. Envoyer email et password au backend
-      const response = await fetch("http://localhost:3000/api/auth/login", {
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -47,12 +55,19 @@ export const Login = () => {
 
       // 4. Rediriger vers le dashboard
       navigate("/Dashbord");
-
     } catch (err) {
       setError("Cannot connect to server");
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Si un token existe déjà, rediriger vers le dashboard
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/Dashbord");
+    }
+  }, [navigate]);
 
   return (
     <Box
@@ -80,7 +95,12 @@ export const Login = () => {
       >
         {/* Logo / Title */}
         <Box sx={{ textAlign: "center", mb: 1 }}>
-          <Typography variant="h5" fontWeight={700} letterSpacing={-0.5} color="text.primary">
+          <Typography
+            variant="h5"
+            fontWeight={700}
+            letterSpacing={-0.5}
+            color="text.primary"
+          >
             Welcome back
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
