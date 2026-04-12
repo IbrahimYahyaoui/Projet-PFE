@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
 
+const userRoutes = require('./routes/user');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -18,6 +20,7 @@ app.use(express.json());
 
 // ── Routes ──
 app.use("/api/auth", authRoutes);
+app.use('/api/users', userRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from Express 2026 by ibrahim!");

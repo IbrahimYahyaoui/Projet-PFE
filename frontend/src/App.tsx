@@ -1,27 +1,44 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Login } from './pages/login'
-import { NotFound } from './pages/NotFound'
-import Dashbord from './pages/dashbord'
-import { ProtectedRoute } from './components/ProtectedRoute'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Login } from "./pages/login";
+import { NotFound } from "./pages/NotFound";
+import Dashbord from "./pages/dashbord";
+import Users from "./pages/Users";
+import Layout from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+
         <Route
           path="/Dashbord"
           element={
             <ProtectedRoute>
-              <Dashbord />
+              <Layout>
+                <Dashbord />
+              </Layout>
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Users />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
