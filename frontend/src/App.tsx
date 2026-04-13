@@ -1,3 +1,4 @@
+import Profile from "./pages/Profile";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Login } from "./pages/login";
 import { NotFound } from "./pages/NotFound";
@@ -5,6 +6,7 @@ import Dashbord from "./pages/dashbord";
 import Users from "./pages/Users";
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+
 
 function App() {
   return (
@@ -29,6 +31,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Users />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Profile />
               </Layout>
             </ProtectedRoute>
           }

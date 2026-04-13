@@ -31,6 +31,7 @@ const Layout = ({ children }: LayoutProps) => {
   const user = storedUser ? JSON.parse(storedUser) : null;
   const userRole = user?.role || "user";
   const userName = user?.name || "User";
+  const userAvatar = user?.avatar || "";
 
   const allMenuItems = [
     { text: "Dashboard", icon: <DashboardIcon fontSize="small" />, path: "/Dashbord" },
@@ -102,6 +103,7 @@ const Layout = ({ children }: LayoutProps) => {
           ))}
         </List>
 
+        {/* Profil utilisateur - cliquable */}
         <Box
           sx={{
             px: 2,
@@ -110,9 +112,13 @@ const Layout = ({ children }: LayoutProps) => {
             display: "flex",
             alignItems: "center",
             gap: 1.5,
+            cursor: "pointer",
+            "&:hover": { bgcolor: "#f5f5f5" },
           }}
+          onClick={() => navigate("/profile")}
         >
           <Avatar
+            src={userAvatar}
             sx={{
               width: 32,
               height: 32,
@@ -121,7 +127,7 @@ const Layout = ({ children }: LayoutProps) => {
               fontWeight: 600,
             }}
           >
-            {getInitials(userName)}
+            {!userAvatar && getInitials(userName)}
           </Avatar>
           <Box sx={{ flex: 1 }}>
             <Typography fontSize={13} fontWeight={600}>
@@ -136,7 +142,13 @@ const Layout = ({ children }: LayoutProps) => {
             </Typography>
           </Box>
           <Tooltip title="Logout">
-            <IconButton size="small" onClick={handleLogout}>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
+            >
               <Logout sx={{ fontSize: 18, color: "text.secondary" }} />
             </IconButton>
           </Tooltip>
