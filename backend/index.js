@@ -7,6 +7,7 @@ const authRoutes = require("./routes/auth");
 const userRoutes = require('./routes/user');
 
 const profileRoutes = require('./routes/profile');
+const ticketRoutes = require('./routes/ticket');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.use(express.json({ limit: '5mb' }));
 app.use("/api/auth", authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from Express 2026 by ibrahim!");

@@ -6,6 +6,8 @@ import Dashbord from "./pages/dashbord";
 import Users from "./pages/Users";
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import CreateTicket from "./pages/CreateTicket";
+import MyTickets from "./pages/MyTickets";
 
 
 function App() {
@@ -36,6 +38,16 @@ function App() {
           }
         />
         <Route
+            path="/create-ticket"
+            element={
+               <ProtectedRoute>
+                   <Layout>
+                    <CreateTicket />
+                   </Layout>
+        </ProtectedRoute>
+  }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>
@@ -45,6 +57,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+          <Route
+              path="/my-tickets"
+              element={
+                   <ProtectedRoute>
+                           <Layout>
+                                <MyTickets />
+                          </Layout>
+                  </ProtectedRoute>
+                      }
+          />
 
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="*" element={<NotFound />} />

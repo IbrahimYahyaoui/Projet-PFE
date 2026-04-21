@@ -11,6 +11,7 @@ import {
   Chip,
 } from "@mui/material";
 import { Add, TrendingUp, ConfirmationNumber, AccessTime, CheckCircle } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 const stats = [
   { label: "Total tickets", value: 24, icon: <ConfirmationNumber sx={{ fontSize: 20 }} />, color: "#41431B" },
@@ -39,6 +40,7 @@ const priorityColors: Record<string, { bg: string; text: string }> = {
 };
 
 const Dashbord = () => {
+  const navigate = useNavigate();
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   const userName = user?.name || "User";
@@ -65,6 +67,7 @@ const Dashbord = () => {
         <Button
           variant="contained"
           startIcon={<Add />}
+          onClick={() => navigate("/create-ticket")}
           disableElevation
           sx={{
             bgcolor: "#41431B",
