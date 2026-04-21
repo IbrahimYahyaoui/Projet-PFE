@@ -10,7 +10,6 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Avatar,
   IconButton,
   Dialog,
   DialogTitle,
@@ -28,6 +27,9 @@ import {
   PersonAdd,
   ContentCopy,
   Close,
+  People,
+  EngineeringOutlined,
+  WorkOutline,
 } from "@mui/icons-material";
 
 interface User {
@@ -137,9 +139,9 @@ const Users = () => {
   };
 
   const roleColors: Record<string, { bg: string; text: string }> = {
-    admin: { bg: "#fce4ec", text: "#c62828" },
-    tech: { bg: "#e3f2fd", text: "#1565c0" },
-    user: { bg: "#e8f5e9", text: "#2e7d32" },
+    admin: { bg: "rgba(198,40,40,0.12)", text: "#c62828" },
+    tech: { bg: "rgba(174,183,132,0.25)", text: "#41431B" },
+    user: { bg: "rgba(138,127,60,0.2)", text: "#5c5420" },
   };
 
   const getInitials = (name: string) => {
@@ -151,21 +153,9 @@ const Users = () => {
       .slice(0, 2);
   };
 
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      "#1565c0",
-      "#2e7d32",
-      "#c62828",
-      "#ef6c00",
-      "#6a1b9a",
-      "#00838f",
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
-
   return (
     <Box sx={{ flex: 1, p: 4 }}>
+      {/* ── En-tête ── */}
       <Box
         sx={{
           display: "flex",
@@ -175,10 +165,10 @@ const Users = () => {
         }}
       >
         <Box>
-          <Typography variant="h5" fontWeight={700}>
+          <Typography variant="h5" fontWeight={700} color="#41431B">
             Users
           </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
+          <Typography variant="body2" color="rgba(65,67,27,0.6)" mt={0.5}>
             Manage your team members
           </Typography>
         </Box>
@@ -188,18 +178,26 @@ const Users = () => {
           disableElevation
           onClick={() => setOpenDialog(true)}
           sx={{
-            bgcolor: "#111",
+            bgcolor: "#41431B",
+            color: "#E3DBBB",
             textTransform: "none",
             borderRadius: 2,
             fontWeight: 600,
             px: 3,
-            "&:hover": { bgcolor: "#333" },
+            py: 1,
+            transition: "all 0.2s ease",
+            "&:hover": {
+              bgcolor: "#555725",
+              transform: "translateY(-2px)",
+              boxShadow: "0 8px 20px rgba(65,67,27,0.25)",
+            },
           }}
         >
           Add user
         </Button>
       </Box>
 
+      {/* ── Cartes de stats ── */}
       <Box
         sx={{
           display: "grid",
@@ -208,63 +206,88 @@ const Users = () => {
           mb: 4,
         }}
       >
-        <Box
-          sx={{
-            bgcolor: "#fff",
-            borderRadius: 3,
-            p: 3,
-            border: "1px solid #e0e0e0",
-          }}
-        >
-          <Typography fontSize={13} color="text.secondary" mb={0.5}>
-            Total users
-          </Typography>
-          <Typography variant="h4" fontWeight={700}>
-            {users.length}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            bgcolor: "#fff",
-            borderRadius: 3,
-            p: 3,
-            border: "1px solid #e0e0e0",
-          }}
-        >
-          <Typography fontSize={13} color="text.secondary" mb={0.5}>
-            Technicians
-          </Typography>
-          <Typography variant="h4" fontWeight={700} color="#1565c0">
-            {users.filter((u) => u.role === "tech").length}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            bgcolor: "#fff",
-            borderRadius: 3,
-            p: 3,
-            border: "1px solid #e0e0e0",
-          }}
-        >
-          <Typography fontSize={13} color="text.secondary" mb={0.5}>
-            Employees
-          </Typography>
-          <Typography variant="h4" fontWeight={700} color="#2e7d32">
-            {users.filter((u) => u.role === "user").length}
-          </Typography>
-        </Box>
+        {[
+          { label: "Total users", value: users.length, icon: <People sx={{ fontSize: 20 }} />, color: "#41431B" },
+          { label: "Technicians", value: users.filter((u) => u.role === "tech").length, icon: <EngineeringOutlined sx={{ fontSize: 20 }} />, color: "#8a7f3c" },
+          { label: "Employees", value: users.filter((u) => u.role === "user").length, icon: <WorkOutline sx={{ fontSize: 20 }} />, color: "#556B2F" },
+        ].map((stat) => (
+          <Box
+            key={stat.label}
+            sx={{
+              bgcolor: "#fff",
+              borderRadius: 3,
+              p: 3,
+              border: "1px solid rgba(65,67,27,0.08)",
+              position: "relative",
+              overflow: "hidden",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 12px 24px rgba(65,67,27,0.08)",
+                borderColor: "rgba(174,183,132,0.5)",
+              },
+            }}
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                top: -10,
+                right: -10,
+                width: 70,
+                height: 70,
+                borderRadius: "50%",
+                bgcolor: "rgba(174,183,132,0.08)",
+              }}
+            />
+
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: "rgba(174,183,132,0.2)",
+                color: stat.color,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 2,
+                position: "relative",
+              }}
+            >
+              {stat.icon}
+            </Box>
+
+            <Typography fontSize={13} color="rgba(65,67,27,0.6)" mb={0.5}>
+              {stat.label}
+            </Typography>
+            <Typography
+              variant="h4"
+              fontWeight={700}
+              sx={{ color: stat.color }}
+            >
+              {stat.value}
+            </Typography>
+          </Box>
+        ))}
       </Box>
 
+      {/* ── Tableau des utilisateurs ── */}
       <Box
         sx={{
           bgcolor: "#fff",
           borderRadius: 3,
-          border: "1px solid #e0e0e0",
+          border: "1px solid rgba(65,67,27,0.08)",
           overflow: "hidden",
         }}
       >
-        <Box sx={{ px: 3, py: 2, borderBottom: "1px solid #e0e0e0" }}>
-          <Typography fontSize={15} fontWeight={600}>
+        <Box
+          sx={{
+            px: 3,
+            py: 2.5,
+            borderBottom: "1px solid rgba(65,67,27,0.08)",
+          }}
+        >
+          <Typography fontSize={16} fontWeight={700} color="#41431B">
             All team members
           </Typography>
         </Box>
@@ -272,23 +295,20 @@ const Users = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
+              <TableRow sx={{ bgcolor: "rgba(174,183,132,0.08)" }}>
+                <TableCell sx={{ fontWeight: 600, color: "rgba(65,67,27,0.6)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   User
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
+                <TableCell sx={{ fontWeight: 600, color: "rgba(65,67,27,0.6)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Email
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
+                <TableCell sx={{ fontWeight: 600, color: "rgba(65,67,27,0.6)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Role
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: "text.secondary" }}>
+                <TableCell sx={{ fontWeight: 600, color: "rgba(65,67,27,0.6)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Joined
                 </TableCell>
-                <TableCell
-                  sx={{ fontWeight: 600, color: "text.secondary" }}
-                  align="right"
-                >
+                <TableCell sx={{ fontWeight: 600, color: "rgba(65,67,27,0.6)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }} align="right">
                   Actions
                 </TableCell>
               </TableRow>
@@ -299,31 +319,35 @@ const Users = () => {
                   key={user._id}
                   sx={{
                     "&:last-child td": { borderBottom: 0 },
-                    "&:hover": { bgcolor: "#fafafa" },
+                    transition: "all 0.2s ease",
+                    "&:hover": { bgcolor: "rgba(174,183,132,0.05)" },
                   }}
                 >
                   <TableCell>
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Avatar
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Box
                         sx={{
                           width: 36,
                           height: 36,
-                          bgcolor: getAvatarColor(user.name),
+                          borderRadius: "50%",
+                          bgcolor: "#AEB784",
+                          color: "#41431B",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           fontSize: 13,
-                          fontWeight: 600,
+                          fontWeight: 700,
                         }}
                       >
                         {getInitials(user.name)}
-                      </Avatar>
-                      <Typography fontSize={14} fontWeight={500}>
+                      </Box>
+                      <Typography fontSize={14} fontWeight={500} color="#41431B">
                         {user.name}
                       </Typography>
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography fontSize={14} color="text.secondary">
+                    <Typography fontSize={14} color="rgba(65,67,27,0.7)">
                       {user.email}
                     </Typography>
                   </TableCell>
@@ -332,17 +356,18 @@ const Users = () => {
                       label={user.role}
                       size="small"
                       sx={{
-                        bgcolor: roleColors[user.role]?.bg || "#f5f5f5",
-                        color: roleColors[user.role]?.text || "#333",
+                        bgcolor: roleColors[user.role]?.bg || "rgba(174,183,132,0.2)",
+                        color: roleColors[user.role]?.text || "#41431B",
                         fontWeight: 600,
-                        fontSize: 12,
+                        fontSize: 11,
                         borderRadius: 1.5,
-                        textTransform: "capitalize",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
                       }}
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography fontSize={13} color="text.secondary">
+                    <Typography fontSize={13} color="rgba(65,67,27,0.6)">
                       {new Date(user.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
@@ -355,12 +380,14 @@ const Users = () => {
                       <Tooltip title="Delete user">
                         <IconButton
                           size="small"
-                          onClick={() =>
-                            handleDeleteUser(user._id, user.name)
-                          }
+                          onClick={() => handleDeleteUser(user._id, user.name)}
                           sx={{
                             color: "#c62828",
-                            "&:hover": { bgcolor: "#fce4ec" },
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              bgcolor: "rgba(198,40,40,0.1)",
+                              transform: "scale(1.1)",
+                            },
                           }}
                         >
                           <Delete fontSize="small" />
@@ -375,17 +402,17 @@ const Users = () => {
         </TableContainer>
       </Box>
 
-      {/* Dialog : Ajouter un utilisateur */}
+      {/* ── Dialog : Ajouter un utilisateur ── */}
       <Dialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3, p: 1 },
+          sx: { borderRadius: 4, p: 1 },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: 18, pb: 1 }}>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: 18, pb: 1, color: "#41431B" }}>
           <Box
             sx={{
               display: "flex",
@@ -398,7 +425,7 @@ const Users = () => {
               <Close fontSize="small" />
             </IconButton>
           </Box>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
+          <Typography variant="body2" color="rgba(65,67,27,0.6)" mt={0.5}>
             A password will be generated automatically
           </Typography>
         </DialogTitle>
@@ -417,7 +444,13 @@ const Users = () => {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               fullWidth
               size="small"
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&.Mui-focused fieldset": { borderColor: "#AEB784" },
+                },
+                "& label.Mui-focused": { color: "#41431B" },
+              }}
             />
 
             <TextField
@@ -427,7 +460,13 @@ const Users = () => {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               fullWidth
               size="small"
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&.Mui-focused fieldset": { borderColor: "#AEB784" },
+                },
+                "& label.Mui-focused": { color: "#41431B" },
+              }}
             />
 
             <TextField
@@ -437,7 +476,13 @@ const Users = () => {
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               fullWidth
               size="small"
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&.Mui-focused fieldset": { borderColor: "#AEB784" },
+                },
+                "& label.Mui-focused": { color: "#41431B" },
+              }}
             >
               <MenuItem value="tech">Technician</MenuItem>
               <MenuItem value="user">Employee</MenuItem>
@@ -450,7 +495,7 @@ const Users = () => {
             onClick={() => setOpenDialog(false)}
             sx={{
               textTransform: "none",
-              color: "text.secondary",
+              color: "rgba(65,67,27,0.6)",
               borderRadius: 2,
             }}
           >
@@ -463,11 +508,12 @@ const Users = () => {
             disabled={loading || !form.name || !form.email}
             startIcon={<Add />}
             sx={{
-              bgcolor: "#111",
+              bgcolor: "#41431B",
+              color: "#E3DBBB",
               textTransform: "none",
               borderRadius: 2,
               fontWeight: 600,
-              "&:hover": { bgcolor: "#333" },
+              "&:hover": { bgcolor: "#555725" },
             }}
           >
             {loading ? "Creating..." : "Create user"}
@@ -475,29 +521,29 @@ const Users = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog : Mot de passe généré */}
+      {/* ── Dialog : Mot de passe généré ── */}
       <Dialog
         open={showPasswordDialog}
         onClose={() => setShowPasswordDialog(false)}
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3, p: 1 },
+          sx: { borderRadius: 4, p: 1 },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: 18, pb: 0 }}>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: 18, pb: 0, color: "#41431B" }}>
           User created successfully!
         </DialogTitle>
 
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" mb={3}>
+          <Typography variant="body2" color="rgba(65,67,27,0.6)" mb={3}>
             Share these credentials with the new team member. The password
             cannot be retrieved later.
           </Typography>
 
           <Box
             sx={{
-              bgcolor: "#f5f5f5",
+              bgcolor: "rgba(174,183,132,0.15)",
               borderRadius: 2,
               p: 2.5,
               display: "flex",
@@ -506,16 +552,16 @@ const Users = () => {
             }}
           >
             <Box>
-              <Typography fontSize={12} color="text.secondary" mb={0.5}>
+              <Typography fontSize={12} color="rgba(65,67,27,0.6)" mb={0.5}>
                 Email
               </Typography>
-              <Typography fontSize={14} fontWeight={600}>
+              <Typography fontSize={14} fontWeight={600} color="#41431B">
                 {newUserEmail}
               </Typography>
             </Box>
 
             <Box>
-              <Typography fontSize={12} color="text.secondary" mb={0.5}>
+              <Typography fontSize={12} color="rgba(65,67,27,0.6)" mb={0.5}>
                 Generated password
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -525,16 +571,17 @@ const Users = () => {
                   fontFamily="monospace"
                   sx={{
                     bgcolor: "#fff",
+                    color: "#41431B",
                     px: 2,
                     py: 0.5,
                     borderRadius: 1.5,
-                    border: "1px solid #e0e0e0",
+                    border: "1px solid rgba(65,67,27,0.15)",
                   }}
                 >
                   {generatedPassword}
                 </Typography>
                 <Tooltip title={copied ? "Copied!" : "Copy password"}>
-                  <IconButton size="small" onClick={handleCopyPassword}>
+                  <IconButton size="small" onClick={handleCopyPassword} sx={{ color: "#41431B" }}>
                     <ContentCopy fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -543,8 +590,7 @@ const Users = () => {
           </Box>
 
           <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
-            Make sure to copy the password now. You won't be able to see it
-            again!
+            Make sure to copy the password now. You won't be able to see it again!
           </Alert>
         </DialogContent>
 
@@ -554,11 +600,12 @@ const Users = () => {
             disableElevation
             onClick={() => setShowPasswordDialog(false)}
             sx={{
-              bgcolor: "#111",
+              bgcolor: "#41431B",
+              color: "#E3DBBB",
               textTransform: "none",
               borderRadius: 2,
               fontWeight: 600,
-              "&:hover": { bgcolor: "#333" },
+              "&:hover": { bgcolor: "#555725" },
             }}
           >
             Done
@@ -566,7 +613,7 @@ const Users = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar de succès */}
+      {/* Snackbar */}
       <Snackbar
         open={!!success}
         autoHideDuration={3000}
