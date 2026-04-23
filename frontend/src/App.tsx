@@ -8,6 +8,8 @@ import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import CreateTicket from "./pages/CreateTicket";
 import MyTickets from "./pages/MyTickets";
+import AllTickets from "./pages/AllTickets";
+import TicketDetails from "./pages/TicketDetails";
 
 
 function App() {
@@ -67,6 +69,26 @@ function App() {
                   </ProtectedRoute>
                       }
           />
+            <Route
+  path="/all-tickets"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <AllTickets />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+                    <Route
+  path="/tickets/:id"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <TicketDetails />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
 
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="*" element={<NotFound />} />
