@@ -16,6 +16,7 @@ import {
   Logout,
   LightMode,
   DarkMode,
+  AssignmentInd,
 } from "@mui/icons-material";
 
 interface LayoutProps {
@@ -70,7 +71,8 @@ const Layout = ({ children }: LayoutProps) => {
   const mainItems = [
     { text: "Dashboard", icon: <DashboardIcon sx={{ fontSize: 20 }} />, path: "/Dashbord" },
     { text: "My tickets", icon: <ConfirmationNumber sx={{ fontSize: 20 }} />, path: "/my-tickets" },
-    { text: "All tickets", icon: <ListAlt sx={{ fontSize: 20 }} />, path: "/all-tickets" },
+    { text: "Assigned to me", icon: <AssignmentInd sx={{ fontSize: 20 }} />, path: "/assigned-tickets", techOnly: true },
+    { text: "All tickets", icon: <ListAlt sx={{ fontSize: 20 }} />, path: "/all-tickets", adminOnly: true },
     { text: "Users", icon: <People sx={{ fontSize: 20 }} />, path: "/users", adminOnly: true },
   ];
 
@@ -78,9 +80,12 @@ const Layout = ({ children }: LayoutProps) => {
     { text: "Settings", icon: <Settings sx={{ fontSize: 20 }} />, path: "/settings" },
   ];
 
-  const filteredMainItems = mainItems.filter(
-    (item) => !item.adminOnly || userRole === "admin"
-  );
+  // Filtrer selon le rôle
+  const filteredMainItems = mainItems.filter((item) => {
+    if (item.adminOnly) return userRole === "admin";
+    if (item.techOnly) return userRole === "tech" || userRole === "admin";
+    return true;
+  });
 
   // ── Déconnexion ──
   const handleLogout = () => {
@@ -128,7 +133,6 @@ const Layout = ({ children }: LayoutProps) => {
           },
         }}
       >
-        {/* Indicateur actif */}
         {isActive && (
           <Box
             sx={{
@@ -258,7 +262,6 @@ const Layout = ({ children }: LayoutProps) => {
           </Box>
         </Box>
 
-        {/* Spacer */}
         <Box sx={{ flex: 1 }} />
 
         {/* Toggle Light/Dark */}
@@ -316,7 +319,6 @@ const Layout = ({ children }: LayoutProps) => {
           </Box>
         </Box>
 
-        {/* Divider */}
         <Box sx={{ mx: 2, borderTop: `1px solid ${colors.divider}` }} />
 
         {/* Profil utilisateur */}

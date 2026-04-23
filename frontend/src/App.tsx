@@ -10,6 +10,7 @@ import CreateTicket from "./pages/CreateTicket";
 import MyTickets from "./pages/MyTickets";
 import AllTickets from "./pages/AllTickets";
 import TicketDetails from "./pages/TicketDetails";
+import AssignedTickets from "./pages/AssignedTickets";
 
 
 function App() {
@@ -85,6 +86,16 @@ function App() {
     <ProtectedRoute>
       <Layout>
         <TicketDetails />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/assigned-tickets"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <AssignedTickets />
       </Layout>
     </ProtectedRoute>
   }
