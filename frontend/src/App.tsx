@@ -11,7 +11,7 @@ import MyTickets from "./pages/MyTickets";
 import AllTickets from "./pages/AllTickets";
 import TicketDetails from "./pages/TicketDetails";
 import AssignedTickets from "./pages/AssignedTickets";
-
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -96,6 +96,16 @@ function App() {
     <ProtectedRoute>
       <Layout>
         <AssignedTickets />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <Settings />
       </Layout>
     </ProtectedRoute>
   }
