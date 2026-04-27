@@ -26,7 +26,6 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [darkMode, setDarkMode] = useState(false);
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
@@ -34,38 +33,22 @@ const Layout = ({ children }: LayoutProps) => {
   const userName = user?.name || "User";
   const userAvatar = user?.avatar || "";
 
-  // ── Couleurs selon le mode ──
-  const colors = darkMode
-    ? {
-        sidebarBg: "#1a1b0e",
-        sidebarBorder: "rgba(174,183,132,0.15)",
-        textPrimary: "#E3DBBB",
-        textSecondary: "rgba(227,219,187,0.5)",
-        hoverBg: "rgba(174,183,132,0.1)",
-        activeBg: "rgba(174,183,132,0.15)",
-        activeText: "#AEB784",
-        activeIcon: "#AEB784",
-        sectionLabel: "rgba(227,219,187,0.35)",
-        contentBg: "#121306",
-        toggleBg: "rgba(174,183,132,0.1)",
-        toggleActiveBg: "#41431B",
-        divider: "rgba(174,183,132,0.1)",
-      }
-    : {
-        sidebarBg: "#ffffff",
-        sidebarBorder: "#e8e4d9",
-        textPrimary: "#41431B",
-        textSecondary: "rgba(65,67,27,0.5)",
-        hoverBg: "rgba(174,183,132,0.1)",
-        activeBg: "rgba(174,183,132,0.2)",
-        activeText: "#41431B",
-        activeIcon: "#41431B",
-        sectionLabel: "rgba(65,67,27,0.35)",
-        contentBg: "#E3DBBB",
-        toggleBg: "rgba(65,67,27,0.06)",
-        toggleActiveBg: "#41431B",
-        divider: "rgba(65,67,27,0.08)",
-      };
+  // ── Couleurs Desert Sand ──
+  const colors = {
+    sidebarBg: "#140E0A",
+    sidebarBorder: "rgba(245,158,11,0.15)",
+    textPrimary: "#FEF3C7",
+    textSecondary: "rgba(254,243,199,0.5)",
+    hoverBg: "rgba(245,158,11,0.08)",
+    activeBg: "rgba(245,158,11,0.15)",
+    activeText: "#F59E0B",
+    activeIcon: "#F59E0B",
+    sectionLabel: "rgba(254,243,199,0.3)",
+    contentBg: "#1C1410",
+    divider: "rgba(245,158,11,0.1)",
+    toggleBg: "rgba(245,158,11,0.08)",
+    toggleActiveBg: "#F59E0B",
+  };
 
   // ── Menu items ──
   const mainItems = [
@@ -80,21 +63,18 @@ const Layout = ({ children }: LayoutProps) => {
     { text: "Settings", icon: <Settings sx={{ fontSize: 20 }} />, path: "/settings" },
   ];
 
-  // Filtrer selon le rôle
   const filteredMainItems = mainItems.filter((item) => {
     if (item.adminOnly) return userRole === "admin";
     if (item.techOnly) return userRole === "tech" || userRole === "admin";
     return true;
   });
 
-  // ── Déconnexion ──
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
   };
 
-  // ── Initiales ──
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -104,7 +84,6 @@ const Layout = ({ children }: LayoutProps) => {
       .slice(0, 2);
   };
 
-  // ── Composant MenuItem ──
   const MenuItem = ({ item }: { item: { text: string; icon: React.ReactNode; path: string } }) => {
     const isActive = location.pathname === item.path;
 
@@ -128,9 +107,7 @@ const Layout = ({ children }: LayoutProps) => {
             bgcolor: isActive ? colors.activeBg : colors.hoverBg,
             transform: "translateX(4px)",
           },
-          "&:active": {
-            transform: "scale(0.98)",
-          },
+          "&:active": { transform: "scale(0.98)" },
         }}
       >
         {isActive && (
@@ -143,8 +120,7 @@ const Layout = ({ children }: LayoutProps) => {
               width: 3,
               height: 20,
               borderRadius: 4,
-              bgcolor: "#AEB784",
-              transition: "all 0.3s ease",
+              bgcolor: "#F59E0B",
             }}
           />
         )}
@@ -160,7 +136,7 @@ const Layout = ({ children }: LayoutProps) => {
         <Typography
           fontSize={14}
           fontWeight={isActive ? 600 : 400}
-          sx={{ transition: "font-weight 0.2s ease" }}
+          color={isActive ? colors.activeText : colors.textPrimary}
         >
           {item.text}
         </Typography>
@@ -178,25 +154,16 @@ const Layout = ({ children }: LayoutProps) => {
           borderRight: `1px solid ${colors.sidebarBorder}`,
           display: "flex",
           flexDirection: "column",
-          transition: "all 0.3s ease",
         }}
       >
         {/* Logo */}
-        <Box
-          sx={{
-            px: 3,
-            py: 3,
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-          }}
-        >
+        <Box sx={{ px: 3, py: 3, display: "flex", alignItems: "center", gap: 1.5 }}>
           <Box
             sx={{
               width: 36,
               height: 36,
               borderRadius: 2,
-              bgcolor: "#AEB784",
+              bgcolor: "#F59E0B",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -204,16 +171,11 @@ const Layout = ({ children }: LayoutProps) => {
               "&:hover": { transform: "rotate(10deg)" },
             }}
           >
-            <Typography fontSize={15} fontWeight={800} color="#41431B">
+            <Typography fontSize={15} fontWeight={800} color="#1C1410">
               TF
             </Typography>
           </Box>
-          <Typography
-            fontSize={17}
-            fontWeight={700}
-            color={colors.textPrimary}
-            letterSpacing={0.5}
-          >
+          <Typography fontSize={17} fontWeight={700} color={colors.textPrimary} letterSpacing={0.5}>
             TicketFlow
           </Typography>
         </Box>
@@ -224,12 +186,7 @@ const Layout = ({ children }: LayoutProps) => {
             fontSize={11}
             fontWeight={600}
             color={colors.sectionLabel}
-            sx={{
-              px: 3,
-              mb: 1,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-            }}
+            sx={{ px: 3, mb: 1, letterSpacing: 1.5, textTransform: "uppercase" }}
           >
             Main
           </Typography>
@@ -246,12 +203,7 @@ const Layout = ({ children }: LayoutProps) => {
             fontSize={11}
             fontWeight={600}
             color={colors.sectionLabel}
-            sx={{
-              px: 3,
-              mb: 1,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-            }}
+            sx={{ px: 3, mb: 1, letterSpacing: 1.5, textTransform: "uppercase" }}
           >
             Support
           </Typography>
@@ -264,64 +216,10 @@ const Layout = ({ children }: LayoutProps) => {
 
         <Box sx={{ flex: 1 }} />
 
-        {/* Toggle Light/Dark */}
-        <Box sx={{ px: 3, mb: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              bgcolor: colors.toggleBg,
-              borderRadius: 3,
-              p: 0.4,
-            }}
-          >
-            <Box
-              onClick={() => setDarkMode(false)}
-              sx={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 0.8,
-                py: 0.8,
-                borderRadius: 2.5,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                bgcolor: !darkMode ? colors.toggleActiveBg : "transparent",
-                color: !darkMode ? "#E3DBBB" : colors.textSecondary,
-              }}
-            >
-              <LightMode sx={{ fontSize: 15 }} />
-              <Typography fontSize={12} fontWeight={500}>
-                Light
-              </Typography>
-            </Box>
-            <Box
-              onClick={() => setDarkMode(true)}
-              sx={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 0.8,
-                py: 0.8,
-                borderRadius: 2.5,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                bgcolor: darkMode ? colors.toggleActiveBg : "transparent",
-                color: darkMode ? "#E3DBBB" : colors.textSecondary,
-              }}
-            >
-              <DarkMode sx={{ fontSize: 15 }} />
-              <Typography fontSize={12} fontWeight={500}>
-                Dark
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-
+        {/* Divider */}
         <Box sx={{ mx: 2, borderTop: `1px solid ${colors.divider}` }} />
 
-        {/* Profil utilisateur */}
+        {/* Profil */}
         <Box
           sx={{
             px: 2,
@@ -340,30 +238,19 @@ const Layout = ({ children }: LayoutProps) => {
             sx={{
               width: 36,
               height: 36,
-              bgcolor: "#AEB784",
-              color: "#41431B",
+              bgcolor: "#F59E0B",
+              color: "#1C1410",
               fontSize: 14,
-              fontWeight: 600,
-              transition: "transform 0.2s ease",
-              "&:hover": { transform: "scale(1.05)" },
+              fontWeight: 700,
             }}
           >
             {!userAvatar && getInitials(userName)}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography
-              fontSize={13}
-              fontWeight={600}
-              color={colors.textPrimary}
-              noWrap
-            >
+            <Typography fontSize={13} fontWeight={600} color={colors.textPrimary} noWrap>
               {userName}
             </Typography>
-            <Typography
-              fontSize={11}
-              color={colors.textSecondary}
-              sx={{ textTransform: "capitalize" }}
-            >
+            <Typography fontSize={11} color={colors.textSecondary} sx={{ textTransform: "capitalize" }}>
               {userRole}
             </Typography>
           </Box>
@@ -377,10 +264,7 @@ const Layout = ({ children }: LayoutProps) => {
               sx={{
                 color: colors.textSecondary,
                 transition: "all 0.2s ease",
-                "&:hover": {
-                  color: "#c62828",
-                  bgcolor: "rgba(198,40,40,0.1)",
-                },
+                "&:hover": { color: "#F59E0B", bgcolor: "rgba(245,158,11,0.1)" },
               }}
             >
               <Logout sx={{ fontSize: 18 }} />
@@ -390,7 +274,7 @@ const Layout = ({ children }: LayoutProps) => {
       </Box>
 
       {/* ====== CONTENU PRINCIPAL ====== */}
-      <Box sx={{ flex: 1, transition: "background-color 0.3s ease" }}>
+      <Box sx={{ flex: 1 }}>
         {children}
       </Box>
     </Box>
