@@ -1,0 +1,18 @@
+[33m721f3f3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: sprint 3 - status timeline + page transition animations
+[33m9adef63[m feat: sprint 2 - filters and search on all tickets + export CSV
+[33mfeceed1[m feat: sprint 1 - 404 page + loading skeletons + notification badges in sidebar
+[33mc2e8289[m feat: Desert Sand theme applied to all pages + theme.ts constants file
+[33m03ebc0a[m feat: settings page with appearance, notifications, account and system sections
+[33mc2f08e9[m feat: dashboard with real data, charts, critical tickets, top categories and tech performance
+[33mdb89552[m feat: assigned tickets page + role-based sidebar menu
+[33m66040a0[m feat: all tickets page + ticket details with comments and assignment
+[33m5940f53[m feat: phase 2 - ticket system backend + create ticket + my tickets pages
+[33m438c542[m feat: complete UI redesign with olive/beige palette + dashboard and users pages
+[33ma91fdea[m feat: add authentication middleware for users and profile routes
+[33maa34382[m feat: new login design + sidebar with dark mode + profile page redesign
+[33m0718bcb[m feat: profile page with avatar upload and password change
+[33m8b9afb6[m feat: users management + Resend email integration + role-based access
+[33m60202ca[m feat: protected routes + ProtectedRoute component
+[33m5b41b98[m feat: implement authentication with login and register endpoints
+[33m5e5f27f[m feat: login JWT auth + dashboard design
+[33mc78bca6[m init

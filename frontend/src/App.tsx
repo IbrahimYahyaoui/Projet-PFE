@@ -1,30 +1,90 @@
-import Profile from "./pages/Profile";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Home } from "./pages/Home";
 import { Login } from "./pages/login";
 import { NotFound } from "./pages/NotFound";
-import Dashbord from "./pages/dashbord";
-import Users from "./pages/Users";
-import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import CreateTicket from "./pages/CreateTicket";
-import MyTickets from "./pages/MyTickets";
+import Layout from "./components/Layout";
+import Dashbord from "./pages/dashbord";
 import AllTickets from "./pages/AllTickets";
-import TicketDetails from "./pages/TicketDetails";
+import MyTickets from "./pages/MyTickets";
 import AssignedTickets from "./pages/AssignedTickets";
+import TicketDetails from "./pages/TicketDetails";
+import CreateTicket from "./pages/CreateTicket";
+import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        {/* ══════ PUBLIC ROUTES ══════ */}
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
 
+        {/* ══════ PROTECTED ROUTES ══════ */}
         <Route
           path="/Dashbord"
           element={
             <ProtectedRoute>
               <Layout>
                 <Dashbord />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-tickets"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <MyTickets />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/all-tickets"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AllTickets />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/assigned-tickets"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AssignedTickets />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tickets/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <TicketDetails />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/create-ticket"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CreateTicket />
               </Layout>
             </ProtectedRoute>
           }
@@ -40,16 +100,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-            path="/create-ticket"
-            element={
-               <ProtectedRoute>
-                   <Layout>
-                    <CreateTicket />
-                   </Layout>
-        </ProtectedRoute>
-  }
-        />
+
         <Route
           path="/profile"
           element={
@@ -60,59 +111,21 @@ function App() {
             </ProtectedRoute>
           }
         />
-          <Route
-              path="/my-tickets"
-              element={
-                   <ProtectedRoute>
-                           <Layout>
-                                <MyTickets />
-                          </Layout>
-                  </ProtectedRoute>
-                      }
-          />
-            <Route
-  path="/all-tickets"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <AllTickets />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
-                    <Route
-  path="/tickets/:id"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <TicketDetails />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/assigned-tickets"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <AssignedTickets />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/settings"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <Settings />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
 
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Settings />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ══════ 404 ══════ */}
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </BrowserRouter>
   );
