@@ -30,8 +30,9 @@ export const C = {
   textMuted: "#94A3B8",
 
   // States
-  danger: "#EF4444",
-  dangerBg: "rgba(239, 68, 68, 0.08)",
+   danger: "#EF4444",
+   dangerBg: "rgba(239, 68, 68, 0.08)",
+   dangerHover: "#DC2626",
   success: "#22C55E",
   successBg: "rgba(34, 197, 94, 0.08)",
   warning: "#F97316",

@@ -1,333 +1,644 @@
+// frontend/src/pages/CreateTicket.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
-  Button,
   TextField,
   MenuItem,
+  Button,
+  Paper,
+  Grid,
+  Chip,
   CircularProgress,
+  Alert,
+  Divider,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
-import { ArrowBack, Send } from "@mui/icons-material";
-import { C } from "../theme";
+import {
+  ConfirmationNumber as TicketIcon,
+  AttachFile as AttachIcon,
+  Send as SendIcon,
+  ArrowBack as BackIcon,
+  PriorityHigh as UrgentIcon,
+  KeyboardArrowUp as HighIcon,
+  Remove as MediumIcon,
+  KeyboardArrowDown as LowIcon,
+  Close as CloseIcon,
+} from "@mui/icons-material";
+import { C, priorityColors } from "../theme";
 
-const apiUrl = (
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000"
-).replace(/\/$/, "");
+// ✅ "critical" pour matcher exactement le theme.ts
+type Priority = "low" | "medium" | "high" | "critical";
+type Category =
+  | "technical"
+  | "billing"
+  | "access"
+  | "hardware"
+  | "software"
+  | "other";
 
-const CreateTicket = () => {
+interface FormData {
+  title: string;
+  description: string;
+  priority: Priority;
+  category: Category;
+  attachments: File[];
+}
+
+// ✅ "critical" au lieu de "urgent"
+const PRIORITIES: { value: Priority; label: string; icon: JSX.Element }[] = [
+  { value: "low",      label: "Faible",    icon: <LowIcon fontSize="small" /> },
+  { value: "medium",   label: "Moyenne",   icon: <MediumIcon fontSize="small" /> },
+  { value: "high",     label: "Haute",     icon: <HighIcon fontSize="small" /> },
+  { value: "critical", label: "Critique",  icon: <UrgentIcon fontSize="small" /> },
+];
+
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: "technical", label: "Problème technique" },
+  { value: "billing",   label: "Facturation" },
+  { value: "access",    label: "Accès / Permissions" },
+  { value: "hardware",  label: "Matériel" },
+  { value: "software",  label: "Logiciel" },
+  { value: "other",     label: "Autre" },
+];
+
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    fontFamily: "Inter, sans-serif",
+    backgroundColor: C.bg,
+    borderRadius: "10px",
+    "& fieldset": { borderColor: C.border },
+    "&:hover fieldset": { borderColor: C.accent },
+    "&.Mui-focused fieldset": { borderColor: C.accent, borderWidth: "2px" },
+  },
+  "& .MuiInputLabel-root": {
+    fontFamily: "Inter, sans-serif",
+    color: C.textMuted,
+    "&.Mui-focused": { color: C.accent },
+  },
+  "& .MuiInputBase-input": { color: C.textPrimary },
+  "& .MuiSelect-icon": { color: C.textMuted },
+};
+
+export default function CreateTicket() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState({
+
+  const [form, setForm] = useState<FormData>({
     title: "",
     description: "",
-    category: "software",
     priority: "medium",
+    category: "technical",
+    attachments: [],
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (field: keyof FormData) => (e: any) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setError(null);
+  };
+
+  const handlePrioritySelect = (p: Priority) => {
+    setForm((prev) => ({ ...prev, priority: p }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newFiles = Array.from(e.target.files);
+    setForm((prev) => ({
+      ...prev,
+      attachments: [...prev.attachments, ...newFiles].slice(0, 5),
+    }));
+  };
+
+  const removeFile = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index),
+    }));
   };
 
   const handleSubmit = async () => {
-    setError("");
-    if (!formData.title.trim() || !formData.description.trim()) {
-      setError("Please fill in all required fields");
+    if (!form.title.trim()) {
+      setError("Le titre est obligatoire.");
       return;
     }
+    if (!form.description.trim()) {
+      setError("La description est obligatoire.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/tickets`, {
+      const body = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        priority: form.priority,
+        category: form.category,
+      };
+
+      const res = await fetch("/api/tickets", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (res.ok) {
-        navigate(`/tickets/${data._id}`);
-      } else {
-        setError(data.message || "Failed to create ticket");
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Erreur lors de la création.");
       }
-    } catch (err) {
-      setError("Cannot connect to server");
+
+      setSuccess(true);
+      setTimeout(() => navigate("/my-tickets"), 1500);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const inputSx = {
-    "& .MuiOutlinedInput-root": {
-      bgcolor: C.card,
-      borderRadius: "8px",
-      fontSize: 14,
-      color: C.navy,
-      fontFamily: "Inter, sans-serif",
-      "& fieldset": { borderColor: C.border },
-      "&:hover fieldset": { borderColor: C.accent },
-      "&.Mui-focused fieldset": { borderColor: C.accent, borderWidth: 1.5 },
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: 13,
-      fontFamily: "Inter, sans-serif",
-      color: C.textMuted,
-    },
-    "& .MuiInputLabel-root.Mui-focused": { color: C.accent },
-    "& .MuiOutlinedInput-input::placeholder": {
-      color: C.textMuted,
-      opacity: 1,
-    },
-  };
+  const selectedPriority = priorityColors[form.priority];
 
   return (
-    <Box sx={{
-      flex: 1,
-      p: 3,
-      bgcolor: C.bgPage,
-      fontFamily: "Inter, sans-serif",
-    }}>
-
+    <Box
+      sx={{
+        minHeight: "100vh",
+        backgroundColor: C.bgPage,
+        fontFamily: "Inter, sans-serif",
+        p: { xs: 2, md: 4 },
+      }}
+    >
       {/* ── Header ── */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
+        <Tooltip title="Retour">
+          <IconButton
+            onClick={() => navigate(-1)}
+            sx={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              color: C.textSecondary,
+              "&:hover": { backgroundColor: C.accentLight, color: C.accent },
+            }}
+          >
+            <BackIcon />
+          </IconButton>
+        </Tooltip>
+
+        <Box
           sx={{
-            color: C.slate,
-            textTransform: "none",
-            fontFamily: "Inter, sans-serif",
-            fontSize: 13,
-            borderRadius: "8px",
-            "&:hover": { color: C.accent, bgcolor: C.accentLight },
+            width: 44,
+            height: 44,
+            borderRadius: "12px",
+            backgroundColor: C.accentLight,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          Back
-        </Button>
+          <TicketIcon sx={{ color: C.accent, fontSize: 22 }} />
+        </Box>
+
         <Box>
           <Typography
             variant="h5"
-            fontWeight={700}
-            color={C.navy}
-            fontFamily="Inter, sans-serif"
-            sx={{ letterSpacing: "-0.3px" }}
+            sx={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 700,
+              color: C.textPrimary,
+              lineHeight: 1.2,
+            }}
           >
-            Create new ticket
+            Nouveau Ticket
           </Typography>
           <Typography
             variant="body2"
-            color={C.textMuted}
-            fontFamily="Inter, sans-serif"
+            sx={{ color: C.textMuted, fontFamily: "Inter, sans-serif" }}
           >
-            Describe your issue in detail
+            Décrivez votre problème pour qu'un agent vous assiste
           </Typography>
         </Box>
       </Box>
 
-      {/* ── Form ── */}
-      <Box sx={{ maxWidth: 720 }}>
-
-        {/* Error */}
-        {error && (
-          <Box sx={{
-            bgcolor: C.dangerBg,
+      {/* ── Alerts ── */}
+      {error && (
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
+            backgroundColor: C.dangerBg,
+            color: C.danger,
             border: `1px solid ${C.danger}30`,
-            borderRadius: "8px",
-            p: 2,
-            mb: 2,
-          }}>
-            <Typography fontSize={13} color={C.danger} fontFamily="Inter, sans-serif">
-              {error}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Title */}
-        <Box sx={{
-          bgcolor: C.card,
-          borderRadius: "10px",
-          border: `1px solid ${C.border}`,
-          p: 3,
-          mb: 2,
-        }}>
-          <Typography
-            fontSize={13}
-            fontWeight={600}
-            color={C.textMuted}
-            fontFamily="Inter, sans-serif"
-            sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}
-          >
-            Title *
-          </Typography>
-          <TextField
-            fullWidth
-            name="title"
-            placeholder="Short and descriptive title"
-            value={formData.title}
-            onChange={handleChange}
-            sx={inputSx}
-          />
-        </Box>
-
-        {/* Description */}
-        <Box sx={{
-          bgcolor: C.card,
-          borderRadius: "10px",
-          border: `1px solid ${C.border}`,
-          p: 3,
-          mb: 2,
-        }}>
-          <Typography
-            fontSize={13}
-            fontWeight={600}
-            color={C.textMuted}
-            fontFamily="Inter, sans-serif"
-            sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}
-          >
-            Description *
-          </Typography>
-          <TextField
-            fullWidth
-            name="description"
-            placeholder="Describe the issue in detail. Include steps to reproduce, error messages, etc."
-            value={formData.description}
-            onChange={handleChange}
-            multiline
-            rows={6}
-            sx={inputSx}
-          />
-        </Box>
-
-        {/* Category + Priority */}
-        <Box sx={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 2,
-          mb: 2,
-        }}>
-          {/* Category */}
-          <Box sx={{
-            bgcolor: C.card,
             borderRadius: "10px",
-            border: `1px solid ${C.border}`,
-            p: 3,
-          }}>
-            <Typography
-              fontSize={13}
-              fontWeight={600}
-              color={C.textMuted}
-              fontFamily="Inter, sans-serif"
-              sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}
-            >
-              Category *
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              sx={inputSx}
-            >
-              <MenuItem value="hardware">Hardware</MenuItem>
-              <MenuItem value="software">Software</MenuItem>
-              <MenuItem value="network">Network</MenuItem>
-              <MenuItem value="access">Access</MenuItem>
-              <MenuItem value="other">Other</MenuItem>
-            </TextField>
-          </Box>
+            fontFamily: "Inter, sans-serif",
+            "& .MuiAlert-icon": { color: C.danger },
+          }}
+        >
+          {error}
+        </Alert>
+      )}
 
-          {/* Priority */}
-          <Box sx={{
-            bgcolor: C.card,
+      {success && (
+        <Alert
+          severity="success"
+          sx={{
+            mb: 3,
+            backgroundColor: C.successBg,
+            color: C.success,
+            border: `1px solid ${C.success}40`,
             borderRadius: "10px",
-            border: `1px solid ${C.border}`,
-            p: 3,
-          }}>
-            <Typography
-              fontSize={13}
-              fontWeight={600}
-              color={C.textMuted}
-              fontFamily="Inter, sans-serif"
-              sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}
-            >
-              Priority *
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              sx={inputSx}
-            >
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-              <MenuItem value="critical">Critical</MenuItem>
-            </TextField>
-          </Box>
-        </Box>
+            fontFamily: "Inter, sans-serif",
+            "& .MuiAlert-icon": { color: C.success },
+          }}
+        >
+          Ticket créé avec succès ! Redirection en cours…
+        </Alert>
+      )}
 
-        {/* Submit */}
-        <Box sx={{
-          bgcolor: C.card,
-          borderRadius: "10px",
-          border: `1px solid ${C.border}`,
-          p: 3,
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 2,
-        }}>
-          <Button
-            variant="outlined"
-            onClick={() => navigate(-1)}
-            disableElevation
+      <Grid container spacing={3}>
+        {/* ══ LEFT ══ */}
+        <Grid item xs={12} md={8}>
+          <Paper
             sx={{
-              borderColor: C.border,
-              color: C.slate,
-              textTransform: "none",
-              borderRadius: "8px",
-              fontSize: 14,
-              fontFamily: "Inter, sans-serif",
-              "&:hover": { borderColor: C.accent, color: C.accent },
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: "16px",
+              p: 3,
             }}
           >
-            Cancel
-          </Button>
+            <Typography
+              sx={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                color: C.textPrimary,
+                mb: 3,
+                fontSize: "0.95rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Informations du ticket
+            </Typography>
+
+            <TextField
+              label="Titre du ticket"
+              fullWidth
+              value={form.title}
+              onChange={handleChange("title")}
+              placeholder="Ex: Impossible de se connecter au VPN"
+              sx={{ ...inputSx, mb: 3 }}
+              inputProps={{ maxLength: 120 }}
+            />
+
+            <TextField
+              label="Description détaillée"
+              fullWidth
+              multiline
+              rows={6}
+              value={form.description}
+              onChange={handleChange("description")}
+              placeholder="Décrivez le problème en détail : quand il survient, les messages d'erreur, les étapes pour le reproduire…"
+              sx={{ ...inputSx, mb: 3 }}
+            />
+
+            <TextField
+              select
+              label="Catégorie"
+              fullWidth
+              value={form.category}
+              onChange={handleChange("category")}
+              sx={{ ...inputSx, mb: 3 }}
+            >
+              {CATEGORIES.map((cat) => (
+                <MenuItem
+                  key={cat.value}
+                  value={cat.value}
+                  sx={{
+                    fontFamily: "Inter, sans-serif",
+                    color: C.textPrimary,
+                    "&:hover": { backgroundColor: C.accentLight },
+                    "&.Mui-selected": {
+                      backgroundColor: C.accentLight,
+                      "&:hover": { backgroundColor: C.accentLight },
+                    },
+                  }}
+                >
+                  {cat.label}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <Divider sx={{ borderColor: C.border, my: 3 }} />
+
+            {/* Attachments */}
+            <Box>
+              <Typography
+                sx={{
+                  fontFamily: "Inter, sans-serif",
+                  fontWeight: 600,
+                  color: C.textSecondary,
+                  mb: 1.5,
+                  fontSize: "0.875rem",
+                }}
+              >
+                Pièces jointes{" "}
+                <span style={{ color: C.textMuted, fontWeight: 400 }}>
+                  (optionnel · max 5)
+                </span>
+              </Typography>
+
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<AttachIcon />}
+                disabled={form.attachments.length >= 5}
+                sx={{
+                  fontFamily: "Inter, sans-serif",
+                  borderColor: C.border,
+                  color: C.textSecondary,
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  mb: 2,
+                  "&:hover": {
+                    borderColor: C.accent,
+                    color: C.accent,
+                    backgroundColor: C.accentLight,
+                  },
+                }}
+              >
+                Ajouter un fichier
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  onChange={handleFileChange}
+                />
+              </Button>
+
+              {form.attachments.length > 0 && (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {form.attachments.map((file, i) => (
+                    <Chip
+                      key={i}
+                      label={file.name}
+                      onDelete={() => removeFile(i)}
+                      deleteIcon={<CloseIcon />}
+                      sx={{
+                        fontFamily: "Inter, sans-serif",
+                        backgroundColor: C.accentLight,
+                        color: C.accent,
+                        border: `1px solid ${C.accent}40`,
+                        "& .MuiChip-deleteIcon": {
+                          color: C.accent,
+                          fontSize: 16,
+                          "&:hover": { color: C.danger },
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* ══ RIGHT ══ */}
+        <Grid item xs={12} md={4}>
+          {/* Priority Card */}
+          <Paper
+            sx={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: "16px",
+              p: 3,
+              mb: 3,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                color: C.textPrimary,
+                mb: 2,
+                fontSize: "0.95rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Priorité
+            </Typography>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {PRIORITIES.map((p) => {
+                const colors = priorityColors[p.value]; // ✅ clés matchent maintenant
+                const isSelected = form.priority === p.value;
+                return (
+                  <Box
+                    key={p.value}
+                    onClick={() => handlePrioritySelect(p.value)}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      p: "10px 14px",
+                      borderRadius: "10px",
+                      border: `1.5px solid ${isSelected ? colors.border : C.border}`,
+                      backgroundColor: isSelected ? colors.bg : "transparent",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        borderColor: colors.border,
+                        backgroundColor: colors.bg,
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", color: colors.text }}>
+                      {p.icon}
+                    </Box>
+                    <Typography
+                      sx={{
+                        fontFamily: "Inter, sans-serif",
+                        fontWeight: isSelected ? 600 : 400,
+                        fontSize: "0.875rem",
+                        color: isSelected ? colors.text : C.textSecondary,
+                        flex: 1,
+                      }}
+                    >
+                      {p.label}
+                    </Typography>
+                    {isSelected && (
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          backgroundColor: colors.text,
+                        }}
+                      />
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Paper>
+
+          {/* Summary Card */}
+          <Paper
+            sx={{
+              backgroundColor: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: "16px",
+              p: 3,
+              mb: 3,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                color: C.textPrimary,
+                mb: 2,
+                fontSize: "0.95rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Résumé
+            </Typography>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {[
+                {
+                  label: "Statut initial",
+                  value: "Ouvert",
+                  color: C.accent,
+                  bg: C.accentLight,
+                },
+                {
+                  label: "Priorité",
+                  value: PRIORITIES.find((p) => p.value === form.priority)?.label ?? "—",
+                  color: selectedPriority?.text ?? C.textSecondary,
+                  bg: selectedPriority?.bg ?? C.bg,
+                },
+                {
+                  label: "Catégorie",
+                  value: CATEGORIES.find((c) => c.value === form.category)?.label ?? "—",
+                  color: C.textSecondary,
+                  bg: C.bg,
+                },
+              ].map((row) => (
+                <Box
+                  key={row.label}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "0.8rem",
+                      color: C.textMuted,
+                    }}
+                  >
+                    {row.label}
+                  </Typography>
+                  <Chip
+                    label={row.value}
+                    size="small"
+                    sx={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      backgroundColor: row.bg,
+                      color: row.color,
+                      height: 24,
+                    }}
+                  />
+                </Box>
+              ))}
+
+              <Divider sx={{ borderColor: C.border }} />
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "0.8rem",
+                    color: C.textMuted,
+                  }}
+                >
+                  Pièces jointes
+                </Typography>
+                <Typography
+                  sx={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: C.textSecondary,
+                  }}
+                >
+                  {form.attachments.length} / 5
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Submit */}
           <Button
+            fullWidth
             variant="contained"
-            endIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Send />}
+            size="large"
             onClick={handleSubmit}
-            disabled={loading}
-            disableElevation
+            disabled={loading || success}
+            startIcon={
+              loading ? (
+                <CircularProgress size={18} sx={{ color: C.navy }} />
+              ) : (
+                <SendIcon />
+              )
+            }
             sx={{
-              bgcolor: C.accent,
-              color: C.navy,
-              textTransform: "none",
-              borderRadius: "8px",
-              fontWeight: 700,
-              fontSize: 14,
               fontFamily: "Inter, sans-serif",
-              px: 3,
-              boxShadow: `0 4px 12px rgba(95,194,186,0.3)`,
+              fontWeight: 700,
+              fontSize: "0.95rem",
+              backgroundColor: C.accent,
+              color: C.navy,
+              borderRadius: "12px",
+              py: 1.6,
+              textTransform: "none",
+              boxShadow: `0 4px 20px ${C.accent}40`,
               "&:hover": {
-                bgcolor: C.accentHover,
-                transform: "translateY(-1px)",
-                boxShadow: `0 8px 20px rgba(95,194,186,0.4)`,
+                backgroundColor: C.accentHover,
+                boxShadow: `0 6px 24px ${C.accent}60`,
               },
-              "&:disabled": { opacity: 0.6 },
+              "&.Mui-disabled": {
+                backgroundColor: C.slate,
+                color: C.textMuted,
+                boxShadow: "none",
+              },
             }}
           >
-            {loading ? "Creating..." : "Create ticket"}
+            {loading ? "Création en cours…" : success ? "Ticket créé ✓" : "Créer le ticket"}
           </Button>
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
     </Box>
   );
-};
-
-export default CreateTicket;
+}

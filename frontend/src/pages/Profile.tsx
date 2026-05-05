@@ -1,247 +1,368 @@
-import { useState, useRef } from "react";
+// frontend/src/pages/Profile.tsx
+import React, { useState, useEffect } from "react";
 import {
-  Box, Typography, Button, TextField, Avatar,
-  Alert, Snackbar, IconButton, Divider,
+  Box,
+  Typography,
+  Paper,
+  Avatar,
+  Button,
+  TextField,
+  Chip,
+  Divider,
+  CircularProgress,
+  Alert,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
-  CameraAlt, Lock, Visibility, VisibilityOff,
-  ChevronRight, Person, Email, Badge, Logout,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Close as CloseIcon,
+  Lock as LockIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  CalendarToday as CalendarIcon,
+  ConfirmationNumber as TicketIcon,
+  AdminPanelSettings as AdminIcon,
+  Engineering as TechIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
-import { C } from "../theme";
+import { C, roleColors } from "../theme";
 
-const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+type Role = "admin" | "tech" | "user";
 
-const Profile = () => {
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
-  const navigate = useNavigate();
+interface UserProfile {
+  _id: string;
+  name: string;
+  email: string;
+  role: Role;
+  createdAt: string;
+  ticketsCount?: number;
+}
 
-  const [name, setName] = useState(user?.name || "");
-  const [avatar, setAvatar] = useState(user?.avatar || "");
-  const [editMode, setEditMode] = useState(false);
-  const [passwordMode, setPasswordMode] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const ROLE_LABELS: Record<Role, string> = {
+  admin: "Administrateur",
+  tech: "Technicien",
+  user: "Utilisateur",
+};
 
-  const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+const ROLE_ICONS: Record<Role, React.ReactNode> = {
+  admin: <AdminIcon sx={{ fontSize: 14 }} />,
+  tech: <TechIcon sx={{ fontSize: 14 }} />,
+  user: <PersonIcon sx={{ fontSize: 14 }} />,
+};
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 500000) { setError("Image must be less than 500KB"); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const newAvatar = reader.result as string;
-      setAvatar(newAvatar);
-      saveProfile(name, newAvatar);
+const getInitials = (name: string) =>
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit", month: "long", year: "numeric",
+  });
+
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    fontFamily: "Inter, sans-serif",
+    backgroundColor: C.bg,
+    borderRadius: "10px",
+    "& fieldset": { borderColor: C.border },
+    "&:hover fieldset": { borderColor: C.accent },
+    "&.Mui-focused fieldset": { borderColor: C.accent, borderWidth: "2px" },
+  },
+  "& .MuiInputLabel-root": {
+    fontFamily: "Inter, sans-serif",
+    color: C.textMuted,
+    "&.Mui-focused": { color: C.accent },
+  },
+  "& .MuiInputBase-input": { color: C.textPrimary },
+};
+
+export default function Profile() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [editInfo, setEditInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({ name: "", email: "" });
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoError, setInfoError] = useState<string | null>(null);
+  const [infoSuccess, setInfoSuccess] = useState(false);
+
+  const [editPwd, setEditPwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: "", next: "", confirm: "" });
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setProfile(data);
+        setInfoForm({ name: data.name, email: data.email });
+      } catch {
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            setProfile({
+              _id: payload.id ?? payload._id ?? "",
+              name: payload.name ?? "Utilisateur",
+              email: payload.email ?? "",
+              role: payload.role ?? "user",
+              createdAt: new Date().toISOString(),
+            });
+            setInfoForm({ name: payload.name ?? "", email: payload.email ?? "" });
+          } catch {}
+        }
+      } finally {
+        setLoading(false);
+      }
     };
-    reader.readAsDataURL(file);
-  };
+    fetchProfile();
+  }, []);
 
-  const saveProfile = async (newName: string, newAvatar: string) => {
-    setError("");
-    setLoading(true);
+  const handleSaveInfo = async () => {
+    if (!infoForm.name.trim()) { setInfoError("Le nom est obligatoire."); return; }
+    if (!infoForm.email.trim()) { setInfoError("L'email est obligatoire."); return; }
+    setInfoLoading(true);
+    setInfoError(null);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${apiUrl}/api/profile/${user.id}`, {
+      const res = await fetch(`/api/users/${profile?._id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newName, avatar: newAvatar }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: infoForm.name, email: infoForm.email }),
       });
-      const data = await response.json();
-      if (!response.ok) { setError(data.message || "Failed to update profile"); setLoading(false); return; }
-      const updatedUser = { ...user, name: data.user.name, avatar: data.user.avatar };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setSuccess("Profile updated successfully!");
-      setEditMode(false);
-    } catch { setError("Cannot connect to server"); }
-    setLoading(false);
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.message || "Erreur serveur.");
+      }
+      const updated = await res.json();
+      setProfile((p) => p ? { ...p, name: updated.name, email: updated.email } : p);
+      setInfoSuccess(true);
+      setEditInfo(false);
+      setTimeout(() => setInfoSuccess(false), 3000);
+    } catch (err: any) {
+      setInfoError(err.message);
+    } finally {
+      setInfoLoading(false);
+    }
   };
 
-  const handleChangePassword = async () => {
-    setError("");
-    if (newPassword !== confirmPassword) { setError("New passwords don't match"); return; }
-    if (newPassword.length < 6) { setError("Password must be at least 6 characters"); return; }
-    setLoading(true);
+  const handleSavePwd = async () => {
+    if (!pwdForm.current) { setPwdError("Mot de passe actuel requis."); return; }
+    if (!pwdForm.next) { setPwdError("Nouveau mot de passe requis."); return; }
+    if (pwdForm.next !== pwdForm.confirm) { setPwdError("Les mots de passe ne correspondent pas."); return; }
+    if (pwdForm.next.length < 6) { setPwdError("Minimum 6 caractères."); return; }
+    setPwdLoading(true);
+    setPwdError(null);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${apiUrl}/api/profile/${user.id}/password`, {
+      const res = await fetch("/api/users/change-password", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: pwdForm.current,
+          newPassword: pwdForm.next,
+        }),
       });
-      const data = await response.json();
-      if (!response.ok) { setError(data.message || "Failed to change password"); setLoading(false); return; }
-      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-      setPasswordMode(false);
-      setSuccess("Password changed successfully!");
-    } catch { setError("Cannot connect to server"); }
-    setLoading(false);
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.message || "Erreur serveur.");
+      }
+      setPwdSuccess(true);
+      setEditPwd(false);
+      setPwdForm({ current: "", next: "", confirm: "" });
+      setTimeout(() => setPwdSuccess(false), 3000);
+    } catch (err: any) {
+      setPwdError(err.message);
+    } finally {
+      setPwdLoading(false);
+    }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: "100vh", backgroundColor: C.bgPage, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <CircularProgress sx={{ color: C.accent }} />
+      </Box>
+    );
+  }
 
-  const rowStyle = {
-    display: "flex", alignItems: "center", px: 2.5, py: 2, gap: 2,
-    transition: "all 0.2s ease",
-  };
+  if (!profile) return null;
 
-  const sectionStyle = {
-    bgcolor: C.card, borderRadius: 3, border: `1px solid ${C.border}`, overflow: "hidden", mb: 3,
-  };
-
-  const fieldStyle = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: 2, bgcolor: "#1C1410", color: C.textPrimary,
-      "& fieldset": { borderColor: C.border },
-      "&:hover fieldset": { borderColor: "rgba(245,158,11,0.3)" },
-      "&.Mui-focused fieldset": { borderColor: C.accent },
-    },
-    "& .MuiInputLabel-root": { color: C.textSecondary },
-    "& .MuiInputLabel-root.Mui-focused": { color: C.accent },
-  };
+  const role = roleColors[profile.role] ?? roleColors["user"];
 
   return (
-    <Box sx={{ flex: 1, display: "flex", justifyContent: "center", py: 4, px: 2, bgcolor: C.bg }}>
-      <Box sx={{ width: "100%", maxWidth: 500 }}>
-        {/* Avatar + Nom */}
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 4 }}>
-          <Box sx={{ position: "relative", mb: 2 }}>
-            <Avatar
-              src={avatar}
-              sx={{ width: 90, height: 90, bgcolor: C.iconBg, color: C.accent, fontSize: 28, fontWeight: 700, border: `4px solid rgba(245,158,11,0.2)` }}
-            >
-              {!avatar && getInitials(name)}
-            </Avatar>
-            <IconButton size="small" onClick={() => fileInputRef.current?.click()}
-              sx={{ position: "absolute", bottom: 0, right: 0, bgcolor: C.accent, color: "#1C1410", width: 30, height: 30, border: `2px solid ${C.bg}`, "&:hover": { bgcolor: C.accentHover, transform: "scale(1.1)" } }}
-            >
-              <CameraAlt sx={{ fontSize: 14 }} />
-            </IconButton>
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageUpload} />
-          </Box>
-          <Typography fontSize={20} fontWeight={700} color={C.textPrimary}>{name}</Typography>
-          <Typography fontSize={14} color={C.textSecondary} mt={0.3}>{user?.email}</Typography>
-          <Button variant="contained" disableElevation size="small" onClick={() => setEditMode(true)}
-            sx={{ mt: 2, borderRadius: 6, px: 3, py: 0.8, bgcolor: C.accent, color: "#1C1410", textTransform: "none", fontWeight: 600, fontSize: 13, "&:hover": { bgcolor: C.accentHover } }}
-          >
-            Edit profile
-          </Button>
+    <Box sx={{ minHeight: "100vh", backgroundColor: C.bgPage, fontFamily: "Inter, sans-serif", p: { xs: 2, md: 4 }, maxWidth: 860, mx: "auto" }}>
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
+        <Box sx={{ width: 44, height: 44, borderRadius: "12px", backgroundColor: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <PersonIcon sx={{ color: C.accent, fontSize: 22 }} />
         </Box>
-
-        {/* Account Section */}
-        <Typography fontSize={12} fontWeight={600} color={C.textMuted} sx={{ px: 2.5, mb: 1, letterSpacing: 1, textTransform: "uppercase" }}>
-          Account
-        </Typography>
-        <Box sx={sectionStyle}>
-          <Box sx={{ ...rowStyle, cursor: "default" }}>
-            <Person sx={{ fontSize: 20, color: C.textMuted }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography fontSize={14} color={C.textPrimary}>Name</Typography>
-            </Box>
-            <Typography fontSize={14} color={C.textSecondary}>{name}</Typography>
-          </Box>
-          <Divider sx={{ borderColor: C.border, mx: 2.5 }} />
-          <Box sx={{ ...rowStyle, cursor: "default" }}>
-            <Email sx={{ fontSize: 20, color: C.textMuted }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography fontSize={14} color={C.textPrimary}>Email</Typography>
-            </Box>
-            <Typography fontSize={14} color={C.textSecondary}>{user?.email}</Typography>
-          </Box>
-          <Divider sx={{ borderColor: C.border, mx: 2.5 }} />
-          <Box sx={{ ...rowStyle, cursor: "default" }}>
-            <Badge sx={{ fontSize: 20, color: C.textMuted }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography fontSize={14} color={C.textPrimary}>Role</Typography>
-            </Box>
-            <Box sx={{ bgcolor: C.iconBg, color: C.accent, px: 1.5, py: 0.3, borderRadius: 2, fontSize: 12, fontWeight: 600, textTransform: "capitalize" }}>
-              {user?.role}
-            </Box>
-          </Box>
+        <Box>
+          <Typography variant="h5" sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>
+            Mon Profil
+          </Typography>
+          <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "Inter, sans-serif" }}>
+            Gérez vos informations personnelles
+          </Typography>
         </Box>
+      </Box>
 
-        {/* Security Section */}
-        <Typography fontSize={12} fontWeight={600} color={C.textMuted} sx={{ px: 2.5, mb: 1, letterSpacing: 1, textTransform: "uppercase" }}>
-          Security
-        </Typography>
-        <Box sx={sectionStyle}>
-          <Box sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.hoverBg } }} onClick={() => setPasswordMode(!passwordMode)}>
-            <Lock sx={{ fontSize: 20, color: C.textMuted }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography fontSize={14} color={C.textPrimary}>Change password</Typography>
-            </Box>
-            <ChevronRight sx={{ fontSize: 20, color: C.textMuted, transition: "transform 0.2s ease", transform: passwordMode ? "rotate(90deg)" : "rotate(0deg)" }} />
+      {infoSuccess && (
+        <Alert severity="success" sx={{ mb: 3, backgroundColor: C.successBg, color: C.success, border: `1px solid ${C.success}40`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.success } }}>
+          Informations mises à jour avec succès !
+        </Alert>
+      )}
+      {pwdSuccess && (
+        <Alert severity="success" sx={{ mb: 3, backgroundColor: C.successBg, color: C.success, border: `1px solid ${C.success}40`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.success } }}>
+          Mot de passe modifié avec succès !
+        </Alert>
+      )}
+
+      {/* Card 1 */}
+      <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3, mb: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 3, flexWrap: "wrap" }}>
+          <Avatar sx={{ width: 72, height: 72, backgroundColor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.5rem", border: `2px solid ${C.accent}40` }}>
+            {getInitials(profile.name)}
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.2rem", color: C.textPrimary }}>
+              {profile.name}
+            </Typography>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: C.textMuted, mb: 1 }}>
+              {profile.email}
+            </Typography>
+            <Chip
+              icon={<>{ROLE_ICONS[profile.role]}</>}
+              label={ROLE_LABELS[profile.role]}
+              size="small"
+              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", backgroundColor: role.bg, color: role.text, border: `1px solid ${role.border}`, "& .MuiChip-icon": { color: role.text } }}
+            />
           </Box>
-
-          {passwordMode && (
-            <Box sx={{ px: 2.5, pb: 2.5, display: "flex", flexDirection: "column", gap: 2 }}>
-              <TextField label="Current password" type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} fullWidth size="small" sx={fieldStyle}
-                slotProps={{ input: { endAdornment: <IconButton size="small" onClick={() => setShowCurrentPassword((v) => !v)} sx={{ color: C.textSecondary }}>{showCurrentPassword ? <Visibility sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}</IconButton> } }}
-              />
-              <TextField label="New password" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} fullWidth size="small" sx={fieldStyle}
-                slotProps={{ input: { endAdornment: <IconButton size="small" onClick={() => setShowNewPassword((v) => !v)} sx={{ color: C.textSecondary }}>{showNewPassword ? <Visibility sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}</IconButton> } }}
-              />
-              <TextField label="Confirm new password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} fullWidth size="small" sx={fieldStyle} />
-              {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
-              <Button variant="contained" disableElevation onClick={handleChangePassword} disabled={loading || !currentPassword || !newPassword || !confirmPassword}
-                sx={{ bgcolor: C.accent, color: "#1C1410", textTransform: "none", borderRadius: 2, fontWeight: 600, alignSelf: "flex-start", "&:hover": { bgcolor: C.accentHover } }}
+          {!editInfo && (
+            <Tooltip title="Modifier">
+              <IconButton
+                onClick={() => { setEditInfo(true); setInfoError(null); }}
+                sx={{ border: `1px solid ${C.border}`, color: C.textSecondary, "&:hover": { backgroundColor: C.accentLight, color: C.accent, borderColor: C.accent } }}
               >
-                {loading ? "Changing..." : "Update password"}
-              </Button>
-            </Box>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
 
-        {/* Logout */}
-        <Box sx={sectionStyle}>
-          <Box sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.dangerBg } }} onClick={handleLogout}>
-            <Logout sx={{ fontSize: 20, color: C.danger }} />
-            <Typography fontSize={14} fontWeight={500} color={C.danger}>Logout</Typography>
+        <Divider sx={{ borderColor: C.border, mb: 3 }} />
+
+        {editInfo ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {infoError && (
+              <Alert severity="error" sx={{ backgroundColor: C.dangerBg, color: C.danger, border: `1px solid ${C.danger}30`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.danger } }}>
+                {infoError}
+              </Alert>
+            )}
+            <TextField label="Nom complet" fullWidth value={infoForm.name} onChange={(e) => setInfoForm((f) => ({ ...f, name: e.target.value }))} sx={inputSx} />
+            <TextField label="Email" type="email" fullWidth value={infoForm.email} onChange={(e) => setInfoForm((f) => ({ ...f, email: e.target.value }))} sx={inputSx} />
+            <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end" }}>
+              <Button onClick={() => { setEditInfo(false); setInfoError(null); }} startIcon={<CloseIcon />} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none", "&:hover": { backgroundColor: C.bgPage } }}>
+                Annuler
+              </Button>
+              <Button variant="contained" onClick={handleSaveInfo} disabled={infoLoading}
+                startIcon={infoLoading ? <CircularProgress size={16} sx={{ color: C.navy }} /> : <SaveIcon />}
+                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.accentHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+                {infoLoading ? "Enregistrement…" : "Enregistrer"}
+              </Button>
+            </Box>
           </Box>
+        ) : (
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2.5 }}>
+            {[
+              { icon: <PersonIcon sx={{ fontSize: 18 }} />,   label: "Nom complet",   value: profile.name },
+              { icon: <EmailIcon sx={{ fontSize: 18 }} />,    label: "Email",          value: profile.email },
+              { icon: <CalendarIcon sx={{ fontSize: 18 }} />, label: "Membre depuis",  value: formatDate(profile.createdAt) },
+              { icon: <TicketIcon sx={{ fontSize: 18 }} />,   label: "Tickets créés",  value: String(profile.ticketsCount ?? "—") },
+            ].map((row) => (
+              <Box key={row.label} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, p: 2, borderRadius: "12px", backgroundColor: C.bgPage, border: `1px solid ${C.border}` }}>
+                <Box sx={{ color: C.accent, mt: 0.2, flexShrink: 0 }}>{row.icon}</Box>
+                <Box>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.72rem", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", mb: 0.3 }}>
+                    {row.label}
+                  </Typography>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9rem", color: C.textPrimary, wordBreak: "break-all" }}>
+                    {row.value}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Paper>
+
+      {/* Card 2 — Mot de passe */}
+      <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: editPwd ? 3 : 0 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box sx={{ width: 36, height: 36, borderRadius: "10px", backgroundColor: C.dangerBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <LockIcon sx={{ color: C.danger, fontSize: 18 }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: C.textPrimary, fontSize: "0.95rem" }}>
+                Mot de passe
+              </Typography>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted }}>
+                Modifiez votre mot de passe de connexion
+              </Typography>
+            </Box>
+          </Box>
+          {!editPwd ? (
+            <Button variant="outlined" onClick={() => { setEditPwd(true); setPwdError(null); }}
+              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, borderColor: C.border, color: C.textSecondary, borderRadius: "10px", textTransform: "none", "&:hover": { borderColor: C.accent, color: C.accent, backgroundColor: C.accentLight } }}>
+              Modifier
+            </Button>
+          ) : (
+            <IconButton onClick={() => { setEditPwd(false); setPwdError(null); setPwdForm({ current: "", next: "", confirm: "" }); }} size="small" sx={{ color: C.textMuted, "&:hover": { color: C.danger } }}>
+              <CloseIcon />
+            </IconButton>
+          )}
         </Box>
 
-        {/* Edit Modal */}
-        {editMode && (
-          <Box
-            sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, bgcolor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1300 }}
-            onClick={() => setEditMode(false)}
-          >
-            <Box sx={{ bgcolor: C.card, borderRadius: 4, p: 4, width: 380, display: "flex", flexDirection: "column", gap: 2.5, border: `1px solid ${C.border}` }} onClick={(e) => e.stopPropagation()}>
-              <Typography fontSize={18} fontWeight={700} color={C.textPrimary}>Edit profile</Typography>
-              <TextField label="Full name" value={name} onChange={(e) => setName(e.target.value)} fullWidth size="small" sx={fieldStyle} />
-              {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
+        {editPwd && (
+          <>
+            <Divider sx={{ borderColor: C.border, mb: 3 }} />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+              {pwdError && (
+                <Alert severity="error" sx={{ backgroundColor: C.dangerBg, color: C.danger, border: `1px solid ${C.danger}30`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.danger } }}>
+                  {pwdError}
+                </Alert>
+              )}
+              <TextField label="Mot de passe actuel" type="password" fullWidth value={pwdForm.current} onChange={(e) => setPwdForm((f) => ({ ...f, current: e.target.value }))} sx={inputSx} />
+              <TextField label="Nouveau mot de passe" type="password" fullWidth value={pwdForm.next} onChange={(e) => setPwdForm((f) => ({ ...f, next: e.target.value }))} sx={inputSx} />
+              <TextField label="Confirmer le nouveau mot de passe" type="password" fullWidth value={pwdForm.confirm} onChange={(e) => setPwdForm((f) => ({ ...f, confirm: e.target.value }))} sx={inputSx} />
               <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end" }}>
-                <Button onClick={() => setEditMode(false)} sx={{ textTransform: "none", color: C.textSecondary, borderRadius: 2 }}>Cancel</Button>
-                <Button variant="contained" disableElevation onClick={() => saveProfile(name, avatar)} disabled={loading}
-                  sx={{ bgcolor: C.accent, color: "#1C1410", textTransform: "none", borderRadius: 2, fontWeight: 600, "&:hover": { bgcolor: C.accentHover } }}
-                >
-                  {loading ? "Saving..." : "Save"}
+                <Button onClick={() => { setEditPwd(false); setPwdError(null); setPwdForm({ current: "", next: "", confirm: "" }); }}
+                  sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none", "&:hover": { backgroundColor: C.bgPage } }}>
+                  Annuler
+                </Button>
+                <Button variant="contained" onClick={handleSavePwd} disabled={pwdLoading}
+                  startIcon={pwdLoading ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : <SaveIcon />}
+                  sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.danger, color: "#fff", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.dangerHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+                  {pwdLoading ? "Enregistrement…" : "Changer le mot de passe"}
                 </Button>
               </Box>
             </Box>
-          </Box>
+          </>
         )}
-
-        <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-          <Alert severity="success" onClose={() => setSuccess("")} sx={{ borderRadius: 2 }}>{success}</Alert>
-        </Snackbar>
-      </Box>
+      </Paper>
     </Box>
   );
-};
-
-export default Profile;
+}

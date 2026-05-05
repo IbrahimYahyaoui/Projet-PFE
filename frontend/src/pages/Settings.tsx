@@ -1,250 +1,248 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// frontend/src/pages/Settings.tsx
+import React, { useState } from "react";
 import {
-  Box, Typography, Switch, Button, Divider,
-  Alert, Snackbar, MenuItem, TextField,
+  Box,
+  Typography,
+  Paper,
+  Switch,
+  Divider,
+  Button,
+  TextField,
+  MenuItem,
+  Chip,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 import {
-  Palette, Notifications, Person, AdminPanelSettings,
-  ChevronRight, Download, Delete, Lock,
+  Settings as SettingsIcon,
+  Notifications as NotifIcon,
+  Palette as PaletteIcon,
+  Language as LanguageIcon,
+  Security as SecurityIcon,
+  Storage as StorageIcon,
+  CheckCircle as CheckIcon,
 } from "@mui/icons-material";
 import { C } from "../theme";
 
-const Settings = () => {
-  const navigate = useNavigate();
+interface SettingRow {
+  id: string;
+  label: string;
+  description: string;
+  value: boolean;
+}
 
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
-  const isAdmin = user?.role === "admin";
-
-  const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("english");
-  const [notifEmail, setNotifEmail] = useState(true);
-  const [notifAssigned, setNotifAssigned] = useState(true);
-  const [notifComment, setNotifComment] = useState(true);
-  const [success, setSuccess] = useState("");
-
-  const sectionStyle = {
-    bgcolor: C.card,
-    borderRadius: 3,
-    border: `1px solid ${C.border}`,
-    overflow: "hidden",
-    mb: 3,
-  };
-
-  const rowStyle = {
-    display: "flex",
-    alignItems: "center",
-    px: 3,
-    py: 2,
-    gap: 2,
-    transition: "all 0.2s ease",
-  };
-
-  const iconBoxStyle = {
-    width: 36,
-    height: 36,
-    borderRadius: 2,
-    bgcolor: C.iconBg,
-    color: C.accent,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const switchStyle = {
-    "& .MuiSwitch-switchBase.Mui-checked": { color: C.accent },
-    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: C.accentHover },
-  };
-
-  const labelStyle = {
-    fontSize: 12,
-    fontWeight: 600,
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    fontFamily: "Inter, sans-serif",
+    backgroundColor: C.bg,
+    borderRadius: "10px",
+    "& fieldset": { borderColor: C.border },
+    "&:hover fieldset": { borderColor: C.accent },
+    "&.Mui-focused fieldset": { borderColor: C.accent, borderWidth: "2px" },
+  },
+  "& .MuiInputLabel-root": {
+    fontFamily: "Inter, sans-serif",
     color: C.textMuted,
-    px: 1,
-    mb: 1,
-    letterSpacing: 1,
-    textTransform: "uppercase" as const,
+    "&.Mui-focused": { color: C.accent },
+  },
+  "& .MuiInputBase-input": { color: C.textPrimary },
+  "& .MuiSelect-icon": { color: C.textMuted },
+};
+
+const switchSx = {
+  "& .MuiSwitch-switchBase.Mui-checked": { color: C.accent },
+  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+    backgroundColor: C.accent,
+  },
+};
+
+function Section({
+  icon,
+  title,
+  badge,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  badge?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", overflow: "hidden", mb: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 3, py: 2, backgroundColor: C.bgPage, borderBottom: `1px solid ${C.border}` }}>
+        <Box sx={{ color: C.accent }}>{icon}</Box>
+        <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9rem", color: C.textPrimary, textTransform: "uppercase", letterSpacing: "0.05em", flex: 1 }}>
+          {title}
+        </Typography>
+        {badge && (
+          <Chip label={badge} size="small" sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.7rem", fontWeight: 600, backgroundColor: C.accentLight, color: C.accent, height: 22 }} />
+        )}
+      </Box>
+      <Box sx={{ p: 3 }}>{children}</Box>
+    </Paper>
+  );
+}
+
+function ToggleRow({ label, description, checked, onChange }: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, py: 1.5 }}>
+      <Box>
+        <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>
+          {label}
+        </Typography>
+        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>
+          {description}
+        </Typography>
+      </Box>
+      <Switch checked={checked} onChange={onChange} sx={switchSx} />
+    </Box>
+  );
+}
+
+export default function Settings() {
+  const [notifs, setNotifs] = useState<SettingRow[]>([
+    { id: "email_new",      label: "Nouveau ticket",      description: "Recevoir un email à chaque nouveau ticket créé",    value: true  },
+    { id: "email_assign",   label: "Ticket assigné",      description: "Recevoir un email quand un ticket vous est assigné", value: true  },
+    { id: "email_resolved", label: "Ticket résolu",       description: "Recevoir un email quand votre ticket est résolu",    value: false },
+    { id: "email_comment",  label: "Nouveau commentaire", description: "Recevoir un email pour chaque commentaire",          value: true  },
+  ]);
+
+  const [appearance, setAppearance] = useState<SettingRow[]>([
+    { id: "compact",    label: "Vue compacte",    description: "Afficher plus d'éléments dans les listes",   value: false },
+    { id: "animations", label: "Animations",      description: "Activer les animations d'interface",          value: true  },
+    { id: "sidebar",    label: "Sidebar réduite", description: "Réduire la barre latérale par défaut",        value: false },
+  ]);
+
+  const [language, setLanguage]     = useState("fr");
+  const [timezone, setTimezone]     = useState("Africa/Tunis");
+  const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
+  const [prefSaved, setPrefSaved]   = useState(false);
+  const [prefLoading, setPrefLoading] = useState(false);
+
+  const [security, setSecurity] = useState<SettingRow[]>([
+    { id: "2fa",         label: "Double authentification", description: "Ajouter une couche de sécurité supplémentaire", value: false },
+    { id: "session_log", label: "Journal des sessions",    description: "Enregistrer les connexions et déconnexions",    value: true  },
+    { id: "auto_logout", label: "Déconnexion automatique", description: "Se déconnecter après 30 min d'inactivité",     value: false },
+  ]);
+
+  const toggleNotif      = (id: string) => setNotifs((p)      => p.map((n) => n.id === id ? { ...n, value: !n.value } : n));
+  const toggleAppearance = (id: string) => setAppearance((p)  => p.map((a) => a.id === id ? { ...a, value: !a.value } : a));
+  const toggleSecurity   = (id: string) => setSecurity((p)    => p.map((s) => s.id === id ? { ...s, value: !s.value } : s));
+
+  const handleSavePref = async () => {
+    setPrefLoading(true);
+    await new Promise((r) => setTimeout(r, 800));
+    setPrefLoading(false);
+    setPrefSaved(true);
+    setTimeout(() => setPrefSaved(false), 3000);
   };
 
   return (
-    <Box sx={{ flex: 1, p: 4, bgcolor: C.bg }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: C.bgPage, fontFamily: "Inter, sans-serif", p: { xs: 2, md: 4 }, maxWidth: 860, mx: "auto" }}>
+
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography fontSize={26} fontWeight={700} color={C.textPrimary}>Settings</Typography>
-        <Typography fontSize={14} color={C.textSecondary} mt={0.5}>Manage your preferences and account</Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
+        <Box sx={{ width: 44, height: 44, borderRadius: "12px", backgroundColor: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <SettingsIcon sx={{ color: C.accent, fontSize: 22 }} />
+        </Box>
+        <Box>
+          <Typography variant="h5" sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>
+            Paramètres
+          </Typography>
+          <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "Inter, sans-serif" }}>
+            Configurez votre expérience TicketFlow
+          </Typography>
+        </Box>
       </Box>
 
-      {/* ── Appearance ── */}
-      <Typography sx={labelStyle}>Appearance</Typography>
-      <Box sx={sectionStyle}>
-        <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${C.border}` }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Box sx={iconBoxStyle}><Palette sx={{ fontSize: 18 }} /></Box>
-            <Typography fontSize={15} fontWeight={600} color={C.textPrimary}>Appearance</Typography>
+      {/* 1. Notifications */}
+      <Section icon={<NotifIcon />} title="Notifications" badge="Email">
+        {notifs.map((n, i) => (
+          <Box key={n.id}>
+            <ToggleRow label={n.label} description={n.description} checked={n.value} onChange={() => toggleNotif(n.id)} />
+            {i < notifs.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
           </Box>
-        </Box>
+        ))}
+      </Section>
 
-        <Box sx={rowStyle}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>Dark mode</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Switch between light and dark theme</Typography>
+      {/* 2. Apparence */}
+      <Section icon={<PaletteIcon />} title="Apparence">
+        {appearance.map((a, i) => (
+          <Box key={a.id}>
+            <ToggleRow label={a.label} description={a.description} checked={a.value} onChange={() => toggleAppearance(a.id)} />
+            {i < appearance.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
           </Box>
-          <Switch checked={darkMode} onChange={(e) => setDarkMode(e.target.checked)} sx={switchStyle} />
-        </Box>
+        ))}
+      </Section>
 
-        <Divider sx={{ borderColor: C.border, mx: 3 }} />
-
-        <Box sx={rowStyle}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>Language</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Choose your preferred language</Typography>
-          </Box>
-          <TextField
-            select value={language}
-            onChange={(e) => { setLanguage(e.target.value); setSuccess("Language updated!"); }}
-            size="small"
-            sx={{
-              width: 150,
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2, bgcolor: "#1C1410", color: C.textPrimary,
-                "& fieldset": { borderColor: C.border },
-                "&:hover fieldset": { borderColor: "rgba(245,158,11,0.3)" },
-                "&.Mui-focused fieldset": { borderColor: C.accent },
-              },
-              "& .MuiSelect-icon": { color: C.textSecondary },
-            }}
-          >
-            <MenuItem value="english">English</MenuItem>
-            <MenuItem value="french">Français</MenuItem>
-            <MenuItem value="arabic">العربية</MenuItem>
+      {/* 3. Préférences */}
+      <Section icon={<LanguageIcon />} title="Préférences régionales">
+        {prefSaved && (
+          <Alert severity="success" icon={<CheckIcon />} sx={{ mb: 3, backgroundColor: C.successBg, color: C.success, border: `1px solid ${C.success}40`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.success } }}>
+            Préférences enregistrées !
+          </Alert>
+        )}
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2.5, mb: 3 }}>
+          <TextField select label="Langue" value={language} onChange={(e) => setLanguage(e.target.value)} sx={inputSx}>
+            {[{ value: "fr", label: "Français" }, { value: "en", label: "English" }, { value: "ar", label: "العربية" }].map((o) => (
+              <MenuItem key={o.value} value={o.value} sx={{ fontFamily: "Inter, sans-serif", color: C.textPrimary, "&:hover": { backgroundColor: C.accentLight } }}>{o.label}</MenuItem>
+            ))}
+          </TextField>
+          <TextField select label="Fuseau horaire" value={timezone} onChange={(e) => setTimezone(e.target.value)} sx={inputSx}>
+            {[{ value: "Africa/Tunis", label: "Tunis (UTC+1)" }, { value: "Europe/Paris", label: "Paris (UTC+1)" }, { value: "UTC", label: "UTC (UTC+0)" }].map((o) => (
+              <MenuItem key={o.value} value={o.value} sx={{ fontFamily: "Inter, sans-serif", color: C.textPrimary, "&:hover": { backgroundColor: C.accentLight } }}>{o.label}</MenuItem>
+            ))}
+          </TextField>
+          <TextField select label="Format de date" value={dateFormat} onChange={(e) => setDateFormat(e.target.value)} sx={inputSx}>
+            {[{ value: "DD/MM/YYYY", label: "DD/MM/YYYY" }, { value: "MM/DD/YYYY", label: "MM/DD/YYYY" }, { value: "YYYY-MM-DD", label: "YYYY-MM-DD" }].map((o) => (
+              <MenuItem key={o.value} value={o.value} sx={{ fontFamily: "Inter, sans-serif", color: C.textPrimary, "&:hover": { backgroundColor: C.accentLight } }}>{o.label}</MenuItem>
+            ))}
           </TextField>
         </Box>
-      </Box>
-
-      {/* ── Notifications ── */}
-      <Typography sx={labelStyle}>Notifications</Typography>
-      <Box sx={sectionStyle}>
-        <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${C.border}` }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Box sx={iconBoxStyle}><Notifications sx={{ fontSize: 18 }} /></Box>
-            <Typography fontSize={15} fontWeight={600} color={C.textPrimary}>Notifications</Typography>
-          </Box>
+        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+          <Button variant="contained" onClick={handleSavePref} disabled={prefLoading}
+            startIcon={prefLoading ? <CircularProgress size={16} sx={{ color: C.navy }} /> : <CheckIcon />}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.accentHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+            {prefLoading ? "Enregistrement…" : "Enregistrer"}
+          </Button>
         </Box>
+      </Section>
 
-        <Box sx={rowStyle}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>Email notifications</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Receive notifications via email</Typography>
+      {/* 4. Sécurité */}
+      <Section icon={<SecurityIcon />} title="Sécurité">
+        {security.map((s, i) => (
+          <Box key={s.id}>
+            <ToggleRow label={s.label} description={s.description} checked={s.value} onChange={() => toggleSecurity(s.id)} />
+            {i < security.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
           </Box>
-          <Switch checked={notifEmail} onChange={(e) => setNotifEmail(e.target.checked)} sx={switchStyle} />
-        </Box>
+        ))}
+      </Section>
 
-        <Divider sx={{ borderColor: C.border, mx: 3 }} />
-
-        <Box sx={rowStyle}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>Ticket assigned</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Notify when a ticket is assigned to you</Typography>
-          </Box>
-          <Switch checked={notifAssigned} onChange={(e) => setNotifAssigned(e.target.checked)} disabled={!notifEmail} sx={switchStyle} />
-        </Box>
-
-        <Divider sx={{ borderColor: C.border, mx: 3 }} />
-
-        <Box sx={rowStyle}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>New comment</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Notify when someone comments on your ticket</Typography>
-          </Box>
-          <Switch checked={notifComment} onChange={(e) => setNotifComment(e.target.checked)} disabled={!notifEmail} sx={switchStyle} />
-        </Box>
-      </Box>
-
-      {/* ── Account ── */}
-      <Typography sx={labelStyle}>Account</Typography>
-      <Box sx={sectionStyle}>
-        <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${C.border}` }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Box sx={iconBoxStyle}><Person sx={{ fontSize: 18 }} /></Box>
-            <Typography fontSize={15} fontWeight={600} color={C.textPrimary}>Account</Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.hoverBg } }} onClick={() => navigate("/profile")}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>Edit profile</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Change your name and photo</Typography>
-          </Box>
-          <ChevronRight sx={{ color: C.textMuted, fontSize: 20 }} />
-        </Box>
-
-        <Divider sx={{ borderColor: C.border, mx: 3 }} />
-
-        <Box sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.hoverBg } }} onClick={() => navigate("/profile")}>
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.textPrimary}>Change password</Typography>
-            <Typography fontSize={12} color={C.textSecondary}>Update your security password</Typography>
-          </Box>
-          <Lock sx={{ color: C.textMuted, fontSize: 20 }} />
-        </Box>
-
-        <Divider sx={{ borderColor: C.border, mx: 3 }} />
-
-        <Box
-          sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.dangerBg } }}
-          onClick={() => { if (window.confirm("Are you sure?")) setSuccess("Account deletion requested."); }}
-        >
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize={14} color={C.danger}>Delete account</Typography>
-            <Typography fontSize={12} color="rgba(198,40,40,0.6)">Permanently delete your account and data</Typography>
-          </Box>
-          <Delete sx={{ color: C.danger, fontSize: 20 }} />
-        </Box>
-      </Box>
-
-      {/* ── System (admin only) ── */}
-      {isAdmin && (
-        <>
-          <Typography sx={labelStyle}>System</Typography>
-          <Box sx={sectionStyle}>
-            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${C.border}` }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <Box sx={iconBoxStyle}><AdminPanelSettings sx={{ fontSize: 18 }} /></Box>
-                <Typography fontSize={15} fontWeight={600} color={C.textPrimary}>System (Admin only)</Typography>
+      {/* 5. Données */}
+      <Section icon={<StorageIcon />} title="Données & Confidentialité">
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {[
+            { label: "Exporter mes données",   description: "Télécharger toutes vos données en format JSON",                          btnLabel: "Exporter",  btnColor: C.accent,  btnHover: C.accentHover, textColor: C.navy  },
+            { label: "Supprimer mon compte",   description: "Supprimer définitivement votre compte et toutes vos données",            btnLabel: "Supprimer", btnColor: C.danger,  btnHover: C.dangerHover, textColor: "#fff"  },
+          ].map((row) => (
+            <Box key={row.label} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, p: 2, borderRadius: "12px", border: `1px solid ${C.border}`, backgroundColor: C.bgPage, flexWrap: "wrap" }}>
+              <Box>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>{row.label}</Typography>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>{row.description}</Typography>
               </Box>
-            </Box>
-
-            <Box sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.hoverBg } }} onClick={() => setSuccess("Export started!")}>
-              <Box sx={{ flex: 1 }}>
-                <Typography fontSize={14} color={C.textPrimary}>Export tickets</Typography>
-                <Typography fontSize={12} color={C.textSecondary}>Download all tickets as CSV</Typography>
-              </Box>
-              <Button variant="contained" disableElevation size="small" startIcon={<Download sx={{ fontSize: 16 }} />}
-                sx={{ bgcolor: C.accent, color: "#1C1410", textTransform: "none", borderRadius: 2, fontWeight: 700, fontSize: 12, "&:hover": { bgcolor: C.accentHover } }}
-              >
-                Export CSV
+              <Button variant="contained" size="small"
+                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8rem", backgroundColor: row.btnColor, color: row.textColor, borderRadius: "8px", textTransform: "none", px: 2, "&:hover": { backgroundColor: row.btnHover } }}>
+                {row.btnLabel}
               </Button>
             </Box>
-
-            <Divider sx={{ borderColor: C.border, mx: 3 }} />
-
-            <Box sx={{ ...rowStyle, cursor: "pointer", "&:hover": { bgcolor: C.hoverBg } }} onClick={() => navigate("/users")}>
-              <Box sx={{ flex: 1 }}>
-                <Typography fontSize={14} color={C.textPrimary}>Manage users</Typography>
-                <Typography fontSize={12} color={C.textSecondary}>Add, remove and manage team members</Typography>
-              </Box>
-              <ChevronRight sx={{ color: C.textMuted, fontSize: 20 }} />
-            </Box>
-          </Box>
-        </>
-      )}
-
-      <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-        <Alert severity="success" onClose={() => setSuccess("")} sx={{ borderRadius: 2 }}>{success}</Alert>
-      </Snackbar>
+          ))}
+        </Box>
+      </Section>
     </Box>
   );
-};
-
-export default Settings;
+}
