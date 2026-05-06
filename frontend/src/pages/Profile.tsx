@@ -76,6 +76,10 @@ const inputSx = {
   "& .MuiInputBase-input": { color: C.textPrimary },
 };
 
+const apiUrl = (
+  import.meta.env.VITE_API_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
+
 export default function Profile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,25 +100,37 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("/api/users/me", {
+        // ✅ Correct endpoint avec apiUrl
+        const res = await fetch(`${apiUrl}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json();
-        setProfile(data);
-        setInfoForm({ name: data.name, email: data.email });
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data);
+          setInfoForm({ name: data.name, email: data.email });
+        } else {
+          throw new Error("Failed to fetch");
+        }
       } catch {
+        // Fallback JWT
         const token = localStorage.getItem("token");
         if (token) {
           try {
             const payload = JSON.parse(atob(token.split(".")[1]));
+            // ✅ Récupérer aussi depuis localStorage user
+            const storedUser = localStorage.getItem("user");
+            const storedUserData = storedUser ? JSON.parse(storedUser) : null;
             setProfile({
               _id: payload.id ?? payload._id ?? "",
               name: payload.name ?? "Utilisateur",
-              email: payload.email ?? "",
+              email: storedUserData?.email ?? payload.email ?? "",
               role: payload.role ?? "user",
               createdAt: new Date().toISOString(),
             });
-            setInfoForm({ name: payload.name ?? "", email: payload.email ?? "" });
+            setInfoForm({
+              name: payload.name ?? "",
+              email: storedUserData?.email ?? payload.email ?? "",
+            });
           } catch {}
         }
       } finally {
@@ -131,7 +147,8 @@ export default function Profile() {
     setInfoError(null);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/users/${profile?._id}`, {
+      // ✅ Correct endpoint
+      const res = await fetch(`${apiUrl}/api/users/${profile?._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -145,6 +162,12 @@ export default function Profile() {
       }
       const updated = await res.json();
       setProfile((p) => p ? { ...p, name: updated.name, email: updated.email } : p);
+      // ✅ Mettre à jour localStorage aussi
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        localStorage.setItem("user", JSON.stringify({ ...userData, name: updated.name, email: updated.email }));
+      }
       setInfoSuccess(true);
       setEditInfo(false);
       setTimeout(() => setInfoSuccess(false), 3000);
@@ -164,7 +187,8 @@ export default function Profile() {
     setPwdError(null);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/users/change-password", {
+      // ✅ Correct endpoint : /api/profile/:id/password
+      const res = await fetch(`${apiUrl}/api/profile/${profile?._id}/password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

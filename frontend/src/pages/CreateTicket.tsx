@@ -30,13 +30,9 @@ import {
 import { C, priorityColors } from "../theme";
 
 type Priority = "low" | "medium" | "high" | "critical";
-type Category =
-  | "technical"
-  | "billing"
-  | "access"
-  | "hardware"
-  | "software"
-  | "other";
+
+// ✅ Catégories qui matchent exactement le schema MongoDB
+type Category = "hardware" | "software" | "network" | "access" | "other";
 
 interface FormData {
   title: string;
@@ -53,14 +49,19 @@ const PRIORITIES: { value: Priority; label: string; icon: React.ReactNode }[] = 
   { value: "critical", label: "Critique", icon: <UrgentIcon fontSize="small" /> },
 ];
 
+// ✅ Catégories corrigées
 const CATEGORIES: { value: Category; label: string }[] = [
-  { value: "technical", label: "Problème technique" },
-  { value: "billing",   label: "Facturation" },
-  { value: "access",    label: "Accès / Permissions" },
-  { value: "hardware",  label: "Matériel" },
-  { value: "software",  label: "Logiciel" },
-  { value: "other",     label: "Autre" },
+  { value: "hardware", label: "Matériel" },
+  { value: "software", label: "Logiciel" },
+  { value: "network",  label: "Réseau" },
+  { value: "access",   label: "Accès / Permissions" },
+  { value: "other",    label: "Autre" },
 ];
+
+// ✅ apiUrl correct
+const apiUrl = (
+  import.meta.env.VITE_API_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -87,7 +88,7 @@ export default function CreateTicket() {
     title: "",
     description: "",
     priority: "medium",
-    category: "technical",
+    category: "hardware",
     attachments: [],
   });
   const [loading, setLoading] = useState(false);
@@ -135,7 +136,8 @@ export default function CreateTicket() {
         category: form.category,
       };
 
-      const res = await fetch("/api/tickets", {
+      // ✅ apiUrl correct
+      const res = await fetch(`${apiUrl}/api/tickets`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,9 +197,7 @@ export default function CreateTicket() {
         </Alert>
       )}
 
-      {/* ✅ MUI v6 : size={{ xs: 12, md: 8 }} au lieu de item xs={12} md={8} */}
       <Grid container spacing={3}>
-
         {/* LEFT */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3 }}>
@@ -309,7 +309,6 @@ export default function CreateTicket() {
             {loading ? "Création en cours…" : success ? "Ticket créé ✓" : "Créer le ticket"}
           </Button>
         </Grid>
-
       </Grid>
     </Box>
   );

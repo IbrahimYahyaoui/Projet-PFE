@@ -30,8 +30,8 @@ import { C, statusColors, priorityColors } from "../theme";
 
 interface Comment {
   _id: string;
-  user: { _id: string; name: string };
-  text: string;
+  userId: { _id: string; name: string }; // ✅ userId au lieu de user
+  content: string;                        // ✅ content au lieu de text
   createdAt: string;
 }
 
@@ -69,7 +69,6 @@ const TicketDetails = () => {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [techList, setTechList] = useState<User[]>([]);
 
-  // Edit fields
   const [editStatus, setEditStatus] = useState("");
   const [editAssignedTo, setEditAssignedTo] = useState("");
 
@@ -166,7 +165,7 @@ const TicketDetails = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ text: comment }),
+        body: JSON.stringify({ content: comment }), // ✅ content au lieu de text
       });
       if (res.ok) {
         await fetchTicket();
@@ -215,31 +214,14 @@ const TicketDetails = () => {
   }
 
   return (
-    <Box sx={{
-      flex: 1,
-      p: 3,
-      bgcolor: C.bgPage,
-      fontFamily: "Inter, sans-serif",
-    }}>
+    <Box sx={{ flex: 1, p: 3, bgcolor: C.bgPage, fontFamily: "Inter, sans-serif" }}>
 
-      {/* ── Header ── */}
-      <Box sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        mb: 3,
-      }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate(-1)}
-          sx={{
-            color: C.slate,
-            textTransform: "none",
-            fontFamily: "Inter, sans-serif",
-            fontSize: 13,
-            "&:hover": { color: C.accent, bgcolor: C.accentLight },
-            borderRadius: "8px",
-          }}
+          sx={{ color: C.slate, textTransform: "none", fontFamily: "Inter, sans-serif", fontSize: 13, "&:hover": { color: C.accent, bgcolor: C.accentLight }, borderRadius: "8px" }}
         >
           Back
         </Button>
@@ -248,81 +230,24 @@ const TicketDetails = () => {
           <Box sx={{ display: "flex", gap: 1 }}>
             {isEditing ? (
               <>
-                <Button
-                  startIcon={<Save />}
-                  onClick={handleSave}
-                  variant="contained"
-                  disableElevation
-                  sx={{
-                    bgcolor: C.accent,
-                    color: C.navy,
-                    textTransform: "none",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    fontFamily: "Inter, sans-serif",
-                    "&:hover": { bgcolor: C.accentHover },
-                  }}
-                >
+                <Button startIcon={<Save />} onClick={handleSave} variant="contained" disableElevation
+                  sx={{ bgcolor: C.accent, color: C.navy, textTransform: "none", borderRadius: "8px", fontWeight: 600, fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { bgcolor: C.accentHover } }}>
                   Save changes
                 </Button>
-                <Button
-                  startIcon={<Close />}
-                  onClick={() => setIsEditing(false)}
-                  variant="outlined"
-                  disableElevation
-                  sx={{
-                    borderColor: C.border,
-                    color: C.slate,
-                    textTransform: "none",
-                    borderRadius: "8px",
-                    fontSize: 13,
-                    fontFamily: "Inter, sans-serif",
-                    "&:hover": { borderColor: C.accent, color: C.accent },
-                  }}
-                >
+                <Button startIcon={<Close />} onClick={() => setIsEditing(false)} variant="outlined" disableElevation
+                  sx={{ borderColor: C.border, color: C.slate, textTransform: "none", borderRadius: "8px", fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { borderColor: C.accent, color: C.accent } }}>
                   Cancel
                 </Button>
               </>
             ) : (
               <>
-                <Button
-                  startIcon={<Edit />}
-                  onClick={() => setIsEditing(true)}
-                  variant="outlined"
-                  disableElevation
-                  sx={{
-                    borderColor: C.border,
-                    color: C.slate,
-                    textTransform: "none",
-                    borderRadius: "8px",
-                    fontSize: 13,
-                    fontFamily: "Inter, sans-serif",
-                    "&:hover": { borderColor: C.accent, color: C.accent },
-                  }}
-                >
+                <Button startIcon={<Edit />} onClick={() => setIsEditing(true)} variant="outlined" disableElevation
+                  sx={{ borderColor: C.border, color: C.slate, textTransform: "none", borderRadius: "8px", fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { borderColor: C.accent, color: C.accent } }}>
                   Edit
                 </Button>
                 {isAdmin && (
-                  <Button
-                    startIcon={<Delete />}
-                    onClick={() => setDeleteDialog(true)}
-                    variant="outlined"
-                    disableElevation
-                    sx={{
-                      borderColor: C.border,
-                      color: C.textMuted,
-                      textTransform: "none",
-                      borderRadius: "8px",
-                      fontSize: 13,
-                      fontFamily: "Inter, sans-serif",
-                      "&:hover": {
-                        borderColor: C.danger,
-                        color: C.danger,
-                        bgcolor: C.dangerBg,
-                      },
-                    }}
-                  >
+                  <Button startIcon={<Delete />} onClick={() => setDeleteDialog(true)} variant="outlined" disableElevation
+                    sx={{ borderColor: C.border, color: C.textMuted, textTransform: "none", borderRadius: "8px", fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { borderColor: C.danger, color: C.danger, bgcolor: C.dangerBg } }}>
                     Delete
                   </Button>
                 )}
@@ -332,115 +257,43 @@ const TicketDetails = () => {
         )}
       </Box>
 
-      {/* ── Main Grid ── */}
+      {/* Main Grid */}
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 3 }}>
 
-        {/* ── LEFT: Ticket content ── */}
+        {/* LEFT */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
           {/* Title + Badges */}
-          <Box sx={{
-            bgcolor: C.card,
-            borderRadius: "10px",
-            border: `1px solid ${C.border}`,
-            p: 3,
-          }}>
-            <Typography
-              variant="h5"
-              fontWeight={700}
-              color={C.navy}
-              fontFamily="Inter, sans-serif"
-              sx={{ letterSpacing: "-0.3px", mb: 1.5 }}
-            >
+          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
+            <Typography variant="h5" fontWeight={700} color={C.navy} fontFamily="Inter, sans-serif" sx={{ letterSpacing: "-0.3px", mb: 1.5 }}>
               {ticket.title}
             </Typography>
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Chip
-                label={ticket.status.replace("_", " ")}
-                size="small"
-                sx={{
-                  bgcolor: statusColors[ticket.status]?.bg,
-                  color: statusColors[ticket.status]?.text,
-                  border: `1px solid ${statusColors[ticket.status]?.border}`,
-                  fontWeight: 600,
-                  fontSize: 11,
-                  textTransform: "capitalize",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              />
-              <Chip
-                label={ticket.priority}
-                size="small"
-                sx={{
-                  bgcolor: priorityColors[ticket.priority]?.bg,
-                  color: priorityColors[ticket.priority]?.text,
-                  border: `1px solid ${priorityColors[ticket.priority]?.border}`,
-                  fontWeight: 600,
-                  fontSize: 11,
-                  textTransform: "capitalize",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              />
-              <Chip
-                label={ticket.category}
-                size="small"
-                sx={{
-                  bgcolor: "#F8FAFC",
-                  color: C.slate,
-                  border: `1px solid ${C.border}`,
-                  fontWeight: 500,
-                  fontSize: 11,
-                  textTransform: "capitalize",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              />
+              <Chip label={ticket.status.replace("_", " ")} size="small"
+                sx={{ bgcolor: statusColors[ticket.status]?.bg, color: statusColors[ticket.status]?.text, border: `1px solid ${statusColors[ticket.status]?.border}`, fontWeight: 600, fontSize: 11, textTransform: "capitalize", fontFamily: "Inter, sans-serif" }} />
+              <Chip label={ticket.priority} size="small"
+                sx={{ bgcolor: priorityColors[ticket.priority]?.bg, color: priorityColors[ticket.priority]?.text, border: `1px solid ${priorityColors[ticket.priority]?.border}`, fontWeight: 600, fontSize: 11, textTransform: "capitalize", fontFamily: "Inter, sans-serif" }} />
+              <Chip label={ticket.category} size="small"
+                sx={{ bgcolor: "#F8FAFC", color: C.slate, border: `1px solid ${C.border}`, fontWeight: 500, fontSize: 11, textTransform: "capitalize", fontFamily: "Inter, sans-serif" }} />
             </Box>
           </Box>
 
           {/* Description */}
-          <Box sx={{
-            bgcolor: C.card,
-            borderRadius: "10px",
-            border: `1px solid ${C.border}`,
-            p: 3,
-          }}>
-            <Typography
-              fontSize={13}
-              fontWeight={600}
-              color={C.textMuted}
-              fontFamily="Inter, sans-serif"
-              sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}
-            >
+          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
+            <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}>
               Description
             </Typography>
-            <Typography
-              fontSize={14}
-              color={C.navy}
-              fontFamily="Inter, sans-serif"
-              sx={{ lineHeight: 1.7 }}
-            >
+            <Typography fontSize={14} color={C.navy} fontFamily="Inter, sans-serif" sx={{ lineHeight: 1.7 }}>
               {ticket.description}
             </Typography>
           </Box>
 
           {/* Comments */}
-          <Box sx={{
-            bgcolor: C.card,
-            borderRadius: "10px",
-            border: `1px solid ${C.border}`,
-            p: 3,
-          }}>
-            <Typography
-              fontSize={13}
-              fontWeight={600}
-              color={C.textMuted}
-              fontFamily="Inter, sans-serif"
-              sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}
-            >
+          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
+            <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}>
               Comments ({ticket.comments.length})
             </Typography>
 
-            {/* Comments list */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 3, maxHeight: 350, overflowY: "auto" }}>
               {ticket.comments.length === 0 ? (
                 <Typography fontSize={13} color={C.textMuted} fontFamily="Inter, sans-serif">
@@ -450,35 +303,24 @@ const TicketDetails = () => {
                 ticket.comments.map((c) => (
                   <Box key={c._id}>
                     <Box sx={{ display: "flex", gap: 1.5, mb: 1 }}>
-                      <Avatar
-                        sx={{
-                          width: 32, height: 32,
-                          bgcolor: C.accentLight,
-                          color: C.accent,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          border: `1.5px solid ${C.border}`,
-                        }}
-                      >
-                        {c.user.name.charAt(0).toUpperCase()}
+                      <Avatar sx={{ width: 32, height: 32, bgcolor: C.accentLight, color: C.accent, fontSize: 12, fontWeight: 700, border: `1.5px solid ${C.border}` }}>
+                        {/* ✅ c.userId.name au lieu de c.user.name */}
+                        {c.userId?.name?.charAt(0).toUpperCase()}
                       </Avatar>
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                           <Typography fontSize={13} fontWeight={600} color={C.navy} fontFamily="Inter, sans-serif">
-                            {c.user.name}
+                            {/* ✅ c.userId.name au lieu de c.user.name */}
+                            {c.userId?.name}
                           </Typography>
                           <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif">
                             {new Date(c.createdAt).toLocaleString()}
                           </Typography>
                         </Box>
-                        <Box sx={{
-                          bgcolor: C.bgPage,
-                          borderRadius: "8px",
-                          p: 1.5,
-                          border: `1px solid ${C.border}`,
-                        }}>
+                        <Box sx={{ bgcolor: C.bgPage, borderRadius: "8px", p: 1.5, border: `1px solid ${C.border}` }}>
                           <Typography fontSize={13} color={C.navy} fontFamily="Inter, sans-serif" sx={{ lineHeight: 1.6 }}>
-                            {c.text}
+                            {/* ✅ c.content au lieu de c.text */}
+                            {c.content}
                           </Typography>
                         </Box>
                       </Box>
@@ -492,60 +334,28 @@ const TicketDetails = () => {
 
             {/* Add comment */}
             <Box sx={{ display: "flex", gap: 1.5 }}>
-              <Avatar
-                sx={{
-                  width: 32, height: 32,
-                  bgcolor: C.accentLight,
-                  color: C.accent,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: C.accentLight, color: C.accent, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                 {user?.name?.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ flex: 1, display: "flex", gap: 1 }}>
                 <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
+                  fullWidth multiline rows={2}
                   placeholder="Write a comment..."
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   size="small"
                   sx={{
                     "& .MuiOutlinedInput-root": {
-                      bgcolor: C.bgPage,
-                      borderRadius: "8px",
-                      fontSize: 13,
-                      color: C.navy,
-                      fontFamily: "Inter, sans-serif",
+                      bgcolor: C.bgPage, borderRadius: "8px", fontSize: 13, color: C.navy, fontFamily: "Inter, sans-serif",
                       "& fieldset": { borderColor: C.border },
                       "&:hover fieldset": { borderColor: C.accent },
                       "&.Mui-focused fieldset": { borderColor: C.accent },
                     },
-                    "& .MuiOutlinedInput-input::placeholder": {
-                      color: C.textMuted,
-                      opacity: 1,
-                    },
+                    "& .MuiOutlinedInput-input::placeholder": { color: C.textMuted, opacity: 1 },
                   }}
                 />
-                <Button
-                  variant="contained"
-                  disableElevation
-                  onClick={handleComment}
-                  disabled={sending || !comment.trim()}
-                  sx={{
-                    bgcolor: C.accent,
-                    color: C.navy,
-                    minWidth: 44,
-                    height: 44,
-                    borderRadius: "8px",
-                    alignSelf: "flex-end",
-                    "&:hover": { bgcolor: C.accentHover },
-                    "&:disabled": { opacity: 0.5 },
-                  }}
-                >
+                <Button variant="contained" disableElevation onClick={handleComment} disabled={sending || !comment.trim()}
+                  sx={{ bgcolor: C.accent, color: C.navy, minWidth: 44, height: 44, borderRadius: "8px", alignSelf: "flex-end", "&:hover": { bgcolor: C.accentHover }, "&:disabled": { opacity: 0.5 } }}>
                   <Send sx={{ fontSize: 16 }} />
                 </Button>
               </Box>
@@ -553,32 +363,17 @@ const TicketDetails = () => {
           </Box>
         </Box>
 
-        {/* ── RIGHT: Details sidebar ── */}
+        {/* RIGHT */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
           {/* Details */}
-          <Box sx={{
-            bgcolor: C.card,
-            borderRadius: "10px",
-            border: `1px solid ${C.border}`,
-            p: 3,
-          }}>
-            <Typography
-              fontSize={13}
-              fontWeight={600}
-              color={C.textMuted}
-              fontFamily="Inter, sans-serif"
-              sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}
-            >
+          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
+            <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}>
               Details
             </Typography>
-
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {/* Created by */}
               <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>
-                  Created by
-                </Typography>
+                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Created by</Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Avatar sx={{ width: 24, height: 24, bgcolor: C.accentLight, color: C.accent, fontSize: 10, fontWeight: 700 }}>
                     {ticket.createdBy.name.charAt(0)}
@@ -588,78 +383,49 @@ const TicketDetails = () => {
                   </Typography>
                 </Box>
               </Box>
-
-              {/* Category */}
               <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>
-                  Category
-                </Typography>
+                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Category</Typography>
                 <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif" sx={{ textTransform: "capitalize" }}>
                   {ticket.category}
                 </Typography>
               </Box>
-
-              {/* Created at */}
               <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>
-                  Created at
-                </Typography>
+                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Created at</Typography>
                 <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif">
                   {new Date(ticket.createdAt).toLocaleString()}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Assigned to</Typography>
+                <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif">
+                  {ticket.assignedTo?.name || <span style={{ color: C.textMuted, fontStyle: "italic" }}>Unassigned</span>}
                 </Typography>
               </Box>
             </Box>
           </Box>
 
-          {/* Actions (Edit mode) */}
+          {/* Actions */}
           {canEdit && (
-            <Box sx={{
-              bgcolor: C.card,
-              borderRadius: "10px",
-              border: `1px solid ${C.border}`,
-              p: 3,
-            }}>
-              <Typography
-                fontSize={13}
-                fontWeight={600}
-                color={C.textMuted}
-                fontFamily="Inter, sans-serif"
-                sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}
-              >
+            <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
+              <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}>
                 Actions
               </Typography>
-
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {/* Status */}
                 <FormControl fullWidth size="small" sx={selectSx}>
                   <InputLabel>Status</InputLabel>
-                  <Select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                    label="Status"
-                    disabled={!isEditing}
-                  >
+                  <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} label="Status" disabled={!isEditing}>
                     <MenuItem value="open">Open</MenuItem>
                     <MenuItem value="in_progress">In Progress</MenuItem>
                     <MenuItem value="resolved">Resolved</MenuItem>
                     <MenuItem value="closed">Closed</MenuItem>
                   </Select>
                 </FormControl>
-
-                {/* Assign to */}
                 <FormControl fullWidth size="small" sx={selectSx}>
                   <InputLabel>Assign to</InputLabel>
-                  <Select
-                    value={editAssignedTo}
-                    onChange={(e) => setEditAssignedTo(e.target.value)}
-                    label="Assign to"
-                    disabled={!isEditing}
-                  >
+                  <Select value={editAssignedTo} onChange={(e) => setEditAssignedTo(e.target.value)} label="Assign to" disabled={!isEditing}>
                     <MenuItem value="">Unassigned</MenuItem>
                     {techList.map((tech) => (
-                      <MenuItem key={tech._id} value={tech._id}>
-                        {tech.name}
-                      </MenuItem>
+                      <MenuItem key={tech._id} value={tech._id}>{tech.name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -669,53 +435,21 @@ const TicketDetails = () => {
         </Box>
       </Box>
 
-      {/* ── Delete Dialog ── */}
-      <Dialog
-        open={deleteDialog}
-        onClose={() => setDeleteDialog(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: "12px",
-            border: `1px solid ${C.border}`,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.12)",
-          },
-        }}
-      >
-        <DialogTitle sx={{ color: C.navy, fontFamily: "Inter, sans-serif", fontWeight: 700 }}>
-          Delete Ticket
-        </DialogTitle>
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}
+        PaperProps={{ sx: { borderRadius: "12px", border: `1px solid ${C.border}`, boxShadow: "0 20px 60px rgba(0,0,0,0.12)" } }}>
+        <DialogTitle sx={{ color: C.navy, fontFamily: "Inter, sans-serif", fontWeight: 700 }}>Delete Ticket</DialogTitle>
         <DialogContent>
           <Typography fontSize={14} color={C.textSecondary} fontFamily="Inter, sans-serif">
             Are you sure you want to delete <strong>"{ticket.title}"</strong>? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => setDeleteDialog(false)}
-            sx={{
-              color: C.slate,
-              textTransform: "none",
-              fontFamily: "Inter, sans-serif",
-              borderRadius: "8px",
-              "&:hover": { bgcolor: C.bgPage },
-            }}
-          >
+          <Button onClick={() => setDeleteDialog(false)} sx={{ color: C.slate, textTransform: "none", fontFamily: "Inter, sans-serif", borderRadius: "8px", "&:hover": { bgcolor: C.bgPage } }}>
             Cancel
           </Button>
-          <Button
-            onClick={handleDelete}
-            variant="contained"
-            disableElevation
-            sx={{
-              bgcolor: C.danger,
-              color: "#FFFFFF",
-              textTransform: "none",
-              fontFamily: "Inter, sans-serif",
-              borderRadius: "8px",
-              fontWeight: 600,
-              "&:hover": { bgcolor: C.dangerHover },
-            }}
-          >
+          <Button onClick={handleDelete} variant="contained" disableElevation
+            sx={{ bgcolor: C.danger, color: "#FFFFFF", textTransform: "none", fontFamily: "Inter, sans-serif", borderRadius: "8px", fontWeight: 600, "&:hover": { bgcolor: C.dangerHover } }}>
             Delete
           </Button>
         </DialogActions>
