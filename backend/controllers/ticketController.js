@@ -1,14 +1,24 @@
 // backend/controllers/ticketController.js
 const Ticket = require("../schemas/ticket");
 const Notification = require("../schemas/notification");
+const History = require("../schemas/history");
 
-// ── Helper pour créer une notification ──
+// ── Helper notification ──
 const createNotification = async (userId, type, ticketId, message, triggeredBy) => {
   try {
-    if (userId.toString() === triggeredBy.toString()) return; // pas de notif à soi-même
+    if (userId.toString() === triggeredBy.toString()) return;
     await Notification.create({ userId, type, ticketId, message, triggeredBy });
   } catch (err) {
     console.log("Notification error:", err);
+  }
+};
+
+// ── Helper history ──
+const createHistory = async (ticketId, userId, action, oldValue = null, newValue = null) => {
+  try {
+    await History.create({ ticketId, userId, action, oldValue, newValue });
+  } catch (err) {
+    console.log("History error:", err);
   }
 };
 
@@ -57,7 +67,6 @@ const getTicketById = async (req, res) => {
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate("comments.userId", "name email role");
-
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
@@ -87,6 +96,9 @@ const createTicket = async (req, res) => {
     await ticket.save();
     await ticket.populate("createdBy", "name email role");
 
+    // ✅ History : ticket créé
+    await createHistory(ticket._id, req.user.id, 'created', null, title);
+
     res.status(201).json(ticket);
   } catch (error) {
     console.log(error);
@@ -98,7 +110,8 @@ const updateTicket = async (req, res) => {
   try {
     const { status, priority, category, assignedTo } = req.body;
 
-    const oldTicket = await Ticket.findById(req.params.id);
+    const oldTicket = await Ticket.findById(req.params.id)
+      .populate("assignedTo", "name");
     if (!oldTicket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
@@ -111,23 +124,37 @@ const updateTicket = async (req, res) => {
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role");
 
-    // ✅ Notification si ticket assigné à quelqu'un de nouveau
-    if (assignedTo && assignedTo !== oldTicket.assignedTo?.toString()) {
+    // ✅ History : status changé
+    if (status && status !== oldTicket.status) {
+      await createHistory(ticket._id, req.user.id, 'status_changed', oldTicket.status, status);
+    }
+
+    // ✅ History : priorité changée
+    if (priority && priority !== oldTicket.priority) {
+      await createHistory(ticket._id, req.user.id, 'priority_changed', oldTicket.priority, priority);
+    }
+
+    // ✅ History : assignation
+    if (assignedTo && assignedTo !== oldTicket.assignedTo?._id?.toString()) {
+      await createHistory(ticket._id, req.user.id, 'assigned', oldTicket.assignedTo?.name ?? null, ticket.assignedTo?.name ?? null);
+
+      // Notification
       await createNotification(
-        assignedTo,
-        'assigned',
-        ticket._id,
+        assignedTo, 'assigned', ticket._id,
         `Vous avez été assigné au ticket "${ticket.title}"`,
         req.user.id
       );
     }
 
-    // ✅ Notification si status changé — notifier le créateur
+    // ✅ History : désassignation
+    if (!assignedTo && oldTicket.assignedTo) {
+      await createHistory(ticket._id, req.user.id, 'unassigned', oldTicket.assignedTo?.name, null);
+    }
+
+    // ✅ Notification status changé
     if (status && status !== oldTicket.status) {
       await createNotification(
-        ticket.createdBy._id,
-        'status_changed',
-        ticket._id,
+        ticket.createdBy._id, 'status_changed', ticket._id,
         `Le statut de votre ticket "${ticket.title}" a changé : ${oldTicket.status} → ${status}`,
         req.user.id
       );
@@ -170,21 +197,19 @@ const addComment = async (req, res) => {
     await ticket.save();
     await ticket.populate("comments.userId", "name email role");
 
-    // ✅ Notification au créateur du ticket quand commentaire ajouté
+    // ✅ History : commentaire ajouté
+    await createHistory(ticket._id, req.user.id, 'commented', null, content);
+
+    // ✅ Notifications
     await createNotification(
-      ticket.createdBy,
-      'commented',
-      ticket._id,
+      ticket.createdBy, 'commented', ticket._id,
       `${req.user.name} a commenté votre ticket "${ticket.title}"`,
       req.user.id
     );
 
-    // ✅ Notification au technicien assigné si différent du commentateur
     if (ticket.assignedTo && ticket.assignedTo.toString() !== req.user.id) {
       await createNotification(
-        ticket.assignedTo,
-        'commented',
-        ticket._id,
+        ticket.assignedTo, 'commented', ticket._id,
         `${req.user.name} a commenté le ticket "${ticket.title}"`,
         req.user.id
       );

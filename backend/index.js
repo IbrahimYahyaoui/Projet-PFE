@@ -7,6 +7,7 @@ const userRoutes = require('./routes/user');
 const profileRoutes = require('./routes/profile');
 const ticketRoutes = require('./routes/ticket');
 const notificationRoutes = require('./routes/notification');
+const historyRoutes = require('./routes/history');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -41,6 +42,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/tickets', historyRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from TicketFlow API 🚀");
