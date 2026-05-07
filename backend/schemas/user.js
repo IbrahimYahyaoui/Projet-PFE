@@ -22,12 +22,18 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin' , "tech"],
+      enum: ['user', 'admin', 'tech'],
       default: 'user',
     },
     avatar: {
       type: String,
       default: '',
+    },
+    // ✅ Nouveau champ
+    teamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
     },
   },
   { timestamps: true }

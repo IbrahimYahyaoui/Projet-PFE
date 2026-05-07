@@ -9,7 +9,6 @@ import {
   InputBase,
   Divider,
   IconButton,
-  Badge,
   CircularProgress,
 } from "@mui/material";
 import {
@@ -59,10 +58,10 @@ const timeAgo = (date: string) => {
 
 const notifIcon = (type: string) => {
   switch (type) {
-    case "assigned":      return <AssignedIcon sx={{ fontSize: 16 }} />;
-    case "commented":     return <CommentIcon  sx={{ fontSize: 16 }} />;
-    case "status_changed":return <StatusIcon   sx={{ fontSize: 16 }} />;
-    default:              return <ConfirmationNumber sx={{ fontSize: 16 }} />;
+    case "assigned":       return <AssignedIcon sx={{ fontSize: 16 }} />;
+    case "commented":      return <CommentIcon  sx={{ fontSize: 16 }} />;
+    case "status_changed": return <StatusIcon   sx={{ fontSize: 16 }} />;
+    default:               return <ConfirmationNumber sx={{ fontSize: 16 }} />;
   }
 };
 
@@ -164,7 +163,6 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
-  // Fetch notifs au chargement + toutes les 30 secondes
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
@@ -233,20 +231,68 @@ const Layout = ({ children }: LayoutProps) => {
     navigate(`/tickets/${notif.ticketId._id}`);
   };
 
-  // Séparer notifications importantes (non lues) des autres
   const unreadNotifs = notifications.filter((n) => !n.read);
   const readNotifs   = notifications.filter((n) => n.read);
 
+  // ── Sidebar items ──
   const mainItems = [
-    { text: "Dashboard",      icon: <GridView sx={{ fontSize: 20 }} />,             path: "/Dashbord",         badge: 0 },
-    { text: "My tickets",     icon: <ConfirmationNumber sx={{ fontSize: 20 }} />,   path: "/my-tickets",       badge: myOpenCount },
-    { text: "Assigned to me", icon: <AssignmentInd sx={{ fontSize: 20 }} />,        path: "/assigned-tickets", badge: assignedCount, techOnly: true },
-    { text: "All tickets",    icon: <FormatListBulleted sx={{ fontSize: 20 }} />,   path: "/all-tickets",      badge: allOpenCount,  adminOnly: true },
-    { text: "Users",          icon: <People sx={{ fontSize: 20 }} />,               path: "/users",            adminOnly: true, badge: 0 },
+    {
+      text: "Dashboard",
+      icon: <GridView sx={{ fontSize: 20 }} />,
+      path: "/Dashbord",
+      badge: 0,
+    },
+    {
+      text: "My tickets",
+      icon: <ConfirmationNumber sx={{ fontSize: 20 }} />,
+      path: "/my-tickets",
+      badge: myOpenCount,
+    },
+    {
+      text: "Assigned to me",
+      icon: <AssignmentInd sx={{ fontSize: 20 }} />,
+      path: "/assigned-tickets",
+      badge: assignedCount,
+      techOnly: true,
+    },
+    {
+      text: "All tickets",
+      icon: <FormatListBulleted sx={{ fontSize: 20 }} />,
+      path: "/all-tickets",
+      badge: allOpenCount,
+      adminOnly: true,
+    },
+    {
+      text: "Users",
+      icon: <People sx={{ fontSize: 20 }} />,
+      path: "/users",
+      adminOnly: true,
+      badge: 0,
+    },
+    // ✅ My Team — icône spéciale plus grande
+    {
+      text: "My Team",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      ),
+      path: "/team",
+      badge: 0,
+      techOnly: true,
+    },
   ];
 
   const supportItems = [
-    { text: "Settings", icon: <TuneOutlined sx={{ fontSize: 20 }} />, path: "/settings", badge: 0 },
+    {
+      text: "Settings",
+      icon: <TuneOutlined sx={{ fontSize: 20 }} />,
+      path: "/settings",
+      badge: 0,
+    },
   ];
 
   const filteredMainItems = mainItems.filter((item) => {
@@ -284,21 +330,48 @@ const Layout = ({ children }: LayoutProps) => {
 
   const SidebarItem = ({ item }: { item: { text: string; icon: React.ReactNode; path: string; badge: number } }) => {
     const isActive = location.pathname === item.path;
+    const isTeam = item.path === "/team";
     return (
       <Tooltip title={!sidebarOpen ? item.text : ""} placement="right" arrow>
         <Box
           onClick={() => navigate(item.path)}
-          sx={{ display: "flex", alignItems: "center", gap: sidebarOpen ? 1.5 : 0, px: sidebarOpen ? 1.5 : 0, py: 1, mx: 0.5, borderRadius: "8px", cursor: "pointer", justifyContent: sidebarOpen ? "flex-start" : "center", position: "relative", transition: "all 0.2s ease", bgcolor: isActive ? C.accentLight : "transparent", "&:hover": { bgcolor: isActive ? C.accentLight : "#F8FAFC" } }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: sidebarOpen ? 1.5 : 0,
+            px: sidebarOpen ? 1.5 : 0,
+            py: isTeam ? 1.2 : 1,
+            mx: 0.5,
+            borderRadius: "8px",
+            cursor: "pointer",
+            justifyContent: sidebarOpen ? "flex-start" : "center",
+            position: "relative",
+            transition: "all 0.2s ease",
+            bgcolor: isActive ? C.accentLight : "transparent",
+            // ✅ My Team a un style spécial
+            border: isTeam && !isActive ? `1px solid ${C.accent}20` : "1px solid transparent",
+            "&:hover": { bgcolor: isActive ? C.accentLight : C.accentLight },
+          }}
         >
           {isActive && (
             <Box sx={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 3, height: 20, borderRadius: "0 3px 3px 0", bgcolor: C.accent }} />
           )}
-          <Box sx={{ color: isActive ? C.accent : C.textMuted, display: "flex", alignItems: "center", flexShrink: 0 }}>
+          <Box sx={{
+            color: isActive ? C.accent : isTeam ? C.accent : C.textMuted,
+            display: "flex", alignItems: "center", flexShrink: 0,
+            // ✅ My Team icon légèrement plus grande
+            "& svg": isTeam ? { filter: `drop-shadow(0 0 4px ${C.accent}40)` } : {},
+          }}>
             {item.icon}
           </Box>
           {sidebarOpen && (
             <>
-              <Typography fontSize={13} fontWeight={isActive ? 600 : 400} color={isActive ? C.accent : C.textSecondary} sx={{ flex: 1, whiteSpace: "nowrap", fontFamily: "Inter, sans-serif" }}>
+              <Typography
+                fontSize={isTeam ? 13.5 : 13}
+                fontWeight={isActive || isTeam ? 600 : 400}
+                color={isActive ? C.accent : isTeam ? C.accent : C.textSecondary}
+                sx={{ flex: 1, whiteSpace: "nowrap", fontFamily: "Inter, sans-serif" }}
+              >
                 {item.text}
               </Typography>
               <BadgeCount count={item.badge} />
@@ -318,12 +391,10 @@ const Layout = ({ children }: LayoutProps) => {
       {/* ══════ NAVBAR ══════ */}
       <Box sx={{ height: 56, bgcolor: "#FFFFFF", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", position: "sticky", top: 0, zIndex: 1200, flexShrink: 0 }}>
 
-        {/* Logo */}
         <Box onClick={() => navigate("/Dashbord")} sx={{ width: 56, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderRight: `2px solid ${C.accent}`, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentLight } }}>
           <LogoIcon />
         </Box>
 
-        {/* Navbar content */}
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", gap: 2, px: 2 }}>
           <Typography fontSize={15} fontWeight={700} color={C.navy} fontFamily="Inter, sans-serif" sx={{ letterSpacing: "-0.3px", flexShrink: 0 }}>
             TicketFlow
@@ -331,14 +402,10 @@ const Layout = ({ children }: LayoutProps) => {
 
           {/* Search */}
           <Box sx={{ flex: 1, maxWidth: 500, display: "flex", alignItems: "center", bgcolor: "#F8FAFC", border: `1.5px solid ${C.accent}`, borderRadius: "50px", px: 0.5, py: 0.5, gap: 1, transition: "all 0.2s ease", "&:focus-within": { bgcolor: "#FFFFFF", boxShadow: `0 0 0 3px ${C.accentLight}` } }}>
-            <InputBase
-              placeholder="Search tickets, users..."
-              sx={{ flex: 1, fontSize: 13, color: C.textPrimary, fontFamily: "Inter, sans-serif", pl: 1.5, "& input::placeholder": { color: C.textMuted } }}
-            />
+            <InputBase placeholder="Search tickets, users..." sx={{ flex: 1, fontSize: 13, color: C.textPrimary, fontFamily: "Inter, sans-serif", pl: 1.5, "& input::placeholder": { color: C.textMuted } }} />
             <Box sx={{ width: 34, height: 34, borderRadius: "50%", bgcolor: C.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentHover, transform: "scale(1.05)" } }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0B162C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </Box>
           </Box>
@@ -349,14 +416,12 @@ const Layout = ({ children }: LayoutProps) => {
           <Tooltip title="Help">
             <Box sx={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.textMuted, transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentLight, color: C.accent } }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
+                <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </Box>
           </Tooltip>
 
-          {/* ══ NOTIFICATIONS BELL ══ */}
+          {/* ══ NOTIFICATIONS ══ */}
           <Box ref={notifRef} sx={{ position: "relative" }}>
             <Tooltip title="Notifications">
               <Box
@@ -364,8 +429,7 @@ const Layout = ({ children }: LayoutProps) => {
                 sx={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", color: notifOpen ? C.accent : C.textMuted, bgcolor: notifOpen ? C.accentLight : "transparent", transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentLight, color: C.accent } }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
                 {unreadCount > 0 && (
                   <Box sx={{ position: "absolute", top: 4, right: 4, width: 8, height: 8, borderRadius: "50%", bgcolor: C.danger, border: "1.5px solid white" }} />
@@ -373,25 +437,10 @@ const Layout = ({ children }: LayoutProps) => {
               </Box>
             </Tooltip>
 
-            {/* ══ NOTIFICATION PANEL ══ */}
+            {/* Notification Panel */}
             {notifOpen && (
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "calc(100% + 12px)",
-                  right: -100,
-                  width: 420,
-                  maxHeight: 520,
-                  bgcolor: "#FFFFFF",
-                  borderRadius: "16px",
-                  boxShadow: "0 8px 40px rgba(0,0,0,0.15)",
-                  border: `1px solid ${C.border}`,
-                  zIndex: 9999,
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
+              <Box sx={{ position: "absolute", top: "calc(100% + 12px)", right: -100, width: 420, maxHeight: 520, bgcolor: "#FFFFFF", borderRadius: "16px", boxShadow: "0 8px 40px rgba(0,0,0,0.15)", border: `1px solid ${C.border}`, zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
                 {/* Panel Header */}
                 <Box sx={{ px: 2.5, py: 2, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `2px solid ${C.accent}` }}>
                   <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: C.navy }}>
@@ -430,39 +479,25 @@ const Layout = ({ children }: LayoutProps) => {
                   ) : notifications.length === 0 ? (
                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", py: 6, gap: 1 }}>
                       <NotifEmptyIcon sx={{ fontSize: 48, color: C.textMuted }} />
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", color: C.textMuted, fontSize: "0.875rem" }}>
-                        Aucune notification
-                      </Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", color: C.textMuted, fontSize: "0.875rem" }}>Aucune notification</Typography>
                     </Box>
                   ) : (
                     <>
-                      {/* ── Importantes (non lues) ── */}
                       {unreadNotifs.length > 0 && (
                         <>
                           <Box sx={{ px: 2.5, py: 1.5, bgcolor: C.bgPage }}>
-                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.78rem", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              Importantes
-                            </Typography>
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.78rem", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Importantes</Typography>
                           </Box>
                           {unreadNotifs.map((notif, i) => (
                             <Box key={notif._id}>
-                              <Box
-                                onClick={() => handleNotifClick(notif)}
-                                sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", bgcolor: `${C.accent}08`, transition: "all 0.15s", "&:hover": { bgcolor: C.accentLight } }}
-                              >
-                                {/* Icon type */}
+                              <Box onClick={() => handleNotifClick(notif)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", bgcolor: `${C.accent}08`, transition: "all 0.15s", "&:hover": { bgcolor: C.accentLight } }}>
                                 <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: `${notifColor(notif.type)}15`, color: notifColor(notif.type), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.3 }}>
                                   {notifIcon(notif.type)}
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.85rem", color: C.navy, fontWeight: 500, lineHeight: 1.4, mb: 0.3 }}>
-                                    {notif.message}
-                                  </Typography>
-                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.accent, fontWeight: 600 }}>
-                                    {timeAgo(notif.createdAt)}
-                                  </Typography>
+                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.85rem", color: C.navy, fontWeight: 500, lineHeight: 1.4, mb: 0.3 }}>{notif.message}</Typography>
+                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.accent, fontWeight: 600 }}>{timeAgo(notif.createdAt)}</Typography>
                                 </Box>
-                                {/* Point bleu non lu */}
                                 <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: C.accent, flexShrink: 0, mt: 1 }} />
                               </Box>
                               {i < unreadNotifs.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
@@ -471,30 +506,20 @@ const Layout = ({ children }: LayoutProps) => {
                         </>
                       )}
 
-                      {/* ── Autres (lues) ── */}
                       {readNotifs.length > 0 && (
                         <>
                           <Box sx={{ px: 2.5, py: 1.5, bgcolor: C.bgPage, borderTop: unreadNotifs.length > 0 ? `2px solid ${C.accent}` : "none" }}>
-                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.78rem", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              Autres notifications
-                            </Typography>
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.78rem", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Autres notifications</Typography>
                           </Box>
                           {readNotifs.map((notif, i) => (
                             <Box key={notif._id}>
-                              <Box
-                                onClick={() => handleNotifClick(notif)}
-                                sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", transition: "all 0.15s", "&:hover": { bgcolor: C.bgPage } }}
-                              >
+                              <Box onClick={() => handleNotifClick(notif)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", transition: "all 0.15s", "&:hover": { bgcolor: C.bgPage } }}>
                                 <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: `${notifColor(notif.type)}10`, color: notifColor(notif.type), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.3, opacity: 0.7 }}>
                                   {notifIcon(notif.type)}
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.85rem", color: C.textSecondary, fontWeight: 400, lineHeight: 1.4, mb: 0.3 }}>
-                                    {notif.message}
-                                  </Typography>
-                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted }}>
-                                    {timeAgo(notif.createdAt)}
-                                  </Typography>
+                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.85rem", color: C.textSecondary, fontWeight: 400, lineHeight: 1.4, mb: 0.3 }}>{notif.message}</Typography>
+                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted }}>{timeAgo(notif.createdAt)}</Typography>
                                 </Box>
                               </Box>
                               {i < readNotifs.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
@@ -511,11 +536,8 @@ const Layout = ({ children }: LayoutProps) => {
 
           {/* Profile */}
           <Tooltip title="Profile">
-            <Avatar
-              src={userAvatar}
-              onClick={() => navigate("/profile")}
-              sx={{ width: 34, height: 34, bgcolor: C.accentMid, color: C.accent, fontSize: 11, fontWeight: 700, border: `2px solid ${C.accent}`, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { border: `2px solid ${C.accentHover}`, transform: "scale(1.05)" } }}
-            >
+            <Avatar src={userAvatar} onClick={() => navigate("/profile")}
+              sx={{ width: 34, height: 34, bgcolor: C.accentMid, color: C.accent, fontSize: 11, fontWeight: 700, border: `2px solid ${C.accent}`, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { border: `2px solid ${C.accentHover}`, transform: "scale(1.05)" } }}>
               {!userAvatar && getInitials(userName)}
             </Avatar>
           </Tooltip>
@@ -556,15 +578,10 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Logout */}
           <Box sx={{ borderTop: `1px solid ${C.border}`, px: 0.5, py: 1 }}>
             <Tooltip title="Logout" placement="right">
-              <Box
-                onClick={handleLogout}
-                sx={{ display: "flex", alignItems: "center", gap: sidebarOpen ? 1.5 : 0, px: sidebarOpen ? 1.5 : 0, py: 1, mx: 0.5, borderRadius: "8px", cursor: "pointer", justifyContent: sidebarOpen ? "flex-start" : "center", transition: "all 0.2s ease", color: C.textMuted, "&:hover": { bgcolor: C.dangerBg, color: C.danger } }}
-              >
+              <Box onClick={handleLogout} sx={{ display: "flex", alignItems: "center", gap: sidebarOpen ? 1.5 : 0, px: sidebarOpen ? 1.5 : 0, py: 1, mx: 0.5, borderRadius: "8px", cursor: "pointer", justifyContent: sidebarOpen ? "flex-start" : "center", transition: "all 0.2s ease", color: C.textMuted, "&:hover": { bgcolor: C.dangerBg, color: C.danger } }}>
                 <Logout sx={{ fontSize: 20 }} />
                 {sidebarOpen && (
-                  <Typography fontSize={13} fontWeight={400} fontFamily="Inter, sans-serif" color="inherit">
-                    Logout
-                  </Typography>
+                  <Typography fontSize={13} fontWeight={400} fontFamily="Inter, sans-serif" color="inherit">Logout</Typography>
                 )}
               </Box>
             </Tooltip>
