@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Team from "./pages/Team";
 import Analytics from "./pages/Analytics";
+import Projects from "./pages/Projects";
 
 function App() {
   return (
@@ -141,6 +142,16 @@ function App() {
     <ProtectedRoute>
       <Layout>
         <Analytics />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/projects"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <Projects />
       </Layout>
     </ProtectedRoute>
   }

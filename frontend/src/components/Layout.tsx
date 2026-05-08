@@ -235,6 +235,20 @@ const Layout = ({ children }: LayoutProps) => {
       techOnly: true,
       isTeam: true,
     },
+
+    {
+  text: "Projects",
+  icon: (
+    <Box sx={{ width: 32, height: 32, borderRadius: "8px", bgcolor: C.navy, border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+    </Box>
+  ),
+  path: "/projects",
+  badge: 0,
+  isTeam: true,
+},
     {
       text: "Dashboard",
       icon: <GridView sx={{ fontSize: 20 }} />,
