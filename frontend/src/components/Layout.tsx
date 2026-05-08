@@ -17,7 +17,6 @@ import {
   People,
   TuneOutlined,
   FormatListBulleted,
-  Logout,
   AssignmentInd,
   Settings as SettingsIcon,
   DoneAll as DoneAllIcon,
@@ -194,24 +193,46 @@ const Layout = ({ children }: LayoutProps) => {
     navigate(`/tickets/${notif.ticketId._id}`);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
   const unreadNotifs = notifications.filter((n) => !n.read);
   const readNotifs   = notifications.filter((n) => n.read);
 
-  // ✅ My Team EN PREMIER avec logo TicketFlow grand
   const mainItems = [
     {
       text: "My Team",
       icon: (
-        <svg width="30" height="30" viewBox="0 0 34 34" fill="none">
-          <rect width="34" height="34" rx="8" fill={C.navy} />
-          <polygon points="17,6 29,27 5,27" fill={C.accent} opacity="0.95" />
-          <polygon points="17,11 26,27 8,27" fill="white" opacity="0.15" />
-          <circle cx="17" cy="17" r="3.5" fill="white" opacity="0.95" />
-        </svg>
+        // ✅ Carré navy + border teal + icône people teal — exactement capture 2
+        <Box sx={{
+          width: 32, height: 32,
+          borderRadius: "8px",
+          bgcolor: C.navy,
+          border: `2px solid ${C.accent}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          transition: "all 0.2s",
+        }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </Box>
       ),
       path: "/team",
       badge: 0,
       techOnly: true,
+      isTeam: true,
     },
     {
       text: "Dashboard",
@@ -257,20 +278,11 @@ const Layout = ({ children }: LayoutProps) => {
     },
   ];
 
-  const filteredMainItems = mainItems.filter((item) => {
+  const filteredMainItems = mainItems.filter((item: any) => {
     if (item.adminOnly) return userRole === "admin";
     if (item.techOnly) return userRole === "tech" || userRole === "admin";
     return true;
   });
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
-  const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   const LogoIcon = () => (
     <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
@@ -290,9 +302,9 @@ const Layout = ({ children }: LayoutProps) => {
     );
   };
 
-  const SidebarItem = ({ item }: { item: { text: string; icon: React.ReactNode; path: string; badge: number } }) => {
+  const SidebarItem = ({ item }: { item: any }) => {
     const isActive = location.pathname === item.path;
-    const isTeam = item.path === "/team";
+    const isTeam = item.isTeam;
     return (
       <Tooltip title={!sidebarOpen ? item.text : ""} placement="right" arrow>
         <Box
@@ -301,17 +313,15 @@ const Layout = ({ children }: LayoutProps) => {
             display: "flex",
             alignItems: "center",
             gap: sidebarOpen ? 1.5 : 0,
-            // ✅ My Team a un padding spécial pour être plus grand
-            px: sidebarOpen ? 1.5 : isTeam ? 0.8 : 0,
-            py: isTeam ? 0.8 : 1,
+            px: sidebarOpen ? 1.5 : 0,
+            py: isTeam ? 1.2 : 1,
             mx: 0.5,
-            borderRadius: isTeam ? "10px" : "8px",
+            borderRadius: "8px",
             cursor: "pointer",
             justifyContent: sidebarOpen ? "flex-start" : "center",
             position: "relative",
             transition: "all 0.2s ease",
             bgcolor: isActive ? C.accentLight : "transparent",
-            border: isTeam && !isActive ? `1px solid ${C.accent}25` : "1px solid transparent",
             "&:hover": { bgcolor: C.accentLight },
           }}
         >
@@ -324,7 +334,7 @@ const Layout = ({ children }: LayoutProps) => {
           {sidebarOpen && (
             <>
               <Typography
-                fontSize={isTeam ? 14 : 13}
+                fontSize={isTeam ? 13.5 : 13}
                 fontWeight={isActive || isTeam ? 600 : 400}
                 color={isActive ? C.accent : isTeam ? C.accent : C.textSecondary}
                 sx={{ flex: 1, whiteSpace: "nowrap", fontFamily: "Inter, sans-serif" }}
@@ -343,28 +353,29 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", bgcolor: C.bgPage, fontFamily: "Inter, sans-serif" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh", bgcolor: C.bgPage, fontFamily: "Inter, sans-serif" }}>
 
-      {/* NAVBAR */}
+      {/* ══════ NAVBAR ══════ */}
       <Box sx={{ height: 56, bgcolor: "#FFFFFF", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", position: "sticky", top: 0, zIndex: 1200, flexShrink: 0 }}>
-        <Box onClick={() => navigate("/Dashbord")} sx={{ width: 56, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderRight: `2px solid ${C.accent}`, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentLight } }}>
+        <Box onClick={() => navigate("/Dashbord")} sx={{ width: 56, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderRight: `2px solid ${C.accent}`, cursor: "pointer", "&:hover": { bgcolor: C.accentLight } }}>
           <LogoIcon />
         </Box>
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", gap: 2, px: 2 }}>
           <Typography fontSize={15} fontWeight={700} color={C.navy} fontFamily="Inter, sans-serif" sx={{ letterSpacing: "-0.3px", flexShrink: 0 }}>
             TicketFlow
           </Typography>
-          <Box sx={{ flex: 1, maxWidth: 500, display: "flex", alignItems: "center", bgcolor: "#F8FAFC", border: `1.5px solid ${C.accent}`, borderRadius: "50px", px: 0.5, py: 0.5, gap: 1, transition: "all 0.2s ease", "&:focus-within": { bgcolor: "#FFFFFF", boxShadow: `0 0 0 3px ${C.accentLight}` } }}>
+          <Box sx={{ flex: 1, maxWidth: 500, display: "flex", alignItems: "center", bgcolor: "#F8FAFC", border: `1.5px solid ${C.accent}`, borderRadius: "50px", px: 0.5, py: 0.5, gap: 1, "&:focus-within": { bgcolor: "#FFFFFF", boxShadow: `0 0 0 3px ${C.accentLight}` } }}>
             <InputBase placeholder="Search tickets, users..." sx={{ flex: 1, fontSize: 13, color: C.textPrimary, fontFamily: "Inter, sans-serif", pl: 1.5, "& input::placeholder": { color: C.textMuted } }} />
-            <Box sx={{ width: 34, height: 34, borderRadius: "50%", bgcolor: C.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentHover, transform: "scale(1.05)" } }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: "50%", bgcolor: C.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", "&:hover": { bgcolor: C.accentHover } }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0B162C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </Box>
           </Box>
           <Box sx={{ flex: 1 }} />
+
           <Tooltip title="Help">
-            <Box sx={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.textMuted, transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentLight, color: C.accent } }}>
+            <Box sx={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.textMuted, "&:hover": { bgcolor: C.accentLight, color: C.accent } }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
@@ -376,7 +387,7 @@ const Layout = ({ children }: LayoutProps) => {
             <Tooltip title="Notifications">
               <Box
                 onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifications(); }}
-                sx={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", color: notifOpen ? C.accent : C.textMuted, bgcolor: notifOpen ? C.accentLight : "transparent", transition: "all 0.2s ease", "&:hover": { bgcolor: C.accentLight, color: C.accent } }}
+                sx={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", color: notifOpen ? C.accent : C.textMuted, bgcolor: notifOpen ? C.accentLight : "transparent", "&:hover": { bgcolor: C.accentLight, color: C.accent } }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -431,7 +442,7 @@ const Layout = ({ children }: LayoutProps) => {
                           </Box>
                           {unreadNotifs.map((notif, i) => (
                             <Box key={notif._id}>
-                              <Box onClick={() => handleNotifClick(notif)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", bgcolor: `${C.accent}08`, transition: "all 0.15s", "&:hover": { bgcolor: C.accentLight } }}>
+                              <Box onClick={() => handleNotifClick(notif)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", bgcolor: `${C.accent}08`, "&:hover": { bgcolor: C.accentLight } }}>
                                 <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: `${notifColor(notif.type)}15`, color: notifColor(notif.type), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.3 }}>
                                   {notifIcon(notif.type)}
                                 </Box>
@@ -453,7 +464,7 @@ const Layout = ({ children }: LayoutProps) => {
                           </Box>
                           {readNotifs.map((notif, i) => (
                             <Box key={notif._id}>
-                              <Box onClick={() => handleNotifClick(notif)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", transition: "all 0.15s", "&:hover": { bgcolor: C.bgPage } }}>
+                              <Box onClick={() => handleNotifClick(notif)} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, px: 2.5, py: 1.8, cursor: "pointer", "&:hover": { bgcolor: C.bgPage } }}>
                                 <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: `${notifColor(notif.type)}10`, color: notifColor(notif.type), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.3, opacity: 0.7 }}>
                                   {notifIcon(notif.type)}
                                 </Box>
@@ -476,32 +487,59 @@ const Layout = ({ children }: LayoutProps) => {
 
           <Tooltip title="Profile">
             <Avatar src={userAvatar} onClick={() => navigate("/profile")}
-              sx={{ width: 34, height: 34, bgcolor: C.accentMid, color: C.accent, fontSize: 11, fontWeight: 700, border: `2px solid ${C.accent}`, cursor: "pointer", transition: "all 0.2s ease", "&:hover": { border: `2px solid ${C.accentHover}`, transform: "scale(1.05)" } }}>
+              sx={{ width: 34, height: 34, bgcolor: C.accentMid, color: C.accent, fontSize: 11, fontWeight: 700, border: `2px solid ${C.accent}`, cursor: "pointer", "&:hover": { border: `2px solid ${C.accentHover}`, transform: "scale(1.05)" } }}>
               {!userAvatar && getInitials(userName)}
             </Avatar>
           </Tooltip>
         </Box>
       </Box>
 
-      {/* BODY */}
+      {/* ══════ BODY ══════ */}
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+
+        {/* ✅ SIDEBAR FIXE */}
         <Box
           onMouseEnter={() => setSidebarOpen(true)}
           onMouseLeave={() => setSidebarOpen(false)}
-          sx={{ width: sidebarOpen ? 220 : 56, bgcolor: "#FFFFFF", borderRight: `2px solid ${C.accent}`, display: "flex", flexDirection: "column", transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)", overflow: "hidden", flexShrink: 0, position: "sticky", top: 56, height: "calc(100vh - 56px)", zIndex: 100 }}
+          sx={{ width: sidebarOpen ? 220 : 56, bgcolor: "#FFFFFF", borderRight: `2px solid ${C.accent}`, display: "flex", flexDirection: "column", transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)", overflow: "hidden", flexShrink: 0, height: "100%", zIndex: 100 }}
         >
-          <Box sx={{ px: 0.5, pt: 2, flex: 1 }}>
+          {/* ✅ My Team EN HAUT avec section séparée */}
+          <Box sx={{ px: 0.5, pt: 2, pb: 1 }}>
             {sidebarOpen && (
-              <Typography fontSize={10} fontWeight={600} color={C.textMuted} sx={{ px: 1.5, mb: 1, letterSpacing: "1px", textTransform: "uppercase", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
+              <Typography fontSize={10} fontWeight={600} color={C.textMuted}
+                sx={{ px: 1.5, mb: 1, letterSpacing: "1px", textTransform: "uppercase", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
+                Team
+              </Typography>
+            )}
+            {filteredMainItems.filter((i: any) => i.isTeam).map((item: any) => (
+              <SidebarItem key={item.text} item={item} />
+            ))}
+          </Box>
+
+          {/* ✅ Ligne teal séparatrice */}
+          <Box sx={{ mx: 1.5, borderTop: `2px solid ${C.accent}`, opacity: 0.25 }} />
+
+          {/* Autres items */}
+          <Box sx={{ px: 0.5, pt: 1.5, flex: 1, overflowY: "auto",
+            "&::-webkit-scrollbar": { width: 0 },
+          }}>
+            {sidebarOpen && (
+              <Typography fontSize={10} fontWeight={600} color={C.textMuted}
+                sx={{ px: 1.5, mb: 1, letterSpacing: "1px", textTransform: "uppercase", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
                 Main
               </Typography>
             )}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-              {filteredMainItems.map((item) => <SidebarItem key={item.text} item={item} />)}
+              {filteredMainItems.filter((i: any) => !i.isTeam).map((item: any) => (
+                <SidebarItem key={item.text} item={item} />
+              ))}
             </Box>
+
             <Box sx={{ my: 1.5, mx: 1, borderTop: `1px solid ${C.border}` }} />
+
             {sidebarOpen && (
-              <Typography fontSize={10} fontWeight={600} color={C.textMuted} sx={{ px: 1.5, mb: 1, letterSpacing: "1px", textTransform: "uppercase", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
+              <Typography fontSize={10} fontWeight={600} color={C.textMuted}
+                sx={{ px: 1.5, mb: 1, letterSpacing: "1px", textTransform: "uppercase", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
                 Support
               </Typography>
             )}
@@ -509,17 +547,10 @@ const Layout = ({ children }: LayoutProps) => {
               {supportItems.map((item) => <SidebarItem key={item.text} item={item} />)}
             </Box>
           </Box>
-          <Box sx={{ borderTop: `1px solid ${C.border}`, px: 0.5, py: 1 }}>
-            <Tooltip title="Logout" placement="right">
-              <Box onClick={handleLogout} sx={{ display: "flex", alignItems: "center", gap: sidebarOpen ? 1.5 : 0, px: sidebarOpen ? 1.5 : 0, py: 1, mx: 0.5, borderRadius: "8px", cursor: "pointer", justifyContent: sidebarOpen ? "flex-start" : "center", transition: "all 0.2s ease", color: C.textMuted, "&:hover": { bgcolor: C.dangerBg, color: C.danger } }}>
-                <Logout sx={{ fontSize: 20 }} />
-                {sidebarOpen && <Typography fontSize={13} fontWeight={400} fontFamily="Inter, sans-serif" color="inherit">Logout</Typography>}
-              </Box>
-            </Tooltip>
-          </Box>
         </Box>
 
-        <Box key={location.pathname} className="page-transition" sx={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+        {/* ✅ CONTENT scroll uniquement ici */}
+        <Box key={location.pathname} className="page-transition" sx={{ flex: 1, minWidth: 0, overflowY: "auto", height: "100%" }}>
           {children}
         </Box>
       </Box>

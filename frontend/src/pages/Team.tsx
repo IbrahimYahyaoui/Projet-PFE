@@ -138,12 +138,32 @@ const inputSx = {
 
 // ── Logo TicketFlow ──
 const TeamLogo = ({ size = 48 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 34 34" fill="none">
-    <rect width="34" height="34" rx="8" fill={C.navy} />
-    <polygon points="17,6 29,27 5,27" fill={C.accent} opacity="0.95" />
-    <polygon points="17,11 26,27 8,27" fill="white" opacity="0.15" />
-    <circle cx="17" cy="17" r="3.5" fill="white" opacity="0.95" />
-  </svg>
+  <Box sx={{
+    width: size, height: size,
+    borderRadius: "8px",
+    bgcolor: C.navy,
+    border: `2px solid ${C.accent}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  }}>
+    <svg
+      width={size * 0.55}
+      height={size * 0.55}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={C.accent}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  </Box>
 );
 
 // ════════════════════════════════════════════════════════════
