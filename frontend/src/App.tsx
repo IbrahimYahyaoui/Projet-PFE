@@ -14,6 +14,7 @@ import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Team from "./pages/Team";
+import Analytics from "./pages/Analytics";
 
 function App() {
   return (
@@ -129,6 +130,17 @@ function App() {
     <ProtectedRoute>
       <Layout>
         <Team />
+      </Layout>
+    </ProtectedRoute>
+  }
+  
+/>
+<Route
+  path="/analytics"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <Analytics />
       </Layout>
     </ProtectedRoute>
   }

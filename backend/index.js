@@ -9,6 +9,7 @@ const ticketRoutes = require('./routes/ticket');
 const notificationRoutes = require('./routes/notification');
 const historyRoutes = require('./routes/history');
 const teamRoutes = require('./routes/team');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -45,6 +46,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/tickets', historyRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from TicketFlow API 🚀");

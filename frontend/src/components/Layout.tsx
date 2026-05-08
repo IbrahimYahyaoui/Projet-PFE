@@ -27,6 +27,7 @@ import {
   NotificationsNone as NotifEmptyIcon,
 } from "@mui/icons-material";
 import { C } from "../theme";
+import { BarChart } from "@mui/icons-material";
 
 interface Notification {
   _id: string;
@@ -267,6 +268,13 @@ const Layout = ({ children }: LayoutProps) => {
       adminOnly: true,
       badge: 0,
     },
+    {
+  text: "Analytics",
+  icon: <BarChart sx={{ fontSize: 20 }} />,
+  path: "/analytics",
+  badge: 0,
+  adminOnly: true,
+},
   ];
 
   const supportItems = [
