@@ -23,6 +23,7 @@ import Team            from "./pages/Team";
 import Projects        from "./pages/Projects";
 import Settings        from "./pages/Settings";
 import Users           from "./pages/Users";
+import CompanyContext  from "./pages/CompanyContext";
 
 // ════════════════════════════════════════════════════════
 // Hook
@@ -163,6 +164,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MainLayout><Settings /></MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── Company Context (admin only) ── */}
+        <Route path="/company-context"
+          element={
+            <ProtectedRoute permission="canManageUsers">
+              <MainLayout><CompanyContext /></MainLayout>
             </ProtectedRoute>
           }
         />

@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Box } from "@mui/material";
 import { Navbar } from "../components/Navbar";
 import { SecondarySidebar } from "../components/SecondarySidebar";
+import { ChatBot } from "../components/ChatBot";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -51,6 +52,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </Box>
 
       </Box>
+
+      <ChatBot />
     </Box>
   );
 };

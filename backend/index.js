@@ -11,6 +11,7 @@ const historyRoutes = require('./routes/history');
 const teamRoutes = require('./routes/team');
 const analyticsRoutes = require('./routes/analytics');
 const projectRoutes = require('./routes/project');
+const iaRoutes = require('./routes/IA');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -49,6 +50,7 @@ app.use('/api/tickets', historyRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/ai', iaRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from TicketFlow API 🚀");

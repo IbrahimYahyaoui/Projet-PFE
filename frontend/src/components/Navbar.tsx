@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Box, Typography, Avatar, Badge, IconButton, Popover, List, ListItemButton, ListItemText, Divider, InputBase } from "@mui/material";
-import { Notifications as NotifIcon, Search as SearchIcon, Logout as LogoutIcon, Person as PersonIcon, Settings as SettingsIcon, KeyboardArrowDown as ArrowIcon } from "@mui/icons-material";
+import { Notifications as NotifIcon, Search as SearchIcon, Logout as LogoutIcon, Person as PersonIcon, Settings as SettingsIcon, KeyboardArrowDown as ArrowIcon, Business as BusinessIcon } from "@mui/icons-material";
 import { C } from "../theme";
 import { useCurrentUser } from "../App";
 
@@ -218,6 +218,15 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
             <SettingsIcon sx={{ fontSize: 16, mr: 1.5, color: C.textMuted }} />
             <ListItemText primary="Paramètres" primaryTypographyProps={{ fontFamily: "Inter, sans-serif", fontSize: "0.83rem", color: C.textPrimary }} />
           </ListItemButton>
+          {role === "admin" && (
+            <ListItemButton onClick={() => { navigate("/company-context"); setProfileAnchor(null); }} sx={{ px: 2, py: 1, "&:hover": { bgcolor: C.accentLight } }}>
+              <BusinessIcon sx={{ fontSize: 16, mr: 1.5, color: C.accent }} />
+              <ListItemText
+                primary="Company AI Context"
+                primaryTypographyProps={{ fontFamily: "Inter, sans-serif", fontSize: "0.83rem", color: C.accent, fontWeight: 600 }}
+              />
+            </ListItemButton>
+          )}
         </List>
         <Divider sx={{ borderColor: C.border }} />
         <List dense disablePadding>

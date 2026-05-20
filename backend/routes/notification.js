@@ -12,7 +12,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 router.get('/', verifyToken, getMyNotifications);
-router.put('/read-all', verifyToken, markAllAsRead);
+router.get('/read-all', verifyToken, markAllAsRead);
 router.put('/:id', verifyToken, markAsRead);
 router.delete('/delete-all', verifyToken, deleteAllNotifications);
 router.delete('/:id', verifyToken, deleteNotification);
