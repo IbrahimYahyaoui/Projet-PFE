@@ -1,168 +1,180 @@
+// frontend/src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Home } from "./pages/Home";
-import { Login } from "./pages/login";
-import { NotFound } from "./pages/NotFound";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import Layout from "./components/Layout";
-import Dashbord from "./pages/dashbord";
-import AllTickets from "./pages/AllTickets";
-import MyTickets from "./pages/MyTickets";
-import AssignedTickets from "./pages/AssignedTickets";
-import TicketDetails from "./pages/TicketDetails";
-import CreateTicket from "./pages/CreateTicket";
-import Users from "./pages/Users";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import Team from "./pages/Team";
-import Analytics from "./pages/Analytics";
-import Projects from "./pages/Projects";
+import { PERMISSIONS } from "./theme";
+import type { UserRole } from "./theme";
 
-function App() {
+// ── export const (avec accolades) ──
+import { Home }     from "./pages/Home";
+import { Login }    from "./pages/login";
+import { NotFound } from "./pages/NotFound";
+
+// ── Layout ──
+import { MainLayout } from "./layouts/MainLayout";
+
+// ── export default (sans accolades) ──
+import Dashbord        from "./pages/dashbord";
+import CreateTicket    from "./pages/CreateTicket";
+import TicketDetails   from "./pages/TicketDetails";
+import AllTickets      from "./pages/AllTickets";
+import MyTickets       from "./pages/MyTickets";
+import AssignedTickets from "./pages/AssignedTickets";
+import Analytics       from "./pages/Analytics";
+import Team            from "./pages/Team";
+import Projects        from "./pages/Projects";
+import Settings        from "./pages/Settings";
+import Users           from "./pages/Users";
+
+// ════════════════════════════════════════════════════════
+// Hook
+// ════════════════════════════════════════════════════════
+export const useCurrentUser = () => {
+  const stored = localStorage.getItem("user");
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored) as {
+      id: string;
+      name: string;
+      email: string;
+      role: UserRole;
+    };
+  } catch {
+    return null;
+  }
+};
+
+// ════════════════════════════════════════════════════════
+// ProtectedRoute
+// ════════════════════════════════════════════════════════
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  permission?: keyof typeof PERMISSIONS["admin"];
+}
+
+const ProtectedRoute = ({ children, permission }: ProtectedRouteProps) => {
+  const token = localStorage.getItem("token");
+  const user  = useCurrentUser();
+
+  if (!token || !user) return <Navigate to="/login" replace />;
+
+  if (permission) {
+    const perms = PERMISSIONS[user.role] ?? PERMISSIONS["user"];
+    if (!perms[permission]) return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// ════════════════════════════════════════════════════════
+// App
+// ════════════════════════════════════════════════════════
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* ══════ PUBLIC ROUTES ══════ */}
-        <Route path="/" element={<Home />} />
+        {/* ── Pages publiques ── */}
+        <Route path="/"      element={<Home />}  />
         <Route path="/login" element={<Login />} />
 
-        {/* ══════ PROTECTED ROUTES ══════ */}
-        <Route
-          path="/Dashbord"
+        {/* ── Dashboard ── */}
+        <Route path="/dashboard"
           element={
             <ProtectedRoute>
-              <Layout>
-                <Dashbord />
-              </Layout>
+              <MainLayout><Dashbord /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/my-tickets"
+        {/* ── Tickets ── */}
+        <Route path="/tickets/create"
           element={
             <ProtectedRoute>
-              <Layout>
-                <MyTickets />
-              </Layout>
+              <MainLayout><CreateTicket /></MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/tickets/my"
+          element={
+            <ProtectedRoute>
+              <MainLayout><MyTickets /></MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/tickets/assigned"
+          element={
+            <ProtectedRoute>
+              <MainLayout><AssignedTickets /></MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/tickets/all"
+          element={
+            <ProtectedRoute permission="canSeeAllTickets">
+              <MainLayout><AllTickets /></MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/tickets/:id"
+          element={
+            <ProtectedRoute>
+              <MainLayout><TicketDetails /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/all-tickets"
+        {/* ── Analytics ── */}
+        <Route path="/analytics"
           element={
-            <ProtectedRoute>
-              <Layout>
-                <AllTickets />
-              </Layout>
+            <ProtectedRoute permission="canSeeAnalytics">
+              <MainLayout><Analytics /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/assigned-tickets"
+        {/* ── Team ── */}
+        <Route path="/team"
           element={
-            <ProtectedRoute>
-              <Layout>
-                <AssignedTickets />
-              </Layout>
+            <ProtectedRoute permission="canSeeTeam">
+              <MainLayout><Team /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/tickets/:id"
+        {/* ── Projects ── */}
+        <Route path="/projects"
           element={
             <ProtectedRoute>
-              <Layout>
-                <TicketDetails />
-              </Layout>
+              <MainLayout><Projects /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/create-ticket"
+        {/* ── Users ── */}
+        <Route path="/users"
           element={
-            <ProtectedRoute>
-              <Layout>
-                <CreateTicket />
-              </Layout>
+            <ProtectedRoute permission="canSeeUsers">
+              <MainLayout><Users /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/users"
+        {/* ── Settings ── */}
+        <Route path="/settings"
           element={
             <ProtectedRoute>
-              <Layout>
-                <Users />
-              </Layout>
+              <MainLayout><Settings /></MainLayout>
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Profile />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+        {/* ── Compatibilité ── */}
+        <Route path="/Dashbord"   element={<Navigate to="/dashboard"  replace />} />
+        <Route path="/my-tickets" element={<Navigate to="/tickets/my" replace />} />
 
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Settings />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-  path="/team"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <Team />
-      </Layout>
-    </ProtectedRoute>
-  }
-  
-/>
-<Route
-  path="/analytics"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <Analytics />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/projects"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <Projects />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
-
-        {/* ══════ 404 ══════ */}
+        {/* ── 404 ── */}
         <Route path="*" element={<NotFound />} />
 
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;

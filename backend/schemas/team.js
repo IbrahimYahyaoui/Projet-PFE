@@ -13,6 +13,15 @@ const teamSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    category: {
+      type: String,
+      enum: ['hardware', 'software', 'network', 'access', 'other', 'general'],
+      default: 'general',
+    },
+    color: {
+      type: String,
+      default: '#5FC2BA',
+    },
     leaderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -1,3 +1,4 @@
+// backend/schemas/ticket.js
 const mongoose = require('mongoose');
 
 const commentSchema = new mongoose.Schema(
@@ -30,7 +31,7 @@ const ticketSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['open', 'in_progress', 'resolved', 'closed'],
+      enum: ['open', 'assigned', 'in_progress', 'resolved', 'closed'],
       default: 'open',
     },
     priority: {
@@ -51,6 +52,20 @@ const ticketSchema = new mongoose.Schema(
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: null,
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    teamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
+    },
+    resolvedAt: {
+      type: Date,
       default: null,
     },
     comments: {

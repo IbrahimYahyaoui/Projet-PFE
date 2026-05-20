@@ -1,26 +1,26 @@
+// backend/routes/team.js
 const express = require('express');
-const router = express.Router();
 const {
-  createTeam,
   getMyTeam,
+  getAllTeams,
+  getTeamTickets,
+  createTeam,
+  updateTeam,
   addMember,
   removeMember,
   deleteTeam,
-  getMemberTickets,
-  getMessages,
-  sendMessage,
-  getAvailableUsers,
 } = require('../controllers/teamController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
-router.post('/',                   verifyToken, createTeam);
-router.get('/',                    verifyToken, getMyTeam);
-router.post('/members',            verifyToken, addMember);
-router.delete('/members/:userId',  verifyToken, removeMember);
-router.delete('/',                 verifyToken, deleteTeam);
-router.get('/members/:id/tickets', verifyToken, getMemberTickets);
-router.get('/messages',            verifyToken, getMessages);
-router.post('/messages',           verifyToken, sendMessage);
-router.get('/available-users',     verifyToken, getAvailableUsers);
+const router = express.Router();
+
+router.get('/all',           verifyToken, getAllTeams);
+router.get('/my',            verifyToken, getMyTeam);
+router.get('/my/tickets',    verifyToken, getTeamTickets);
+router.post('/',             verifyToken, createTeam);
+router.put('/:id',           verifyToken, updateTeam);
+router.post('/:id/members',  verifyToken, addMember);
+router.delete('/:id/members/:userId', verifyToken, removeMember);
+router.delete('/:id',        verifyToken, deleteTeam);
 
 module.exports = router;

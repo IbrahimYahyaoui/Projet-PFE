@@ -1,3 +1,4 @@
+// backend/schemas/user.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
@@ -22,14 +23,13 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin', 'tech'],
+      enum: ['user', 'admin', 'tech', 'leader'],
       default: 'user',
     },
     avatar: {
       type: String,
       default: '',
     },
-    // ✅ Nouveau champ
     teamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team',

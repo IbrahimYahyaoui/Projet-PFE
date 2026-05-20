@@ -2,30 +2,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  Chip,
-  Avatar,
-  Divider,
-  CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Box, Typography, Button, TextField, Chip, Avatar,
+  Divider, CircularProgress, MenuItem, Select,
+  FormControl, InputLabel, Dialog, DialogTitle,
+  DialogContent, DialogActions, Alert,
 } from "@mui/material";
 import {
   ArrowBack,
   Send,
   Delete,
-  Edit,
-  Save,
-  Close,
   AddCircleOutline as CreatedIcon,
   SwapHoriz as StatusIcon,
   PersonAdd as AssignedIcon,
@@ -33,12 +18,14 @@ import {
   PriorityHigh as PriorityIcon,
   Comment as CommentIcon,
 } from "@mui/icons-material";
-import { C, statusColors, priorityColors } from "../theme";
+import { C, statusColors, priorityColors, roleColors } from "../theme";
 
-// ─── Types ───────────────────────────────────────────────────
+const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
+// ── Types ──
 interface Comment {
   _id: string;
-  userId: { _id: string; name: string };
+  userId: { _id: string; name: string; role: string };
   content: string;
   createdAt: string;
 }
@@ -51,8 +38,11 @@ interface Ticket {
   priority: string;
   category: string;
   createdAt: string;
-  createdBy: { _id: string; name: string };
-  assignedTo: { _id: string; name: string } | null;
+  resolvedAt?: string;
+  createdBy: { _id: string; name: string; role: string };
+  assignedTo: { _id: string; name: string; role: string } | null;
+  assignedBy: { _id: string; name: string } | null;
+  teamId?: { _id: string; name: string; category: string } | null;
   comments: Comment[];
 }
 
@@ -60,6 +50,7 @@ interface User {
   _id: string;
   name: string;
   role: string;
+  email: string;
 }
 
 interface HistoryItem {
@@ -71,527 +62,557 @@ interface HistoryItem {
   createdAt: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
-const apiUrl = (
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000"
-).replace(/\/$/, "");
-
+// ── Helpers ──
 const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString("fr-FR", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+const getInitials = (name: string) =>
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+const getStatusLabel = (s: string) => ({
+  open: "Ouvert", assigned: "Assigné", in_progress: "En cours", resolved: "Résolu", closed: "Fermé"
+}[s] ?? s);
+
+const getPriorityLabel = (p: string) => ({
+  low: "Faible", medium: "Moyenne", high: "Haute", critical: "Critique"
+}[p] ?? p);
+
+const getCategoryLabel = (c: string) => ({
+  hardware: "Hardware", software: "Software", network: "Réseau", access: "Accès", other: "Autre"
+}[c] ?? c);
 
 const getHistoryConfig = (action: string) => {
-  switch (action) {
-    case "created":
-      return {
-        icon: <CreatedIcon sx={{ fontSize: 16 }} />,
-        color: "#16A34A",
-        bg: "rgba(34, 197, 94, 0.1)",
-        label: "a créé ce ticket",
-      };
-    case "status_changed":
-      return {
-        icon: <StatusIcon sx={{ fontSize: 16 }} />,
-        color: "#2563EB",
-        bg: "rgba(59, 130, 246, 0.1)",
-        label: "a changé le statut",
-      };
-    case "assigned":
-      return {
-        icon: <AssignedIcon sx={{ fontSize: 16 }} />,
-        color: C.accent,
-        bg: C.accentLight,
-        label: "a assigné le ticket",
-      };
-    case "unassigned":
-      return {
-        icon: <UnassignedIcon sx={{ fontSize: 16 }} />,
-        color: "#EA580C",
-        bg: "rgba(249, 115, 22, 0.1)",
-        label: "a retiré l'assignation",
-      };
-    case "priority_changed":
-      return {
-        icon: <PriorityIcon sx={{ fontSize: 16 }} />,
-        color: "#DC2626",
-        bg: "rgba(239, 68, 68, 0.08)",
-        label: "a changé la priorité",
-      };
-    case "commented":
-      return {
-        icon: <CommentIcon sx={{ fontSize: 16 }} />,
-        color: "#7C3AED",
-        bg: "rgba(124, 58, 237, 0.08)",
-        label: "a ajouté un commentaire",
-      };
-    default:
-      return {
-        icon: <CreatedIcon sx={{ fontSize: 16 }} />,
-        color: C.accent,
-        bg: C.accentLight,
-        label: action,
-      };
-  }
+  const map: Record<string, any> = {
+    created:        { icon: "circle-plus",  color: "#16A34A", bg: "rgba(34,197,94,0.08)",   label: "a créé ce ticket" },
+    status_changed: { icon: "arrows-exchange", color: "#2563EB", bg: "rgba(59,130,246,0.08)", label: "a changé le statut" },
+    assigned:       { icon: "user-check",   color: "#0E9188", bg: "rgba(95,194,186,0.08)",  label: "a assigné le ticket" },
+    unassigned:     { icon: "user-x",       color: "#EA580C", bg: "rgba(249,115,22,0.08)",  label: "a retiré l'assignation" },
+    priority_changed:{ icon: "alert-triangle", color: "#DC2626", bg: "rgba(239,68,68,0.08)", label: "a changé la priorité" },
+    commented:      { icon: "message",      color: "#7C3AED", bg: "rgba(124,58,237,0.08)",  label: "a commenté" },
+  };
+  return map[action] ?? { icon: "circle", color: C.accent, bg: C.accentLight, label: action };
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  open: "Ouvert",
-  in_progress: "En cours",
-  resolved: "Résolu",
-  closed: "Fermé",
-};
-
-const PRIORITY_LABELS: Record<string, string> = {
-  low: "Faible",
-  medium: "Moyenne",
-  high: "Haute",
-  critical: "Critique",
-};
-
-// ════════════════════════════════════════════════════════════
-const TicketDetails = () => {
-  const { id } = useParams<{ id: string }>();
+// ════════════════════════════════════════════════
+export default function TicketDetails() {
+  const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [comment, setComment] = useState("");
-  const [sending, setSending] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState(false);
-  const [techList, setTechList] = useState<User[]>([]);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
-  const [editStatus, setEditStatus] = useState("");
-  const [editAssignedTo, setEditAssignedTo] = useState("");
+  const [ticket,         setTicket]         = useState<Ticket | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [comment,        setComment]        = useState("");
+  const [sending,        setSending]        = useState(false);
+  const [history,        setHistory]        = useState<HistoryItem[]>([]);
+  const [techList,       setTechList]       = useState<User[]>([]);
+  const [deleteDialog,   setDeleteDialog]   = useState(false);
+  const [assignDialog,   setAssignDialog]   = useState(false);
+  const [selectedTech,   setSelectedTech]   = useState("");
+  const [assigning,      setAssigning]      = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
 
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
-  const isAdmin = user?.role === "admin";
-  const isTech = user?.role === "tech";
-  const canEdit = isAdmin || isTech;
+  // ── Current user ──
+  const storedUser  = localStorage.getItem("user");
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const userRole    = currentUser?.role ?? "user";
+  const isAdmin     = userRole === "admin";
+  const isLeader    = userRole === "leader";
+  const isTech      = userRole === "tech";
 
-  const fetchTicket = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/tickets/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTicket(data);
-        setEditStatus(data.status);
-        setEditAssignedTo(data.assignedTo?._id || "");
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const canAssign  = isAdmin || isLeader;
+  const canResolve = isAdmin || isLeader || isTech;
+  const canDelete  = isAdmin;
+  const isAssignedToMe = ticket?.assignedTo?._id === currentUser?.id;
 
-  const fetchHistory = async () => {
-    setHistoryLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/tickets/${id}/history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) setHistory(data);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const fetchTechs = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTechList(data.filter((u: User) => u.role === "tech" || u.role === "admin"));
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     fetchTicket();
     fetchHistory();
-    if (canEdit) fetchTechs();
+    if (canAssign) fetchTechList();
   }, [id]);
 
-  const handleSave = async () => {
+  const fetchTicket = async () => {
     try {
-      const token = localStorage.getItem("token");
+      setLoading(true);
+      const res  = await fetch(`${apiUrl}/api/tickets/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setTicket(data);
+    } catch (err) { console.log(err); }
+    finally { setLoading(false); }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const res  = await fetch(`${apiUrl}/api/tickets/${id}/history`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setHistory(data);
+    } catch (err) { console.log(err); }
+  };
+
+  const fetchTechList = async () => {
+    try {
+      const res  = await fetch(`${apiUrl}/api/users/technicians`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setTechList(data);
+    } catch (err) { console.log(err); }
+  };
+
+  // ── Assign ticket (leader/admin) ──
+  const handleAssign = async () => {
+    if (!selectedTech) return;
+    setAssigning(true);
+    try {
+      const res = await fetch(`${apiUrl}/api/tickets/${id}/assign`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ assignedTo: selectedTech }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTicket(data);
+        setAssignDialog(false);
+        setSelectedTech("");
+        fetchHistory();
+      } else {
+        setError(data.message);
+      }
+    } catch (err) { setError("Erreur serveur"); }
+    finally { setAssigning(false); }
+  };
+
+  // ── Update status (tech/leader) ──
+  const handleStatusChange = async (newStatus: string) => {
+    setStatusUpdating(true);
+    setError(null);
+    try {
       const res = await fetch(`${apiUrl}/api/tickets/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: editStatus, assignedTo: editAssignedTo || null }),
+        body: JSON.stringify({ status: newStatus }),
       });
+      const data = await res.json();
       if (res.ok) {
-        await fetchTicket();
-        await fetchHistory();
-        setIsEditing(false);
+        setTicket(data);
+        fetchHistory();
+      } else {
+        setError(data.message);
       }
-    } catch (err) {
-      console.log(err);
-    }
+    } catch (err) { setError("Erreur serveur"); }
+    finally { setStatusUpdating(false); }
   };
 
-  const handleDelete = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/tickets/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) navigate("/all-tickets");
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
+  // ── Add comment ──
   const handleComment = async () => {
     if (!comment.trim()) return;
+    setSending(true);
     try {
-      setSending(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiUrl}/api/tickets/${id}/comments`, {
+      const res = await fetch(`${apiUrl}/api/tickets/${id}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content: comment }),
       });
+      const data = await res.json();
       if (res.ok) {
-        await fetchTicket();
-        await fetchHistory();
+        setTicket(data);
         setComment("");
+        fetchHistory();
       }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setSending(false);
-    }
+    } catch (err) { console.log(err); }
+    finally { setSending(false); }
   };
 
-  const selectSx = {
-    "& .MuiOutlinedInput-root": {
-      bgcolor: C.bgPage, borderRadius: "8px", fontSize: 13, color: C.navy,
-      fontFamily: "Inter, sans-serif",
-      "& fieldset": { borderColor: C.border },
-      "&:hover fieldset": { borderColor: C.accent },
-      "&.Mui-focused fieldset": { borderColor: C.accent },
-    },
-    "& .MuiInputLabel-root": { fontSize: 13, fontFamily: "Inter, sans-serif", color: C.textMuted },
-    "& .MuiInputLabel-root.Mui-focused": { color: C.accent },
+  // ── Delete ──
+  const handleDelete = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/tickets/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) navigate(-1);
+    } catch (err) { console.log(err); }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
-        <CircularProgress sx={{ color: C.accent }} />
-      </Box>
-    );
-  }
+  if (loading) return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+      <CircularProgress sx={{ color: C.accent }} />
+    </Box>
+  );
 
-  if (!ticket) {
-    return <Box sx={{ p: 4 }}><Typography color={C.textMuted}>Ticket not found</Typography></Box>;
-  }
+  if (!ticket) return (
+    <Box sx={{ p: 4, textAlign: "center" }}>
+      <Typography sx={{ fontFamily: "Inter, sans-serif", color: C.textMuted }}>Ticket introuvable</Typography>
+    </Box>
+  );
+
+  const statusConf   = statusColors[ticket.status]   ?? statusColors.open;
+  const priorityConf = priorityColors[ticket.priority] ?? priorityColors.medium;
 
   return (
-    <Box sx={{ flex: 1, p: 3, bgcolor: C.bgPage, fontFamily: "Inter, sans-serif" }}>
+    <Box sx={{ p: "28px 32px", fontFamily: "Inter, sans-serif", bgcolor: "#F4F6FA", minHeight: "100%" }}>
 
-      {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)}
-          sx={{ color: C.slate, textTransform: "none", fontFamily: "Inter, sans-serif", fontSize: 13, "&:hover": { color: C.accent, bgcolor: C.accentLight }, borderRadius: "8px" }}>
-          Back
-        </Button>
-        {canEdit && (
-          <Box sx={{ display: "flex", gap: 1 }}>
-            {isEditing ? (
-              <>
-                <Button startIcon={<Save />} onClick={handleSave} variant="contained" disableElevation
-                  sx={{ bgcolor: C.accent, color: C.navy, textTransform: "none", borderRadius: "8px", fontWeight: 600, fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { bgcolor: C.accentHover } }}>
-                  Save changes
-                </Button>
-                <Button startIcon={<Close />} onClick={() => setIsEditing(false)} variant="outlined" disableElevation
-                  sx={{ borderColor: C.border, color: C.slate, textTransform: "none", borderRadius: "8px", fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { borderColor: C.accent, color: C.accent } }}>
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button startIcon={<Edit />} onClick={() => setIsEditing(true)} variant="outlined" disableElevation
-                  sx={{ borderColor: C.border, color: C.slate, textTransform: "none", borderRadius: "8px", fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { borderColor: C.accent, color: C.accent } }}>
-                  Edit
-                </Button>
-                {isAdmin && (
-                  <Button startIcon={<Delete />} onClick={() => setDeleteDialog(true)} variant="outlined" disableElevation
-                    sx={{ borderColor: C.border, color: C.textMuted, textTransform: "none", borderRadius: "8px", fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { borderColor: C.danger, color: C.danger, bgcolor: C.dangerBg } }}>
-                    Delete
-                  </Button>
-                )}
-              </>
-            )}
-          </Box>
-        )}
+      {/* ── Header ── */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+        <Box onClick={() => navigate(-1)} sx={{ width: 36, height: 36, borderRadius: "9px", bgcolor: "#fff", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { borderColor: C.accent, bgcolor: C.accentLight } }}>
+          <ArrowBack sx={{ fontSize: 18, color: C.textSecondary }} />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "19px", fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px" }}>
+            {ticket.title}
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, mt: 0.3 }}>
+            Créé le {formatDateTime(ticket.createdAt)} par {ticket.createdBy.name}
+          </Typography>
+        </Box>
+        {/* Actions */}
+        <Box sx={{ display: "flex", gap: 1 }}>
+          {canAssign && ticket.status === "open" && (
+            <Button onClick={() => setAssignDialog(true)}
+              sx={{ bgcolor: "#3B82F6", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#2563EB" } }}>
+              <Box component="i" className="ti ti-user-check" sx={{ fontSize: 16 }} />
+              Assigner
+            </Button>
+          )}
+          {canResolve && (isAssignedToMe || isLeader || isAdmin) && ticket.status === "assigned" && (
+            <Button onClick={() => handleStatusChange("in_progress")} disabled={statusUpdating}
+              sx={{ bgcolor: "#F97316", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#EA580C" } }}>
+              <Box component="i" className="ti ti-player-play" sx={{ fontSize: 16 }} />
+              Prendre en charge
+            </Button>
+          )}
+          {canResolve && (isAssignedToMe || isLeader || isAdmin) && ticket.status === "in_progress" && (
+            <Button onClick={() => handleStatusChange("resolved")} disabled={statusUpdating}
+              sx={{ bgcolor: "#22C55E", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#16A34A" } }}>
+              <Box component="i" className="ti ti-circle-check" sx={{ fontSize: 16 }} />
+              Marquer résolu
+            </Button>
+          )}
+          {canDelete && (
+            <Box onClick={() => setDeleteDialog(true)} sx={{ width: 36, height: 36, borderRadius: "9px", bgcolor: "#fff", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { borderColor: C.danger, bgcolor: C.dangerBg } }}>
+              <Delete sx={{ fontSize: 17, color: C.danger }} />
+            </Box>
+          )}
+        </Box>
       </Box>
 
-      {/* Main Grid */}
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 3 }}>
+      {error && <Alert severity="error" sx={{ mb: 2, borderRadius: "10px" }}>{error}</Alert>}
 
-        {/* LEFT */}
+      {/* ── Main Grid ── */}
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 2 }}>
+
+        {/* ── LEFT ── */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
-          {/* Title + Badges */}
-          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
-            <Typography variant="h5" fontWeight={700} color={C.navy} fontFamily="Inter, sans-serif" sx={{ letterSpacing: "-0.3px", mb: 1.5 }}>
-              {ticket.title}
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Chip label={ticket.status.replace("_", " ")} size="small"
-                sx={{ bgcolor: statusColors[ticket.status]?.bg, color: statusColors[ticket.status]?.text, border: `1px solid ${statusColors[ticket.status]?.border}`, fontWeight: 600, fontSize: 11, textTransform: "capitalize", fontFamily: "Inter, sans-serif" }} />
-              <Chip label={ticket.priority} size="small"
-                sx={{ bgcolor: priorityColors[ticket.priority]?.bg, color: priorityColors[ticket.priority]?.text, border: `1px solid ${priorityColors[ticket.priority]?.border}`, fontWeight: 600, fontSize: 11, textTransform: "capitalize", fontFamily: "Inter, sans-serif" }} />
-              <Chip label={ticket.category} size="small"
-                sx={{ bgcolor: "#F8FAFC", color: C.slate, border: `1px solid ${C.border}`, fontWeight: 500, fontSize: 11, textTransform: "capitalize", fontFamily: "Inter, sans-serif" }} />
-            </Box>
-          </Box>
-
           {/* Description */}
-          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
-            <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 1.5 }}>
+          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "20px 24px" }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary, mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+              <Box component="i" className="ti ti-align-left" sx={{ fontSize: 16, color: C.textMuted }} />
               Description
             </Typography>
-            <Typography fontSize={14} color={C.navy} fontFamily="Inter, sans-serif" sx={{ lineHeight: 1.7 }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", color: C.textSecondary, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
               {ticket.description}
             </Typography>
           </Box>
 
           {/* Comments */}
-          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
-            <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}>
-              Comments ({ticket.comments.length})
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 3, maxHeight: 350, overflowY: "auto" }}>
-              {ticket.comments.length === 0 ? (
-                <Typography fontSize={13} color={C.textMuted} fontFamily="Inter, sans-serif">No comments yet. Be the first!</Typography>
-              ) : (
-                ticket.comments.map((c) => (
-                  <Box key={c._id}>
-                    <Box sx={{ display: "flex", gap: 1.5, mb: 1 }}>
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: C.accentLight, color: C.accent, fontSize: 12, fontWeight: 700, border: `1.5px solid ${C.border}` }}>
-                        {c.userId?.name?.charAt(0).toUpperCase()}
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                          <Typography fontSize={13} fontWeight={600} color={C.navy} fontFamily="Inter, sans-serif">{c.userId?.name}</Typography>
-                          <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif">{formatDateTime(c.createdAt)}</Typography>
-                        </Box>
-                        <Box sx={{ bgcolor: C.bgPage, borderRadius: "8px", p: 1.5, border: `1px solid ${C.border}` }}>
-                          <Typography fontSize={13} color={C.navy} fontFamily="Inter, sans-serif" sx={{ lineHeight: 1.6 }}>{c.content}</Typography>
-                        </Box>
-                      </Box>
+          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}` }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
+                Commentaires ({ticket.comments.length})
+              </Typography>
+            </Box>
+
+            {ticket.comments.length === 0 ? (
+              <Box sx={{ p: 3, textAlign: "center" }}>
+                <Box component="i" className="ti ti-message" sx={{ fontSize: 32, color: C.textMuted, display: "block", mb: 1 }} />
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted }}>Aucun commentaire</Typography>
+              </Box>
+            ) : (
+              ticket.comments.map((c) => (
+                <Box key={c._id} sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}`, "&:last-child": { borderBottom: "none" } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                    <Avatar sx={{ width: 30, height: 30, bgcolor: roleColors[c.userId.role]?.bg ?? C.accentLight, color: roleColors[c.userId.role]?.text ?? C.accent, fontSize: "11px", fontWeight: 700 }}>
+                      {getInitials(c.userId.name)}
+                    </Avatar>
+                    <Box>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{c.userId.name}</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{formatDateTime(c.createdAt)}</Typography>
                     </Box>
                   </Box>
-                ))
-              )}
-            </Box>
-            <Divider sx={{ borderColor: C.border, mb: 2 }} />
-            <Box sx={{ display: "flex", gap: 1.5 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: C.accentLight, color: C.accent, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                {user?.name?.charAt(0).toUpperCase()}
-              </Avatar>
-              <Box sx={{ flex: 1, display: "flex", gap: 1 }}>
-                <TextField fullWidth multiline rows={2} placeholder="Write a comment..." value={comment} onChange={(e) => setComment(e.target.value)} size="small"
-                  sx={{ "& .MuiOutlinedInput-root": { bgcolor: C.bgPage, borderRadius: "8px", fontSize: 13, color: C.navy, fontFamily: "Inter, sans-serif", "& fieldset": { borderColor: C.border }, "&:hover fieldset": { borderColor: C.accent }, "&.Mui-focused fieldset": { borderColor: C.accent } }, "& .MuiOutlinedInput-input::placeholder": { color: C.textMuted, opacity: 1 } }}
-                />
-                <Button variant="contained" disableElevation onClick={handleComment} disabled={sending || !comment.trim()}
-                  sx={{ bgcolor: C.accent, color: C.navy, minWidth: 44, height: 44, borderRadius: "8px", alignSelf: "flex-end", "&:hover": { bgcolor: C.accentHover }, "&:disabled": { opacity: 0.5 } }}>
-                  <Send sx={{ fontSize: 16 }} />
-                </Button>
-              </Box>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary, lineHeight: 1.6, pl: 5.5 }}>
+                    {c.content}
+                  </Typography>
+                </Box>
+              ))
+            )}
+
+            {/* Add comment */}
+            <Box sx={{ px: 2.5, py: 2, borderTop: `1px solid ${C.divider}`, display: "flex", gap: 1.5, alignItems: "flex-end" }}>
+              <TextField
+                fullWidth multiline rows={2} placeholder="Ajouter un commentaire..."
+                value={comment} onChange={(e) => setComment(e.target.value)}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", fontFamily: "Inter, sans-serif", fontSize: "13px", "& fieldset": { borderColor: C.border }, "&:hover fieldset": { borderColor: C.accent }, "&.Mui-focused fieldset": { borderColor: C.accent } } }}
+              />
+              <Button onClick={handleComment} disabled={sending || !comment.trim()}
+                sx={{ bgcolor: C.accent, color: "#fff", borderRadius: "10px", minWidth: 44, height: 44, p: 0, "&:hover": { bgcolor: C.accentHover }, "&:disabled": { bgcolor: C.border } }}>
+                <Send sx={{ fontSize: 18 }} />
+              </Button>
             </Box>
           </Box>
 
-          {/* ══ AUDIT TRAIL — Timeline ══ */}
-          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-              <Box sx={{ width: 4, height: 20, borderRadius: "2px", bgcolor: C.accent }} />
-              <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Activité
+          {/* History */}
+          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, overflow: "hidden" }}>
+            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}` }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
+                Historique
               </Typography>
-              <Chip label={history.length} size="small" sx={{ ml: 1, height: 20, fontSize: "0.7rem", fontWeight: 700, backgroundColor: C.accentLight, color: C.accent }} />
             </Box>
-
-            {historyLoading ? (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-                <CircularProgress size={24} sx={{ color: C.accent }} />
-              </Box>
-            ) : history.length === 0 ? (
-              <Typography fontSize={13} color={C.textMuted} fontFamily="Inter, sans-serif">
-                Aucune activité enregistrée.
-              </Typography>
-            ) : (
-              <Box sx={{ position: "relative" }}>
-                {/* Ligne verticale teal */}
-                <Box sx={{ position: "absolute", left: 17, top: 0, bottom: 0, width: 2, bgcolor: `${C.accent}30`, borderRadius: "1px" }} />
-
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                  {history.map((item, index) => {
-                    const config = getHistoryConfig(item.action);
-                    const isLast = index === history.length - 1;
-                    return (
-                      <Box key={item._id} sx={{ display: "flex", gap: 2, pb: isLast ? 0 : 3, position: "relative" }}>
-                        {/* Cercle icône */}
-                        <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: config.bg, color: config.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1, border: `2px solid ${config.color}30` }}>
-                          {config.icon}
-                        </Box>
-
-                        {/* Contenu */}
-                        <Box sx={{ flex: 1, pt: 0.5 }}>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 0.5 }}>
-                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: C.navy }}>
-                              {item.userId?.name}
-                            </Typography>
-                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.82rem", color: C.textSecondary }}>
-                              {config.label}
-                            </Typography>
-                          </Box>
-
-                          {/* oldValue → newValue */}
-                          {(item.oldValue || item.newValue) && item.action !== 'commented' && (
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                              {item.oldValue && (
-                                <Chip
-                                  label={STATUS_LABELS[item.oldValue] ?? PRIORITY_LABELS[item.oldValue] ?? item.oldValue}
-                                  size="small"
-                                  sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600, bgcolor: "#F1F5F9", color: C.textSecondary }}
-                                />
-                              )}
-                              {item.oldValue && item.newValue && (
-                                <Typography sx={{ fontSize: "0.75rem", color: C.textMuted }}>→</Typography>
-                              )}
-                              {item.newValue && (
-                                <Chip
-                                  label={STATUS_LABELS[item.newValue] ?? PRIORITY_LABELS[item.newValue] ?? item.newValue}
-                                  size="small"
-                                  sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600, bgcolor: `${config.color}15`, color: config.color }}
-                                />
-                              )}
-                            </Box>
-                          )}
-
-                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted }}>
-                            {formatDateTime(item.createdAt)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Box>
-            )}
+            <Box sx={{ p: 2.5, display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {history.map((h) => {
+                const conf = getHistoryConfig(h.action);
+                return (
+                  <Box key={h._id} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                    <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: conf.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.2 }}>
+                      <Box component="i" className={`ti ti-${conf.icon}`} sx={{ fontSize: 13, color: conf.color }} />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>
+                        <strong style={{ color: C.textPrimary }}>{h.userId?.name}</strong> {conf.label}
+                        {h.oldValue && h.newValue && (
+                          <> : <span style={{ color: C.danger }}>{h.oldValue}</span> → <span style={{ color: C.success }}>{h.newValue}</span></>
+                        )}
+                      </Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mt: 0.3 }}>
+                        {formatDateTime(h.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                );
+              })}
+              {history.length === 0 && (
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, textAlign: "center" }}>
+                  Aucun historique
+                </Typography>
+              )}
+            </Box>
           </Box>
         </Box>
 
-        {/* RIGHT */}
+        {/* ── RIGHT ── */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
-          {/* Details */}
-          <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
-            <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}>
-              Details
+          {/* Status + Priority */}
+          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
+              Statut & Priorité
             </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Created by</Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Avatar sx={{ width: 24, height: 24, bgcolor: C.accentLight, color: C.accent, fontSize: 10, fontWeight: 700 }}>
-                    {ticket.createdBy.name.charAt(0)}
-                  </Avatar>
-                  <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif">{ticket.createdBy.name}</Typography>
-                </Box>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.2 }}>
+              {/* Status */}
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Statut</Typography>
+                <Chip label={getStatusLabel(ticket.status)} size="small"
+                  sx={{ bgcolor: statusConf.bg, color: statusConf.text, border: `1px solid ${statusConf.border}`, fontWeight: 600, fontSize: "11px", height: 24, fontFamily: "Inter, sans-serif" }} />
               </Box>
-              <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Category</Typography>
-                <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif" sx={{ textTransform: "capitalize" }}>{ticket.category}</Typography>
+              {/* Priority */}
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Priorité</Typography>
+                <Chip label={getPriorityLabel(ticket.priority)} size="small"
+                  sx={{ bgcolor: priorityConf.bg, color: priorityConf.text, border: `1px solid ${priorityConf.border}`, fontWeight: 600, fontSize: "11px", height: 24, fontFamily: "Inter, sans-serif" }} />
               </Box>
-              <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Created at</Typography>
-                <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif">{formatDateTime(ticket.createdAt)}</Typography>
-              </Box>
-              <Box>
-                <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif" mb={0.5}>Assigned to</Typography>
-                <Typography fontSize={13} fontWeight={500} color={C.navy} fontFamily="Inter, sans-serif">
-                  {ticket.assignedTo?.name || <span style={{ color: C.textMuted, fontStyle: "italic" }}>Unassigned</span>}
+              {/* Category */}
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Catégorie</Typography>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>
+                  {getCategoryLabel(ticket.category)}
                 </Typography>
               </Box>
+              {/* Team */}
+              {ticket.teamId && (
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Équipe</Typography>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.accent }}>
+                    {ticket.teamId.name}
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Box>
 
-          {/* Actions */}
-          {canEdit && (
-            <Box sx={{ bgcolor: C.card, borderRadius: "10px", border: `1px solid ${C.border}`, p: 3 }}>
-              <Typography fontSize={13} fontWeight={600} color={C.textMuted} fontFamily="Inter, sans-serif" sx={{ textTransform: "uppercase", letterSpacing: "0.5px", mb: 2 }}>
-                Actions
+          {/* Personnes */}
+          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
+              Personnes
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {/* Créateur */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(124,58,237,0.12)", color: "#7C3AED", fontSize: "11px", fontWeight: 700 }}>
+                  {getInitials(ticket.createdBy.name)}
+                </Avatar>
+                <Box>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.createdBy.name}</Typography>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Créateur</Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderColor: C.divider }} />
+
+              {/* Assigné à */}
+              {ticket.assignedTo ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                  <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(249,115,22,0.12)", color: "#EA580C", fontSize: "11px", fontWeight: 700 }}>
+                    {getInitials(ticket.assignedTo.name)}
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.assignedTo.name}</Typography>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Technicien assigné</Typography>
+                  </Box>
+                  {canAssign && (
+                    <Box onClick={() => setAssignDialog(true)} sx={{ cursor: "pointer", color: C.accent, "&:hover": { opacity: 0.8 } }}>
+                      <Box component="i" className="ti ti-edit" sx={{ fontSize: 15 }} />
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                  <Box sx={{ width: 30, height: 30, borderRadius: "50%", bgcolor: C.bgPage, border: `1.5px dashed ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box component="i" className="ti ti-user-question" sx={{ fontSize: 15, color: C.textMuted }} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, fontStyle: "italic" }}>Non assigné</Typography>
+                  </Box>
+                  {canAssign && (
+                    <Button onClick={() => setAssignDialog(true)} size="small"
+                      sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.accent, textTransform: "none", p: 0, minWidth: "auto", "&:hover": { bgcolor: "transparent", opacity: 0.8 } }}>
+                      Assigner
+                    </Button>
+                  )}
+                </Box>
+              )}
+
+              {/* Assigné par */}
+              {ticket.assignedBy && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                  <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(59,130,246,0.12)", color: "#2563EB", fontSize: "11px", fontWeight: 700 }}>
+                    {getInitials(ticket.assignedBy.name)}
+                  </Avatar>
+                  <Box>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.assignedBy.name}</Typography>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>A assigné le ticket</Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* Dates */}
+          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
+              Dates
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Créé le</Typography>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 500, color: C.textPrimary }}>{formatDateTime(ticket.createdAt)}</Typography>
+              </Box>
+              {ticket.resolvedAt && (
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Résolu le</Typography>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 500, color: "#16A34A" }}>{formatDateTime(ticket.resolvedAt)}</Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* Actions technicien */}
+          {isTech && isAssignedToMe && (
+            <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
+                Mes actions
               </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <FormControl fullWidth size="small" sx={selectSx}>
-                  <InputLabel>Status</InputLabel>
-                  <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} label="Status" disabled={!isEditing}>
-                    <MenuItem value="open">Open</MenuItem>
-                    <MenuItem value="in_progress">In Progress</MenuItem>
-                    <MenuItem value="resolved">Resolved</MenuItem>
-                    <MenuItem value="closed">Closed</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth size="small" sx={selectSx}>
-                  <InputLabel>Assign to</InputLabel>
-                  <Select value={editAssignedTo} onChange={(e) => setEditAssignedTo(e.target.value)} label="Assign to" disabled={!isEditing}>
-                    <MenuItem value="">Unassigned</MenuItem>
-                    {techList.map((tech) => (
-                      <MenuItem key={tech._id} value={tech._id}>{tech.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {ticket.status === "assigned" && (
+                  <Button fullWidth onClick={() => handleStatusChange("in_progress")} disabled={statusUpdating}
+                    sx={{ bgcolor: "#F97316", color: "#fff", borderRadius: "9px", py: 1.2, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", "&:hover": { bgcolor: "#EA580C" } }}>
+                    <Box component="i" className="ti ti-player-play" sx={{ fontSize: 16, mr: 1 }} />
+                    Prendre en charge
+                  </Button>
+                )}
+                {ticket.status === "in_progress" && (
+                  <Button fullWidth onClick={() => handleStatusChange("resolved")} disabled={statusUpdating}
+                    sx={{ bgcolor: "#22C55E", color: "#fff", borderRadius: "9px", py: 1.2, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", "&:hover": { bgcolor: "#16A34A" } }}>
+                    <Box component="i" className="ti ti-circle-check" sx={{ fontSize: 16, mr: 1 }} />
+                    Marquer comme résolu
+                  </Button>
+                )}
               </Box>
             </Box>
           )}
         </Box>
       </Box>
 
-      {/* Delete Dialog */}
-      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}
-        PaperProps={{ sx: { borderRadius: "12px", border: `1px solid ${C.border}`, boxShadow: "0 20px 60px rgba(0,0,0,0.12)" } }}>
-        <DialogTitle sx={{ color: C.navy, fontFamily: "Inter, sans-serif", fontWeight: 700 }}>Delete Ticket</DialogTitle>
-        <DialogContent>
-          <Typography fontSize={14} color={C.textSecondary} fontFamily="Inter, sans-serif">
-            Are you sure you want to delete <strong>"{ticket.title}"</strong>? This action cannot be undone.
+      {/* ── Assign Dialog ── */}
+      <Dialog open={assignDialog} onClose={() => setAssignDialog(false)} PaperProps={{ sx: { borderRadius: "16px", minWidth: 400 } }}>
+        <DialogTitle sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "16px", color: C.textPrimary }}>
+          Assigner le ticket
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, mb: 2 }}>
+            Choisissez un technicien disponible pour ce ticket
           </Typography>
+          <FormControl fullWidth>
+            <InputLabel sx={{ fontFamily: "Inter, sans-serif" }}>Technicien</InputLabel>
+            <Select value={selectedTech} onChange={(e) => setSelectedTech(e.target.value)} label="Technicien"
+              sx={{ borderRadius: "10px", fontFamily: "Inter, sans-serif" }}>
+              {techList.map((tech) => (
+                <MenuItem key={tech._id} value={tech._id} sx={{ fontFamily: "Inter, sans-serif" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Avatar sx={{ width: 28, height: 28, bgcolor: C.accentLight, color: C.accent, fontSize: "11px", fontWeight: 700 }}>
+                      {getInitials(tech.name)}
+                    </Avatar>
+                    <Box>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600 }}>{tech.name}</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{tech.role}</Typography>
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteDialog(false)} sx={{ color: C.slate, textTransform: "none", fontFamily: "Inter, sans-serif", borderRadius: "8px", "&:hover": { bgcolor: C.bgPage } }}>
-            Cancel
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setAssignDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none" }}>
+            Annuler
           </Button>
-          <Button onClick={handleDelete} variant="contained" disableElevation
-            sx={{ bgcolor: C.danger, color: "#FFFFFF", textTransform: "none", fontFamily: "Inter, sans-serif", borderRadius: "8px", fontWeight: 600, "&:hover": { bgcolor: C.dangerHover } }}>
-            Delete
+          <Button onClick={handleAssign} disabled={!selectedTech || assigning} variant="contained"
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: "#3B82F6", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: "#2563EB" } }}>
+            {assigning ? "Assignation..." : "Assigner"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Delete Dialog ── */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} PaperProps={{ sx: { borderRadius: "16px", minWidth: 380 } }}>
+        <DialogTitle sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "16px", color: C.danger }}>
+          Supprimer le ticket
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary }}>
+            Êtes-vous sûr de vouloir supprimer ce ticket ? Cette action est irréversible.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setDeleteDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none" }}>
+            Annuler
+          </Button>
+          <Button onClick={handleDelete} variant="contained"
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.danger, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.dangerHover } }}>
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
-};
-
-export default TicketDetails;
+}

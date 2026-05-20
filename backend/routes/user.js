@@ -1,18 +1,22 @@
-const express = require("express");
-const { getAllUsers, getMe, updateUser, createUser, deleteUser } = require("../controllers/userController");
-const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
+// backend/routes/user.js
+const express = require('express');
+const {
+  getAllUsers,
+  getMe,
+  updateUser,
+  createUser,
+  deleteUser,
+  getTechnicians,
+} = require('../controllers/userController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// ── Mon profil ──
-router.get("/me", verifyToken, getMe);
-
-// ── Tous les users (connecté) ──
-router.get("/", verifyToken, getAllUsers);
-
-// ── Admin seulement ──
-router.post("/", verifyToken, verifyAdmin, createUser);
-router.put("/:id", verifyToken, updateUser);
-router.delete("/:id", verifyToken, verifyAdmin, deleteUser);
+router.get('/',              verifyToken, getAllUsers);
+router.get('/me',            verifyToken, getMe);
+router.get('/technicians',   verifyToken, getTechnicians);
+router.post('/',             verifyToken, createUser);
+router.put('/:id',           verifyToken, updateUser);
+router.delete('/:id',        verifyToken, deleteUser);
 
 module.exports = router;
