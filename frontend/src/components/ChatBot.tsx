@@ -1,107 +1,139 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Box, Fab, Paper, Typography, TextField,
-  IconButton, Collapse, CircularProgress, Chip,
+  Box, Typography, TextField, IconButton, Fab, CircularProgress,
+  Chip, Collapse, Divider, Tooltip,
 } from "@mui/material";
-import { ConfirmationNumber as TicketIcon } from "@mui/icons-material";
-import { C, priorityColors } from "../theme";
 
-// ── Types ────────────────────────────────────────────────────────
-type Priority = "low" | "medium" | "high" | "critical";
-type Category = "hardware" | "software" | "network" | "access" | "other";
+const API = "/api";
 
-interface TicketDraft {
-  title?: string;
-  description?: string;
-  priority?: Priority;
-  category?: Category;
-}
+type Priority    = "low" | "medium" | "high" | "critical";
+type Category    = "hardware" | "software" | "network" | "access" | "other";
+type TicketField = "title" | "description" | "priority" | "category";
 
 interface ActionChip {
-  label: string;
-  value: string;
-  textColor?: string;
-  bgcolor?: string;
-  borderColor?: string;
+  label: string; value: string;
+  bgcolor?: string; textColor?: string; borderColor?: string;
 }
-
+interface TicketDraft {
+  title?: string; description?: string;
+  priority?: Priority; category?: Category;
+}
 interface Msg {
   role: "user" | "ai";
   text: string;
-  chips?: ActionChip[];
-  card?: TicketDraft;
+  chips?:   ActionChip[];
+  card?:    TicketDraft;
   success?: boolean;
 }
+interface HistoryItem { _id: string; title: string; updatedAt: string; }
 
-// ── Constants ────────────────────────────────────────────────────
-const API = "http://localhost:3000/api";
-
-const PRIORITY_CHIPS: ActionChip[] = [
-  { label: "Low",      value: "low",      textColor: priorityColors.low.text,      bgcolor: priorityColors.low.bg,      borderColor: priorityColors.low.border },
-  { label: "Medium",   value: "medium",   textColor: priorityColors.medium.text,   bgcolor: priorityColors.medium.bg,   borderColor: priorityColors.medium.border },
-  { label: "High",     value: "high",     textColor: priorityColors.high.text,     bgcolor: priorityColors.high.bg,     borderColor: priorityColors.high.border },
-  { label: "Critical", value: "critical", textColor: priorityColors.critical.text, bgcolor: priorityColors.critical.bg, borderColor: priorityColors.critical.border },
-];
-
-const CATEGORY_CHIPS: ActionChip[] = [
-  { label: "Hardware", value: "hardware" },
-  { label: "Software", value: "software" },
-  { label: "Network",  value: "network"  },
-  { label: "Access",   value: "access"   },
-  { label: "Other",    value: "other"    },
-];
-
-const CONFIRM_CHIPS: ActionChip[] = [
-  { label: "✓ Confirm & Create", value: "confirm", textColor: C.navy,   bgcolor: C.accent,   borderColor: C.accentHover },
-  { label: "✕ Cancel",           value: "cancel",  textColor: C.danger, bgcolor: C.dangerBg, borderColor: C.danger },
-];
-
-const PRIORITY_LABEL: Record<Priority, string>  = { low: "Low",      medium: "Medium",   high: "High",    critical: "Critical" };
-const CATEGORY_LABEL: Record<Category, string>  = { hardware: "Hardware", software: "Software", network: "Network", access: "Access", other: "Other" };
-
-// ── Ticket field order and questions ────────────────────────────
-type TicketField = keyof TicketDraft;
-const FIELD_ORDER: TicketField[] = ["title", "description", "category", "priority"];
-
-const FIELD_QUESTION: Record<TicketField, string> = {
-  title:       "What should the title of this ticket be?",
-  description: "Can you describe the issue in more detail?",
-  category:    "Which category fits this issue?",
-  priority:    "What priority level does this need?",
+const C = {
+  bg:           "#ffffff",
+  bgSide:       "#f4f7fb",
+  bgInput:      "#f0f4fa",
+  accent:       "#2563eb",
+  accentHover:  "#1d4ed8",
+  accentLight:  "#eff6ff",
+  accentMid:    "#dbeafe",
+  textPrimary:  "#0f172a",
+  textSecondary:"#475569",
+  textMuted:    "#94a3b8",
+  border:       "#e2e8f0",
+  shadow:       "0 1px 3px rgba(0,0,0,0.08)",
+  shadowMd:     "0 4px 16px rgba(37,99,235,0.18)",
+  shadowLg:     "0 8px 40px rgba(15,23,42,0.13)",
+  success:      "#16a34a",
+  successBg:    "#f0fdf4",
+  successBorder:"#bbf7d0",
+  sidebarHover: "#e8f0fe",
+  sidebarActive:"#dbeafe",
+  userBubble:   "#2563eb",
 };
 
-const nextMissing = (d: TicketDraft): TicketField | null =>
-  FIELD_ORDER.find((f) => !d[f]) ?? null;
+const PRIORITY_LABEL: Record<Priority, string> = { low: "🟢 Low", medium: "🟡 Medium", high: "🟠 High", critical: "🔴 Critical" };
+const CATEGORY_LABEL: Record<Category, string> = { hardware: "🖥️ Hardware", software: "💻 Software", network: "🌐 Network", access: "🔑 Access", other: "📦 Other" };
 
-// ── Helpers ──────────────────────────────────────────────────────
+const priorityColors: Record<Priority, { bg: string; text: string; border: string }> = {
+  low:      { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" },
+  medium:   { bg: "#fffbeb", text: "#d97706", border: "#fde68a" },
+  high:     { bg: "#fff7ed", text: "#ea580c", border: "#fed7aa" },
+  critical: { bg: "#fef2f2", text: "#dc2626", border: "#fecaca" },
+};
+
+const FIELD_QUESTION: Record<TicketField, string> = {
+  title:       "Quel titre donneriez-vous à ce ticket ? (résumé court du problème)",
+  description: "Pouvez-vous décrire le problème plus en détail ?",
+  priority:    "Quelle est la priorité de ce ticket ?",
+  category:    "Dans quelle catégorie se situe ce problème ?",
+};
+
+const PRIORITY_CHIPS: ActionChip[] = [
+  { label: "🟢 Low",      value: "low",      ...priorityColors.low      },
+  { label: "🟡 Medium",   value: "medium",   ...priorityColors.medium   },
+  { label: "🟠 High",     value: "high",     ...priorityColors.high     },
+  { label: "🔴 Critical", value: "critical", ...priorityColors.critical },
+];
+const CATEGORY_CHIPS: ActionChip[] = [
+  { label: "🖥️ Hardware", value: "hardware", bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+  { label: "💻 Software", value: "software", bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+  { label: "🌐 Network",  value: "network",  bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+  { label: "🔑 Access",   value: "access",   bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+  { label: "📦 Other",    value: "other",    bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+];
+const CONFIRM_CHIPS: ActionChip[] = [
+  { label: "✅ Créer le ticket", value: "confirm", bgcolor: "#f0fdf4", textColor: "#16a34a", borderColor: "#bbf7d0" },
+  { label: "✏️ Annuler",         value: "cancel",  bgcolor: "#fef2f2", textColor: "#dc2626", borderColor: "#fecaca" },
+];
+
+const nextMissing = (d: TicketDraft): TicketField | null => {
+  if (!d.title)       return "title";
+  if (!d.description) return "description";
+  if (!d.priority)    return "priority";
+  if (!d.category)    return "category";
+  return null;
+};
+
+const QUICK_SUGGESTIONS = [
+  { icon: "🎫", label: "Créer un ticket",      msg: "Je veux créer un nouveau ticket de support" },
+  { icon: "📋", label: "Mes tickets en cours", msg: "Quels sont mes tickets en cours ?" },
+  { icon: "🚨", label: "Problème urgent",      msg: "J'ai un problème urgent qui bloque mon travail" },
+  { icon: "❓", label: "Aide & informations",  msg: "Que peux-tu faire pour m'aider ?" },
+];
+
 const BASE_RULES =
-  "You are TicketFlow AI, a helpful assistant in a ticket management system. " +
-  "Help users with tickets, projects, and team questions. " +
-  "When you can resolve an issue directly, do so. When action is needed, offer to do it. " +
-  "Be concise and professional. " +
-  "IMPORTANT: The user is already authenticated via the platform — NEVER ask them to verify their identity, state their name, or prove who they are. Their identity is confirmed below.";
+  "Tu es l'assistant IA de TUSKENS MEA, une entreprise de développement web et mobile. " +
+  "Tu aides les utilisateurs à gérer leurs tickets de support, projets et équipes. " +
+  "Sois professionnel, bienveillant et concis. " +
+  "RÈGLE LANGUE CRITIQUE : Détecte automatiquement la langue du message de l'utilisateur et réponds TOUJOURS dans cette même langue. Français → français, Arabe → arabe, Anglais → anglais. Ne mélange jamais les langues. " +
+  "IMPORTANT : L'utilisateur est déjà authentifié — ne lui demande JAMAIS de prouver son identité. Son profil est fourni ci-dessous. " +
+  "RÈGLE CRITIQUE TICKETS : Tu n'as JAMAIS accès aux tickets réels et tu ne peux PAS créer de tickets toi-même. " +
+  "Ne simule JAMAIS la création d'un ticket, n'invente JAMAIS de numéro de ticket, ne liste JAMAIS de faux tickets. " +
+  "Quand l'utilisateur a un problème qui nécessite un ticket, dis-lui clairement de cliquer sur le bouton 🎫 en haut du chat pour créer un vrai ticket via le formulaire intégré. " +
+  "À la fin de chaque réponse, si c'est pertinent, propose 2-3 suggestions courtes sous la forme : [SUGGESTIONS: suggestion1 | suggestion2 | suggestion3].";
 
-// ── Component ────────────────────────────────────────────────────
 export const ChatBot = () => {
-  const [open,       setOpen]       = useState(false);
-  const [mode,       setMode]       = useState<"chat" | "ticket">("chat");
-  const [msgs,       setMsgs]       = useState<Msg[]>([]);
-  const [input,      setInput]      = useState("");
-  const [loading,    setLoading]    = useState(false);
-  const [chatCtx,    setChatCtx]    = useState<string | undefined>(undefined);
-  const [draft,      setDraft]      = useState<TicketDraft>({});
-  const [awaitField, setAwaitField] = useState<TicketField | null>(null);
-  const [companyCtx, setCompanyCtx] = useState<string>("");
+  const [open,        setOpen]        = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [mode,        setMode]        = useState<"chat" | "ticket">("chat");
+  const [msgs,        setMsgs]        = useState<Msg[]>([]);
+  const [input,       setInput]       = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [chatCtx,     setChatCtx]     = useState<string | undefined>(undefined);
+  const [draft,       setDraft]       = useState<TicketDraft>({});
+  const [awaitField,  setAwaitField]  = useState<TicketField | null>(null);
+  const [companyCtx,  setCompanyCtx]  = useState<string>("");
+  const [historyId,   setHistoryId]   = useState<string | null>(null);
+  const [histories,   setHistories]   = useState<HistoryItem[]>([]);
+  const [copiedIdx,   setCopiedIdx]   = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // ── Fetch company context from DB when chat opens ────────────
   useEffect(() => {
     if (!open || companyCtx) return;
     const token = localStorage.getItem("token");
     if (!token) return;
     fetch(`${API}/ai/company-context`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((d) => { if (d.contextString) setCompanyCtx(d.contextString); })
+      .then(r => r.json())
+      .then(d => { if (d.contextString) setCompanyCtx(d.contextString); })
       .catch(() => {});
   }, [open]);
 
@@ -109,29 +141,102 @@ export const ChatBot = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, loading]);
 
-  const addMsg  = (m: Msg)    => setMsgs((p) => [...p, m]);
-  const addMsgs = (...ms: Msg[]) => setMsgs((p) => [...p, ...ms]);
+  const addMsg  = (m: Msg)       => setMsgs(p => [...p, m]);
+  const addMsgs = (...ms: Msg[]) => setMsgs(p => [...p, ...ms]);
 
   const buildRules = useCallback(() => {
     let rules = BASE_RULES;
-
-    // Inject the authenticated user's identity so the AI never asks who they are
     try {
       const stored = localStorage.getItem("user");
       if (stored) {
         const u = JSON.parse(stored) as { name: string; email: string; role: string };
-        rules += `\n\n--- Authenticated User ---\nName: ${u.name}\nEmail: ${u.email}\nRole: ${u.role}`;
+        rules += `\n\n--- Utilisateur connecté ---\nNom: ${u.name}\nEmail: ${u.email}\nRôle: ${u.role}`;
       }
     } catch { /* ignore */ }
-
-    if (companyCtx) {
-      rules += `\n\n--- Company Context ---\n${companyCtx}`;
-    }
-
+    if (companyCtx) rules += `\n\n--- Contexte entreprise ---\n${companyCtx}`;
     return rules;
   }, [companyCtx]);
 
-  // ── Chat mode ────────────────────────────────────────────────
+  const parseSuggestions = (text: string): { clean: string; chips: ActionChip[] } => {
+    const match = text.match(/\[SUGGESTIONS:\s*(.+?)\]/);
+    if (!match) return { clean: text, chips: [] };
+    const clean = text.replace(match[0], "").trim();
+    const chips = match[1].split("|").map(s => s.trim()).filter(Boolean).map(s => ({
+      label: s, value: `__suggestion__${s}`,
+      bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid,
+    }));
+    return { clean, chips };
+  };
+
+  const copyMsg = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), 2000);
+    });
+  };
+
+  const saveHistory = async (updatedMsgs: Msg[]) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const payload = {
+      messages: updatedMsgs.filter(m => m.text).map(m => ({ role: m.role, text: m.text })),
+      title: updatedMsgs.find(m => m.role === "user")?.text?.slice(0, 60) || "Conversation",
+    };
+    try {
+      if (historyId) {
+        await fetch(`${API}/chat-history/${historyId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        const res  = await fetch(`${API}/chat-history`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data._id) setHistoryId(data._id);
+      }
+    } catch { /* silently fail */ }
+  };
+
+  const loadHistories = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res  = await fetch(`${API}/chat-history`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (Array.isArray(data)) setHistories(data);
+    } catch { /* ignore */ }
+  };
+
+  const openHistory = async (id: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res  = await fetch(`${API}/chat-history/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.messages) {
+        setMsgs(data.messages.map((m: { role: string; text: string }) => ({ role: m.role as "user" | "ai", text: m.text })));
+        setHistoryId(id);
+        setMode("chat");
+        setChatCtx(undefined);
+        setShowHistory(false);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const newConversation = () => {
+    setMsgs([]);
+    setHistoryId(null);
+    setChatCtx(undefined);
+    setMode("chat");
+    setDraft({});
+    setAwaitField(null);
+    setShowHistory(false);
+  };
+
   const sendChat = async (text: string) => {
     addMsg({ role: "user", text });
     setLoading(true);
@@ -142,22 +247,25 @@ export const ChatBot = () => {
         body: JSON.stringify({ message: text, rules: buildRules(), context: chatCtx }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
-      addMsg({ role: "ai", text: data.reply });
+      if (!res.ok) throw new Error(data.error || "Requête échouée");
+      const { clean, chips } = parseSuggestions(data.reply);
+      const aiMsg: Msg = { role: "ai", text: clean, ...(chips.length > 0 && { chips }) };
+      const updated = [...msgs, { role: "user" as const, text }, aiMsg];
+      setMsgs(updated);
       setChatCtx(data.context);
+      await saveHistory(updated);
     } catch (err: any) {
-      addMsg({ role: "ai", text: `Error: ${err.message}` });
+      addMsg({ role: "ai", text: `Erreur : ${err.message}` });
     } finally { setLoading(false); }
   };
 
-  // ── Ticket mode helpers ──────────────────────────────────────
   const askNext = (d: TicketDraft): Msg => {
     const field = nextMissing(d);
     if (!field) {
       return {
         role: "ai",
-        text: "Here's your ticket summary. Ready to create it?",
-        card: d,
+        text: "Voici le résumé de votre ticket. Voulez-vous le créer ?",
+        card:  d,
         chips: CONFIRM_CHIPS,
       };
     }
@@ -165,7 +273,7 @@ export const ChatBot = () => {
     return {
       role: "ai",
       text: FIELD_QUESTION[field],
-      chips: field === "category" ? CATEGORY_CHIPS : field === "priority" ? PRIORITY_CHIPS : undefined,
+      chips: field === "priority" ? PRIORITY_CHIPS : field === "category" ? CATEGORY_CHIPS : undefined,
     };
   };
 
@@ -173,34 +281,28 @@ export const ChatBot = () => {
     setMode("ticket");
     setDraft({});
     setAwaitField(null);
-    setMsgs([{
-      role: "ai",
-      text: "Let's create a ticket. Describe your issue — I'll extract what I can from your message.",
-    }]);
+    setMsgs([{ role: "ai", text: "Créons un ticket ensemble. Décrivez votre problème — j'extrairai automatiquement les informations clés." }]);
   };
 
-  // ── Initial message: call AI to extract fields once ──────────
   const extractAndAdvance = async (text: string) => {
     addMsg({ role: "user", text });
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/ai/extract-ticket`, {
+      const res       = await fetch(`${API}/ai/extract-ticket`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
       });
       const extracted = await res.json();
-      if (!res.ok) throw new Error(extracted.error || "Extraction failed");
-
+      if (!res.ok) throw new Error(extracted.error || "Extraction échouée");
       const newDraft: TicketDraft = { ...extracted };
       setDraft(newDraft);
       addMsg(askNext(newDraft));
     } catch (err: any) {
-      addMsg({ role: "ai", text: `Error: ${err.message}` });
+      addMsg({ role: "ai", text: `Erreur : ${err.message}` });
     } finally { setLoading(false); }
   };
 
-  // ── Text answer for a field (title or description) ───────────
   const answerTextField = (text: string) => {
     const field = awaitField;
     if (!field) return;
@@ -211,10 +313,9 @@ export const ChatBot = () => {
     addMsg(askNext(newDraft));
   };
 
-  // ── Create ticket via API ────────────────────────────────────
   const createTicket = async () => {
     setLoading(true);
-    addMsg({ role: "user", text: "Confirm & Create" });
+    addMsg({ role: "user", text: "Confirmer & Créer" });
     try {
       const token = localStorage.getItem("token");
       const res   = await fetch(`${API}/tickets`, {
@@ -223,99 +324,76 @@ export const ChatBot = () => {
         body: JSON.stringify(draft),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Creation failed");
+      if (!res.ok) throw new Error(data.message || "Création échouée");
       addMsg({
         role: "ai",
-        text: `Ticket created! "${data.title}" is now open and the team has been notified.`,
+        text: `✅ Ticket créé avec succès ! "${data.title}" est maintenant ouvert et l'équipe a été notifiée.`,
         success: true,
       });
       setMode("chat");
       setDraft({});
       setAwaitField(null);
     } catch (err: any) {
-      addMsg({ role: "ai", text: `Failed to create ticket: ${err.message}` });
+      addMsg({ role: "ai", text: `Échec de création du ticket : ${err.message}` });
     } finally { setLoading(false); }
   };
 
-  // ── Chip click handler ───────────────────────────────────────
   const handleChip = (chip: ActionChip) => {
     if (loading) return;
-
+    if (chip.value.startsWith("__suggestion__")) { sendChat(chip.label); return; }
     if (chip.value === "confirm") { createTicket(); return; }
-
     if (chip.value === "cancel") {
       addMsgs(
-        { role: "user", text: "Cancel" },
-        { role: "ai",   text: "Ticket creation cancelled. How else can I help?" },
+        { role: "user", text: "Annuler" },
+        { role: "ai",   text: "Création de ticket annulée. Comment puis-je vous aider ?" },
       );
-      setMode("chat");
-      setDraft({});
-      setAwaitField(null);
+      setMode("chat"); setDraft({}); setAwaitField(null);
       return;
     }
-
-    // Critical → ask for confirmation first
     if (chip.value === "critical") {
       addMsgs(
-        { role: "user", text: "Critical" },
+        { role: "user", text: "Critique" },
         {
           role: "ai",
-          text: "⚠️ Critical means immediate response required — the team will be alerted right away. Are you sure?",
+          text: "⚠️ Critique signifie une réponse immédiate requise — l'équipe sera alertée. Vous confirmez ?",
           chips: [
-            { label: "Yes, Critical",    value: "confirm_critical", textColor: priorityColors.critical.text, bgcolor: priorityColors.critical.bg, borderColor: priorityColors.critical.border },
-            { label: "Use High instead", value: "high",             textColor: priorityColors.high.text,     bgcolor: priorityColors.high.bg,     borderColor: priorityColors.high.border },
+            { label: "Oui, Critique", value: "confirm_critical", ...priorityColors.critical },
+            { label: "Utiliser High", value: "high",             ...priorityColors.high },
           ],
         },
       );
       return;
     }
-
     if (chip.value === "confirm_critical") {
       const newDraft = { ...draft, priority: "critical" as Priority };
-      setDraft(newDraft);
-      setAwaitField(null);
-      addMsg({ role: "user", text: "Yes, Critical" });
+      setDraft(newDraft); setAwaitField(null);
+      addMsg({ role: "user", text: "Oui, Critique" });
       addMsg(askNext(newDraft));
       return;
     }
-
-    // Priority chip (low / medium / high)
     if (["low", "medium", "high"].includes(chip.value)) {
       const newDraft = { ...draft, priority: chip.value as Priority };
-      setDraft(newDraft);
-      setAwaitField(null);
+      setDraft(newDraft); setAwaitField(null);
       addMsg({ role: "user", text: chip.label });
       addMsg(askNext(newDraft));
       return;
     }
-
-    // Category chip
     if (["hardware", "software", "network", "access", "other"].includes(chip.value)) {
       const newDraft = { ...draft, category: chip.value as Category };
-      setDraft(newDraft);
-      setAwaitField(null);
+      setDraft(newDraft); setAwaitField(null);
       addMsg({ role: "user", text: chip.label });
       addMsg(askNext(newDraft));
       return;
     }
   };
 
-  // ── Main send ────────────────────────────────────────────────
   const handleSend = () => {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
-
     if (mode === "chat") { sendChat(text); return; }
-
-    // Ticket mode: first message → extract fields via AI
-    // Follow-up text messages → answer the current awaited field
-    const isFirstMessage = msgs.length === 1; // only the AI greeting so far
-    if (isFirstMessage) {
-      extractAndAdvance(text);
-    } else {
-      answerTextField(text);
-    }
+    const isFirst = msgs.length === 1;
+    if (isFirst) { extractAndAdvance(text); } else { answerTextField(text); }
   };
 
   const onKey = (e: React.KeyboardEvent) => {
@@ -324,195 +402,318 @@ export const ChatBot = () => {
 
   const lastIdx = msgs.length - 1;
 
-  // ── Render ───────────────────────────────────────────────────
+  let userName = "vous";
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}");
+    if (u.name) userName = u.name.split(" ")[0];
+  } catch { /* ignore */ }
+
   return (
-    <Box sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1300 }}>
+    <Box sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.5 }}>
+
       <Collapse in={open} unmountOnExit>
-        <Paper elevation={0} sx={{
-          width: 374, height: 530, mb: 1.5,
-          border: `1px solid ${C.border}`, borderRadius: "16px",
-          boxShadow: C.shadowLg, display: "flex", flexDirection: "column", overflow: "hidden",
+        <Box sx={{
+          width: 380,
+          height: "calc(100vh - 120px)",
+          maxHeight: 560,
+          bgcolor: C.bg,
+          borderRadius: "20px",
+          boxShadow: C.shadowLg,
+          border: `1px solid ${C.border}`,
+          display: "flex",
+          overflow: "hidden",
+          fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
         }}>
 
-          {/* ── Header ── */}
-          <Box sx={{ px: 2, py: 1.5, bgcolor: C.navyMid, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Box sx={{ width: 32, height: 32, borderRadius: "50%", bgcolor: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
-                ✦
-              </Box>
-              <Box>
-                <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: 14, lineHeight: 1 }}>TicketFlow AI</Typography>
-                <Typography sx={{ color: C.accent, fontSize: 11 }}>
-                  {mode === "ticket" ? "Creating a ticket…" : "Always here to help"}
+          {/* ── SIDEBAR HISTORIQUE ── */}
+          <Collapse in={showHistory} orientation="horizontal" unmountOnExit>
+            <Box sx={{ width: 190, height: "100%", bgcolor: C.bgSide, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }}>
+              <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${C.border}` }}>
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Historique
                 </Typography>
               </Box>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              {mode === "chat" ? (
-                <IconButton size="small" onClick={startTicket} title="New ticket"
-                  sx={{ color: C.accent, bgcolor: "rgba(95,194,186,0.15)", borderRadius: "8px", p: 0.75, "&:hover": { bgcolor: "rgba(95,194,186,0.28)" } }}>
-                  <TicketIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              ) : (
-                <IconButton size="small" onClick={() => { setMode("chat"); setDraft({}); setAwaitField(null); }} title="Back to chat"
-                  sx={{ color: "rgba(255,255,255,0.5)", fontSize: 14, borderRadius: "8px", p: 0.5, "&:hover": { bgcolor: "rgba(255,255,255,0.1)" } }}>
-                  ←
-                </IconButton>
-              )}
-              <IconButton size="small" onClick={() => setOpen(false)} sx={{ color: "rgba(255,255,255,0.5)", p: 0.5 }}>✕</IconButton>
-            </Box>
-          </Box>
-
-          {/* ── Messages ── */}
-          <Box sx={{
-            flex: 1, overflowY: "auto", px: 2, py: 1.5,
-            display: "flex", flexDirection: "column", gap: 1.5, bgcolor: C.bgPage,
-            "&::-webkit-scrollbar": { width: 4 },
-            "&::-webkit-scrollbar-thumb": { bgcolor: C.border, borderRadius: 2 },
-          }}>
-
-            {msgs.length === 0 && (
-              <Box sx={{ textAlign: "center", mt: 5 }}>
-                <Typography sx={{ fontSize: 28 }}>✦</Typography>
-                <Typography sx={{ color: C.textMuted, fontSize: 13, mt: 1 }}>
-                  Ask me anything, or start a new ticket.
-                </Typography>
-                <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-                  <Chip label="📋 Create a ticket" onClick={startTicket}
-                    sx={{ cursor: "pointer", bgcolor: C.accentLight, color: C.accent, border: `1px solid ${C.accent}40`, fontFamily: "Inter, sans-serif", fontSize: 12, fontWeight: 600, "&:hover": { bgcolor: C.accentMid } }} />
+              <Box sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
+                <Box onClick={newConversation} sx={{
+                  px: 1.5, py: 1, borderRadius: "10px",
+                  bgcolor: C.accent, color: "#fff",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center",
+                  "&:hover": { bgcolor: C.accentHover }, transition: "background 0.15s",
+                }}>
+                  + Nouvelle conversation
                 </Box>
               </Box>
-            )}
-
-            {msgs.map((msg, i) => {
-              const chipsActive = i === lastIdx && !loading;
-              return (
-                <Box key={i}>
-                  {/* Bubble */}
-                  <Box sx={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
-                    <Box sx={{
-                      maxWidth: "84%", px: 1.5, py: 1,
-                      borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                      bgcolor: msg.role === "user" ? C.navyMid : msg.success ? C.successBg : C.bg,
-                      border: msg.role === "ai" ? `1px solid ${msg.success ? C.success + "50" : C.border}` : "none",
-                      boxShadow: C.shadow,
-                    }}>
-                      <Typography sx={{
-                        fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap",
-                        color: msg.role === "user" ? "#fff" : msg.success ? C.success : C.textPrimary,
-                      }}>
-                        {msg.text}
-                      </Typography>
-                    </Box>
+              <Box sx={{ flex: 1, overflowY: "auto", px: 1, py: 0.5 }}>
+                {histories.length === 0 ? (
+                  <Typography sx={{ fontSize: 12, color: C.textMuted, px: 1, py: 2, textAlign: "center" }}>
+                    Aucun historique
+                  </Typography>
+                ) : histories.map(h => (
+                  <Box key={h._id} onClick={() => openHistory(h._id)} sx={{
+                    px: 1.5, py: 1, borderRadius: "8px", cursor: "pointer", mb: 0.5,
+                    bgcolor: historyId === h._id ? C.sidebarActive : "transparent",
+                    "&:hover": { bgcolor: C.sidebarHover }, transition: "background 0.12s",
+                  }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {h.title}
+                    </Typography>
+                    <Typography sx={{ fontSize: 10, color: C.textMuted }}>
+                      {new Date(h.updatedAt).toLocaleDateString("fr-FR")}
+                    </Typography>
                   </Box>
+                ))}
+              </Box>
+            </Box>
+          </Collapse>
 
-                  {/* Ticket preview card */}
-                  {msg.card && (
-                    <Box sx={{ mt: 1, bgcolor: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", p: 1.5, maxWidth: "84%" }}>
-                      <Typography sx={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1 }}>
-                        Ticket Preview
-                      </Typography>
-                      {msg.card.title && (
-                        <Box sx={{ mb: 0.75 }}>
-                          <Typography sx={{ fontSize: 10, color: C.textMuted }}>Title</Typography>
-                          <Typography sx={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{msg.card.title}</Typography>
-                        </Box>
-                      )}
-                      {msg.card.description && (
-                        <Box sx={{ mb: 0.75 }}>
-                          <Typography sx={{ fontSize: 10, color: C.textMuted }}>Description</Typography>
-                          <Typography sx={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{msg.card.description}</Typography>
-                        </Box>
-                      )}
-                      <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mt: 0.5 }}>
-                        {msg.card.priority && (
-                          <Chip size="small" label={PRIORITY_LABEL[msg.card.priority]}
-                            sx={{ fontSize: 11, fontWeight: 600, height: 22, bgcolor: priorityColors[msg.card.priority].bg, color: priorityColors[msg.card.priority].text, border: `1px solid ${priorityColors[msg.card.priority].border}` }} />
-                        )}
-                        {msg.card.category && (
-                          <Chip size="small" label={CATEGORY_LABEL[msg.card.category]}
-                            sx={{ fontSize: 11, fontWeight: 600, height: 22, bgcolor: C.accentLight, color: C.accent, border: `1px solid ${C.accent}40` }} />
-                        )}
-                      </Box>
-                    </Box>
-                  )}
+          {/* ── ZONE PRINCIPALE ── */}
+          <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
-                  {/* Chips row — horizontally scrollable */}
-                  {msg.chips && msg.chips.length > 0 && (
+            {/* Header */}
+            <Box sx={{
+              px: 2, py: 1.25,
+              background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
+              display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0,
+            }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: "9px", bgcolor: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                ✦
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>TicketFlow AI</Typography>
+                <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.7)" }}>
+                  TUSKENS MEA • {mode === "ticket" ? "Création ticket" : "Assistant"}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", gap: 0.5 }}>
+                <Tooltip title="Historique">
+                  <IconButton size="small" onClick={() => { if (!showHistory) loadHistories(); setShowHistory(v => !v); }}
+                    sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
+                    <span style={{ fontSize: 14 }}>🕐</span>
+                  </IconButton>
+                </Tooltip>
+                {mode === "chat" && (
+                  <Tooltip title="Créer un ticket">
+                    <IconButton size="small" onClick={startTicket}
+                      sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
+                      <span style={{ fontSize: 14 }}>🎫</span>
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {mode === "ticket" && (
+                  <Tooltip title="Retour au chat">
+                    <IconButton size="small" onClick={() => { setMode("chat"); setMsgs([]); setDraft({}); setAwaitField(null); }}
+                      sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
+                      <span style={{ fontSize: 14 }}>💬</span>
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <IconButton size="small" onClick={() => setOpen(false)}
+                  sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
+                  <span style={{ fontSize: 14 }}>✕</span>
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Zone messages */}
+            <Box sx={{
+              flex: 1, overflowY: "auto", px: 2, py: 1.5,
+              display: "flex", flexDirection: "column", gap: 1.5, bgcolor: C.bg,
+              "&::-webkit-scrollbar": { width: 4 },
+              "&::-webkit-scrollbar-thumb": { bgcolor: C.border, borderRadius: 2 },
+            }}>
+
+              {/* Écran d'accueil */}
+              {msgs.length === 0 && !loading && (
+                <Box>
+                  <Box sx={{ textAlign: "center", py: 1.5, pb: 2 }}>
                     <Box sx={{
-                      mt: 0.75, display: "flex", gap: 0.75,
-                      overflowX: "auto", pb: 0.5,
-                      opacity: chipsActive ? 1 : 0.35,
-                      pointerEvents: chipsActive ? "auto" : "none",
-                      "&::-webkit-scrollbar": { height: 3 },
-                      "&::-webkit-scrollbar-thumb": { bgcolor: C.border, borderRadius: 2 },
-                    }}>
-                      {msg.chips.map((chip, ci) => (
-                        <Box key={ci} onClick={() => chipsActive && handleChip(chip)}
-                          sx={{
-                            flexShrink: 0, cursor: chipsActive ? "pointer" : "default",
+                      width: 48, height: 48, borderRadius: "14px",
+                      background: "linear-gradient(135deg, #2563eb, #1e40af)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 22, mx: "auto", mb: 1.5,
+                      boxShadow: "0 4px 16px rgba(37,99,235,0.3)",
+                    }}>✦</Box>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, mb: 0.5 }}>
+                      Bonjour {userName} !
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.5 }}>
+                      Comment puis-je vous aider aujourd'hui ?
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ mb: 1.5, borderColor: C.border }} />
+                  <Typography sx={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1 }}>
+                    Suggestions
+                  </Typography>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                    {QUICK_SUGGESTIONS.map(s => (
+                      <Box key={s.msg} onClick={() => sendChat(s.msg)} sx={{
+                        px: 1.5, py: 1, borderRadius: "12px",
+                        border: `1px solid ${C.border}`,
+                        display: "flex", alignItems: "center", gap: 1.5,
+                        cursor: "pointer", bgcolor: C.bg,
+                        "&:hover": { bgcolor: C.accentLight, borderColor: C.accent },
+                        transition: "all 0.15s ease",
+                      }}>
+                        <Box sx={{ width: 30, height: 30, borderRadius: "8px", bgcolor: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>
+                          {s.icon}
+                        </Box>
+                        <Typography sx={{ fontSize: 13, color: C.textPrimary, fontWeight: 500 }}>{s.label}</Typography>
+                        <Box sx={{ ml: "auto", color: C.textMuted, fontSize: 14 }}>›</Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Messages */}
+              {msgs.map((msg, i) => {
+                const chipsActive = i === lastIdx && !loading;
+                return (
+                  <Box key={i} sx={{ display: "flex", flexDirection: "column", gap: 0.5, alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
+
+                    {/* Bulle + bouton copier */}
+                    <Box sx={{ position: "relative", maxWidth: "82%", "&:hover .copy-btn": { opacity: 1 } }}>
+                      <Box sx={{
+                        px: 1.5, py: 1,
+                        borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                        bgcolor: msg.role === "user" ? C.userBubble : msg.success ? C.successBg : C.bgInput,
+                        border: msg.role === "ai" ? `1px solid ${msg.success ? C.successBorder : C.border}` : "none",
+                        boxShadow: C.shadow,
+                      }}>
+                        <Typography sx={{ fontSize: 13, lineHeight: 1.65, whiteSpace: "pre-wrap", color: msg.role === "user" ? "#fff" : msg.success ? C.success : C.textPrimary }}>
+                          {msg.text}
+                        </Typography>
+                      </Box>
+
+                      {/* Bouton copier — seulement sur les messages IA */}
+                      {msg.role === "ai" && (
+                        <Tooltip title={copiedIdx === i ? "Copié !" : "Copier"}>
+                          <Box
+                            className="copy-btn"
+                            onClick={() => copyMsg(msg.text, i)}
+                            sx={{
+                              position: "absolute", bottom: 6, right: -30,
+                              width: 22, height: 22, borderRadius: "6px",
+                              bgcolor: C.bg, border: `1px solid ${C.border}`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              cursor: "pointer", opacity: 0,
+                              transition: "all 0.15s",
+                              "&:hover": { bgcolor: C.accentLight, borderColor: C.accent },
+                              fontSize: 12,
+                            }}
+                          >
+                            {copiedIdx === i ? "✅" : "📋"}
+                          </Box>
+                        </Tooltip>
+                      )}
+                    </Box>
+
+                    {/* Card ticket preview */}
+                    {msg.card && (
+                      <Box sx={{ maxWidth: "82%", mt: 0.5, bgcolor: C.bg, border: `1px solid ${C.border}`, borderRadius: "12px", p: 1.5 }}>
+                        <Typography sx={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1 }}>
+                          Aperçu du ticket
+                        </Typography>
+                        {msg.card.title && (
+                          <Box sx={{ mb: 0.75 }}>
+                            <Typography sx={{ fontSize: 10, color: C.textMuted }}>Titre</Typography>
+                            <Typography sx={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{msg.card.title}</Typography>
+                          </Box>
+                        )}
+                        {msg.card.description && (
+                          <Box sx={{ mb: 0.75 }}>
+                            <Typography sx={{ fontSize: 10, color: C.textMuted }}>Description</Typography>
+                            <Typography sx={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.45 }}>{msg.card.description}</Typography>
+                          </Box>
+                        )}
+                        <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mt: 0.75 }}>
+                          {msg.card.priority && (
+                            <Chip size="small" label={PRIORITY_LABEL[msg.card.priority]}
+                              sx={{ fontSize: 11, fontWeight: 600, height: 22, bgcolor: priorityColors[msg.card.priority].bg, color: priorityColors[msg.card.priority].text, border: `1px solid ${priorityColors[msg.card.priority].border}` }} />
+                          )}
+                          {msg.card.category && (
+                            <Chip size="small" label={CATEGORY_LABEL[msg.card.category]}
+                              sx={{ fontSize: 11, fontWeight: 600, height: 22, bgcolor: C.accentLight, color: C.accent, border: `1px solid ${C.accentMid}` }} />
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Chips */}
+                    {msg.chips && msg.chips.length > 0 && (
+                      <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", maxWidth: "90%", opacity: chipsActive ? 1 : 0.4, pointerEvents: chipsActive ? "auto" : "none" }}>
+                        {msg.chips.map((chip, ci) => (
+                          <Box key={ci} onClick={() => chipsActive && handleChip(chip)} sx={{
+                            cursor: chipsActive ? "pointer" : "default",
                             px: 1.5, py: "5px", borderRadius: "20px",
                             border: `1.5px solid ${chip.borderColor || C.border}`,
                             bgcolor: chip.bgcolor || C.bg,
                             color: chip.textColor || C.textPrimary,
-                            fontSize: 12, fontWeight: 600,
-                            fontFamily: "Inter, sans-serif", lineHeight: 1.4,
+                            fontSize: 12, fontWeight: 600, lineHeight: 1.4,
                             userSelect: "none", transition: "all 0.15s",
-                            "&:hover": chipsActive ? { filter: "brightness(0.9)", transform: "translateY(-1px)" } : {},
+                            "&:hover": chipsActive ? { filter: "brightness(0.93)", transform: "translateY(-1px)" } : {},
                           }}>
-                          {chip.label}
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-              );
-            })}
+                            {chip.label}
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
 
-            {loading && (
-              <Box sx={{ display: "flex" }}>
-                <Box sx={{ px: 1.5, py: 1, borderRadius: "14px 14px 14px 4px", bgcolor: C.bg, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 1 }}>
-                  <CircularProgress size={12} sx={{ color: C.accent }} />
-                  <Typography sx={{ fontSize: 12, color: C.textMuted }}>Thinking…</Typography>
+              {loading && (
+                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
+                  <Box sx={{ px: 1.5, py: 1, borderRadius: "16px 16px 16px 4px", bgcolor: C.bgInput, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={11} sx={{ color: C.accent }} />
+                    <Typography sx={{ fontSize: 12, color: C.textMuted }}>En train de réfléchir…</Typography>
+                  </Box>
                 </Box>
-              </Box>
-            )}
-            <div ref={bottomRef} />
-          </Box>
+              )}
+              <div ref={bottomRef} />
+            </Box>
 
-          {/* ── Input ── */}
-          <Box sx={{ px: 1.5, py: 1.5, borderTop: `1px solid ${C.border}`, bgcolor: C.bg, display: "flex", gap: 1, alignItems: "flex-end" }}>
-            <TextField multiline maxRows={4} fullWidth size="small"
-              placeholder={mode === "ticket" ? "Describe your issue or answer above…" : "Type a message…"}
-              value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey}
-              sx={{ "& .MuiOutlinedInput-root": {
-                borderRadius: "12px", fontSize: 13,
-                "& fieldset": { borderColor: C.border },
-                "&:hover fieldset": { borderColor: C.accent },
-                "&.Mui-focused fieldset": { borderColor: C.accent },
-              }}} />
-            <IconButton onClick={handleSend} disabled={!input.trim() || loading}
-              sx={{
-                bgcolor: mode === "ticket" ? C.navyMid : C.accent, color: "#fff",
-                width: 36, height: 36, borderRadius: "10px", flexShrink: 0,
-                "&:hover": { bgcolor: mode === "ticket" ? C.sidebarActive : C.accentHover },
-                "&.Mui-disabled": { bgcolor: C.border, color: C.textMuted },
-              }}>
-              ➤
-            </IconButton>
+            {/* Input */}
+            <Box sx={{ px: 1.5, py: 1.25, borderTop: `1px solid ${C.border}`, bgcolor: C.bg, display: "flex", gap: 1, alignItems: "flex-end" }}>
+              <TextField
+                multiline maxRows={4} fullWidth size="small"
+                placeholder={mode === "ticket" ? "Décrivez votre problème…" : "Envoyer un message…"}
+                value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKey}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "12px", fontSize: 13, bgcolor: C.bgInput,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: C.accent + "60" },
+                    "&.Mui-focused fieldset": { borderColor: C.accent },
+                  },
+                }}
+              />
+              <IconButton onClick={handleSend} disabled={!input.trim() || loading}
+                sx={{
+                  bgcolor: C.accent, color: "#fff",
+                  width: 38, height: 38, borderRadius: "12px", flexShrink: 0,
+                  "&:hover": { bgcolor: C.accentHover },
+                  "&.Mui-disabled": { bgcolor: C.border, color: C.textMuted },
+                  transition: "all 0.15s",
+                }}>
+                <span style={{ fontSize: 16 }}>➤</span>
+              </IconButton>
+            </Box>
+
           </Box>
-        </Paper>
+        </Box>
       </Collapse>
 
-      <Fab onClick={() => setOpen((v) => !v)}
-        sx={{
-          bgcolor: open ? C.navyMid : C.accent, color: "#fff",
-          width: 52, height: 52, boxShadow: C.shadowMd,
-          "&:hover": { bgcolor: open ? C.sidebarActive : C.accentHover },
-          transition: "all 0.2s ease", fontSize: open ? 20 : 22,
-        }}>
+      {/* FAB */}
+      <Fab onClick={() => setOpen(v => !v)} sx={{
+        background: open ? "linear-gradient(135deg, #475569, #334155)" : "linear-gradient(135deg, #2563eb, #1e40af)",
+        color: "#fff", width: 54, height: 54, boxShadow: C.shadowMd,
+        "&:hover": { filter: "brightness(1.1)", transform: "scale(1.05)" },
+        transition: "all 0.2s ease", fontSize: open ? 18 : 22,
+      }}>
         {open ? "✕" : "✦"}
       </Fab>
+
     </Box>
   );
 };

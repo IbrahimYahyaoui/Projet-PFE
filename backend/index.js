@@ -12,6 +12,7 @@ const teamRoutes = require('./routes/team');
 const analyticsRoutes = require('./routes/analytics');
 const projectRoutes = require('./routes/project');
 const iaRoutes = require('./routes/IA');
+const chatHistoryRoutes = require('./routes/chatHistory');  // ← NOUVEAU
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -51,6 +52,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/ai', iaRoutes);
+app.use('/api/chat-history', chatHistoryRoutes);  // ← NOUVEAU
 
 app.get("/", (req, res) => {
   res.send("Hello from TicketFlow API 🚀");
