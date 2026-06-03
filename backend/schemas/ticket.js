@@ -31,7 +31,7 @@ const ticketSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['open', 'assigned', 'in_progress', 'resolved', 'closed'],
+      enum: ['open', 'assigned', 'in_progress', 'waiting', 'resolved', 'closed'],
       default: 'open',
     },
     priority: {
@@ -68,6 +68,16 @@ const ticketSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // SLA
+    slaDeadline: { type: Date, default: null },
+    slaBreached: { type: Boolean, default: false },
+    // Escalation
+    escalationLevel: { type: Number, default: 0 }, // 0=none 1=leader 2=admin
+    escalatedAt: { type: Date, default: null },
+    // Waiting
+    waitingReason: { type: String, default: '' },
+    // Project link
+    relatedProject: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
     comments: {
       type: [commentSchema],
       default: [],

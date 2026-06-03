@@ -22,6 +22,7 @@ const projectSchema = new mongoose.Schema(
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     color: { type: String, default: '#5FC2BA' },
     progress: { type: Number, default: 0, min: 0, max: 100 },
+    relatedTickets: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' }],
   },
   { timestamps: true }
 );

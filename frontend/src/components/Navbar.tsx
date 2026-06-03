@@ -1,47 +1,94 @@
 // frontend/src/components/Navbar.tsx
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Box, Typography, Avatar, Badge, IconButton, Popover, List, ListItemButton, ListItemText, Divider, InputBase } from "@mui/material";
-import { Notifications as NotifIcon, Search as SearchIcon, Logout as LogoutIcon, Person as PersonIcon, Settings as SettingsIcon, KeyboardArrowDown as ArrowIcon, Business as BusinessIcon } from "@mui/icons-material";
-import { C } from "../theme";
+import {
+  Box, Typography, Avatar, Badge, IconButton,
+  Popover, List, ListItemButton, ListItemText, Divider, InputBase,
+} from "@mui/material";
+import {
+  Notifications as NotifIcon,
+  Search as SearchIcon,
+  Logout as LogoutIcon,
+  Person as PersonIcon,
+  Settings as SettingsIcon,
+  KeyboardArrowDown as ArrowIcon,
+  Business as BusinessIcon,
+} from "@mui/icons-material";
+import { C, PERMISSIONS } from "../theme";
+import type { UserRole } from "../theme";
 import { useCurrentUser } from "../App";
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
 }
 
-const getNavModules = (role: string) => {
-  const all = [
-    { label: "Accueil",    path: "/dashboard", roles: ["admin","tech","user","leader"] },
-    { label: "My Team",    path: "/team",       roles: ["admin","leader","tech"] },
-    { label: "My Project", path: "/projects",   roles: ["admin","tech","user","leader"] },
-    { label: "Users",      path: "/users",      roles: ["admin"] },
-  ];
-  return all.filter((m) => m.roles.includes(role));
-};
+interface SubItem {
+  label: string;
+  path: string;
+  icon: string;
+  permission?: keyof typeof PERMISSIONS["admin"];
+}
 
-const getSubItems = (path: string, role: string) => {
-  const map: Record<string, { label: string; path: string; icon: string }[]> = {
-    "/team": [
-      { label: "Dashboard",      path: "/team",             icon: "layout-dashboard" },
-      { label: "Membres",        path: "/team/members",     icon: "users"            },
-      { label: "Tickets Équipe", path: "/team/tickets",     icon: "ticket"           },
-      { label: "Analytics",      path: "/team/analytics",   icon: "chart-bar"        },
+interface Module {
+  id: string;
+  label: string;
+  path: string;
+  permission?: keyof typeof PERMISSIONS["admin"];
+  subItems: SubItem[];
+}
+
+const MODULES: Module[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    path: "/dashboard",
+    subItems: [],
+  },
+  {
+    id: "tickets",
+    label: "Tickets",
+    path: "/tickets/my",
+    subItems: [
+      { label: "File Admin",       path: "/tickets/admin-queue", icon: "inbox",           permission: "canSeeAdminQueue"  },
+      { label: "Tous les tickets", path: "/tickets/all",         icon: "list",            permission: "canSeeAllTickets"  },
+      { label: "Créer un ticket",  path: "/tickets/create",      icon: "circle-plus" },
+      { label: "Mes tickets",      path: "/tickets/my",          icon: "ticket" },
+      { label: "Assignés à moi",   path: "/tickets/assigned",    icon: "clipboard-list" },
+      { label: "Historique",       path: "/tickets/history",     icon: "history",         permission: "canSeeAllTickets"  },
     ],
-    "/projects": [
-      { label: "Mes Projets", path: "/projects",          icon: "folder-open" },
-      { label: "Tasks",       path: "/projects/tasks",    icon: "checkbox"    },
-      { label: "Analytics",   path: "/projects/analytics",icon: "chart-bar"   },
+  },
+  {
+    id: "teams",
+    label: "Teams",
+    path: "/teams",
+    permission: "canSeeTeam",
+    subItems: [
+      { label: "Dashboard",         path: "/teams",            icon: "layout-dashboard" },
+      { label: "Membres",           path: "/teams/members",    icon: "users"            },
+      { label: "Tickets équipe",    path: "/teams/tickets",    icon: "ticket"           },
+      { label: "Charge de travail", path: "/teams/workload",   icon: "chart-bar"        },
+      { label: "Analytics",         path: "/teams/analytics",  icon: "chart-pie",       permission: "canSeeTeamAnalytics" },
     ],
-    "/users": [
-      { label: "Liste Users",    path: "/users",        icon: "users"      },
-      { label: "Ajouter User",   path: "/users/add",    icon: "user-plus"  },
-      { label: "Modifier User",  path: "/users/edit",   icon: "user-edit"  },
-      { label: "Supprimer User", path: "/users/delete", icon: "user-minus" },
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    path: "/projects",
+    subItems: [
+      { label: "Projets",   path: "/projects",           icon: "folder-open"   },
+      { label: "Tâches",    path: "/projects/tasks",     icon: "checkbox"      },
+      { label: "Kanban",    path: "/projects/kanban",    icon: "layout-kanban" },
+      { label: "Analytics", path: "/projects/analytics", icon: "chart-bar",    permission: "canSeeProjectAnalytics" },
     ],
-  };
-  return map[path] ?? [];
-};
+  },
+];
+
+const MORE_ITEMS: SubItem[] = [
+  { label: "Base de connaissances", path: "/knowledge-base",  icon: "books",  permission: "canSeeKnowledgeBase" },
+  { label: "Assistant IA",          path: "/ai-assistant",    icon: "robot"   },
+  { label: "Utilisateurs",          path: "/users",           icon: "users",  permission: "canSeeUsers" },
+  { label: "Paramètres",            path: "/settings",        icon: "settings" },
+];
 
 const getRoleLabel = (r: string) => {
   if (r === "admin")  return "ADMIN";
@@ -61,12 +108,33 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const user      = useCurrentUser();
-  const role      = user?.role ?? "user";
-  const modules   = getNavModules(role);
+  const role      = (user?.role ?? "user") as UserRole;
+  const perms     = PERMISSIONS[role];
 
-  const [profileAnchor,  setProfileAnchor]  = useState<HTMLElement | null>(null);
-  const [hoveredModule,  setHoveredModule]  = useState<string | null>(null);
-  const [searchVal,      setSearchVal]      = useState("");
+  const [profileAnchor, setProfileAnchor] = useState<HTMLElement | null>(null);
+  const [openDropdown,  setOpenDropdown]  = useState<string | null>(null);
+  const [searchVal,     setSearchVal]     = useState("");
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const res = await fetch("/api/notifications/unread-count", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadCount(data.count ?? 0);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -77,18 +145,53 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  const isModuleActive = (path: string) =>
-    location.pathname === path ||
-    (path !== "/dashboard" && location.pathname.startsWith(path));
+  const isModuleActive = (mod: Module) => {
+    if (mod.id === "dashboard") return location.pathname === "/dashboard";
+    return location.pathname.startsWith("/" + mod.id) ||
+      mod.subItems.some(s => location.pathname.startsWith(s.path));
+  };
+
+  const isMoreActive = () =>
+    MORE_ITEMS.some(item => location.pathname.startsWith(item.path));
+
+  const handleMouseEnter = (id: string) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setOpenDropdown(id);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimerRef.current = setTimeout(() => setOpenDropdown(null), 120);
+  };
+
+  const filterSubItems = (items: SubItem[]) =>
+    items.filter(item => !item.permission || perms[item.permission]);
+
+  const filterModules = () =>
+    MODULES.filter(mod => !mod.permission || perms[mod.permission]);
+
+  const filterMore = () => MORE_ITEMS.filter(item => !item.permission || perms[item.permission]);
+
+  const visibleModules = filterModules();
+  const visibleMore    = filterMore();
 
   return (
     <Box sx={{ position: "sticky", top: 0, zIndex: 1200, flexShrink: 0 }}>
 
       {/* ══ TOP NAVBAR ══ */}
-      <Box sx={{ height: 62, bgcolor: "#0F1E35", display: "flex", alignItems: "center", px: 3.5, gap: 2 }}>
+      <Box sx={{
+        height: 62,
+        bgcolor: "#0F1E35",
+        display: "flex",
+        alignItems: "center",
+        px: 3.5,
+        gap: 2,
+      }}>
 
         {/* Logo */}
-        <Box onClick={() => navigate("/dashboard")} sx={{ display: "flex", alignItems: "center", gap: 1.2, cursor: "pointer", flexShrink: 0 }}>
+        <Box
+          onClick={() => navigate("/dashboard")}
+          sx={{ display: "flex", alignItems: "center", gap: 1.2, cursor: "pointer", flexShrink: 0 }}
+        >
           <Box sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #5FC2BA, #4AADA5)", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="18" height="18" viewBox="0 0 34 34" fill="none">
               <polygon points="17,4 31,28 3,28" fill="white" opacity="0.9"/>
@@ -106,7 +209,15 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
         </Box>
 
         {/* Search */}
-        <Box sx={{ flex: 1, maxWidth: 380, mx: "auto", bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "9px", height: 38, display: "flex", alignItems: "center", gap: 1, px: 1.75, transition: "all 0.2s", "&:focus-within": { bgcolor: "rgba(255,255,255,0.10)", border: "1px solid rgba(95,194,186,0.4)" } }}>
+        <Box sx={{
+          flex: 1, maxWidth: 380, mx: "auto",
+          bgcolor: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: "9px", height: 38,
+          display: "flex", alignItems: "center", gap: 1, px: 1.75,
+          transition: "all 0.2s",
+          "&:focus-within": { bgcolor: "rgba(255,255,255,0.10)", border: "1px solid rgba(95,194,186,0.4)" },
+        }}>
           <SearchIcon sx={{ fontSize: 16, color: "rgba(255,255,255,0.3)", flexShrink: 0 }} />
           <InputBase
             placeholder="Rechercher tickets, projets..."
@@ -119,16 +230,21 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
           </Typography>
         </Box>
 
-        {/* Right */}
+        {/* Right side: notifications + profile */}
         <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.2 }}>
           <IconButton size="small" sx={{ width: 36, height: 36, borderRadius: "9px", bgcolor: "rgba(255,255,255,0.07)", "&:hover": { bgcolor: "rgba(255,255,255,0.12)" } }}>
-            <Badge badgeContent={3} sx={{ "& .MuiBadge-badge": { bgcolor: "#EF4444", color: "#fff", fontSize: 9, minWidth: 15, height: 15, border: "1.5px solid #0F1E35" } }}>
+            <Badge
+              badgeContent={unreadCount > 0 ? unreadCount : undefined}
+              sx={{ "& .MuiBadge-badge": { bgcolor: "#EF4444", color: "#fff", fontSize: 9, minWidth: 15, height: 15, border: "1.5px solid #0F1E35" } }}
+            >
               <NotifIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
             </Badge>
           </IconButton>
 
-          {/* Profile */}
-          <Box onClick={(e) => setProfileAnchor(e.currentTarget)} sx={{ display: "flex", alignItems: "center", gap: 1.2, bgcolor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "10px", px: 1.5, py: 0.75, cursor: "pointer", transition: "all 0.15s", "&:hover": { bgcolor: "rgba(255,255,255,0.11)" } }}>
+          <Box
+            onClick={(e) => setProfileAnchor(e.currentTarget)}
+            sx={{ display: "flex", alignItems: "center", gap: 1.2, bgcolor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "10px", px: 1.5, py: 0.75, cursor: "pointer", transition: "all 0.15s", "&:hover": { bgcolor: "rgba(255,255,255,0.11)" } }}
+          >
             <Avatar sx={{ width: 28, height: 28, bgcolor: getRoleBadgeColor(role), color: "#fff", fontSize: "10px", fontWeight: 700, fontFamily: "Inter, sans-serif" }}>
               {getInitials(user?.name ?? "U")}
             </Avatar>
@@ -146,62 +262,201 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
       </Box>
 
       {/* ══ SUB NAVBAR ══ */}
-      <Box sx={{ bgcolor: "#152236", borderBottom: "1px solid rgba(255,255,255,0.06)", px: 3.5, display: "flex", alignItems: "center", gap: 0.5, height: 46 }}>
-        {modules.map((mod) => {
-          const active   = isModuleActive(mod.path);
-          const subItems = getSubItems(mod.path, role);
-          const hovered  = hoveredModule === mod.path;
+      <Box sx={{
+        bgcolor: "#152236",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        px: 3.5,
+        display: "flex",
+        alignItems: "center",
+        gap: 0.5,
+        height: 46,
+      }}>
+
+        {/* Main modules */}
+        {visibleModules.map((mod) => {
+          const active     = isModuleActive(mod);
+          const isOpen     = openDropdown === mod.id;
+          const subItems   = filterSubItems(mod.subItems);
 
           return (
-            <Box key={mod.path} onMouseEnter={() => setHoveredModule(mod.path)} onMouseLeave={() => setHoveredModule(null)} sx={{ position: "relative" }}>
-              <Box onClick={() => navigate(mod.path)}
-                sx={{ display: "flex", alignItems: "center", gap: 0.9, px: 1.75, py: 0.875, borderRadius: "8px", cursor: "pointer", transition: "all 0.18s", position: "relative", bgcolor: active ? "rgba(95,194,186,0.12)" : hovered ? "rgba(255,255,255,0.05)" : "transparent",
-                  "&::after": active ? { content: '""', position: "absolute", bottom: -9, left: 14, right: 14, height: "2px", bgcolor: "#5FC2BA", borderRadius: "2px 2px 0 0" } : {},
+            <Box
+              key={mod.id}
+              onMouseEnter={() => subItems.length > 0 ? handleMouseEnter(mod.id) : undefined}
+              onMouseLeave={subItems.length > 0 ? handleMouseLeave : undefined}
+              sx={{ position: "relative" }}
+            >
+              <Box
+                onClick={() => navigate(mod.path)}
+                sx={{
+                  display: "flex", alignItems: "center", gap: 0.8,
+                  px: 1.75, py: 0.875, borderRadius: "8px",
+                  cursor: "pointer", transition: "all 0.18s", position: "relative",
+                  bgcolor: active ? "rgba(95,194,186,0.12)" : isOpen ? "rgba(255,255,255,0.05)" : "transparent",
+                  "&::after": active ? {
+                    content: '""', position: "absolute",
+                    bottom: -9, left: 14, right: 14,
+                    height: "2px", bgcolor: "#5FC2BA", borderRadius: "2px 2px 0 0",
+                  } : {},
+                  "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
                 }}
               >
-                <Typography sx={{ fontSize: "13px", fontFamily: "Inter, sans-serif", color: active ? "#5FC2BA" : hovered ? "#fff" : "rgba(255,255,255,0.55)", fontWeight: active ? 600 : 400, transition: "all 0.18s" }}>
+                <Typography sx={{
+                  fontSize: "13px", fontFamily: "Inter, sans-serif",
+                  color: active ? "#5FC2BA" : "rgba(255,255,255,0.65)",
+                  fontWeight: active ? 600 : 400,
+                  transition: "all 0.18s",
+                  whiteSpace: "nowrap",
+                }}>
                   {mod.label}
                 </Typography>
+                {subItems.length > 0 && (
+                  <ArrowIcon sx={{ fontSize: 14, color: active ? "#5FC2BA" : "rgba(255,255,255,0.3)", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+                )}
               </Box>
 
               {/* Dropdown */}
-              {subItems.length > 0 && hovered && (
-                <Box sx={{ position: "absolute", top: "calc(100% + 10px)", left: 0, bgcolor: "#fff", borderRadius: "12px", border: `1px solid ${C.border}`, boxShadow: "0 8px 32px rgba(11,22,44,0.14)", minWidth: 200, py: 1, zIndex: 2000, animation: "fadeSlide 0.15s ease",
-                  "@keyframes fadeSlide": { from: { opacity: 0, transform: "translateY(-6px)" }, to: { opacity: 1, transform: "translateY(0)" } },
-                }}>
+              {subItems.length > 0 && isOpen && (
+                <Box
+                  onMouseEnter={() => handleMouseEnter(mod.id)}
+                  onMouseLeave={handleMouseLeave}
+                  sx={{
+                    position: "absolute", top: "calc(100% + 10px)", left: 0,
+                    bgcolor: "#fff", borderRadius: "12px",
+                    border: `1px solid ${C.border}`,
+                    boxShadow: "0 8px 32px rgba(11,22,44,0.14)",
+                    minWidth: 220, py: 1, zIndex: 2000,
+                    animation: "fadeSlide 0.15s ease",
+                    "@keyframes fadeSlide": {
+                      from: { opacity: 0, transform: "translateY(-6px)" },
+                      to:   { opacity: 1, transform: "translateY(0)" },
+                    },
+                  }}
+                >
                   <Box sx={{ px: 1.75, py: 1, borderBottom: `1px solid ${C.divider}`, mb: 0.5 }}>
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                       {mod.label}
                     </Typography>
                   </Box>
-                  {subItems.map((sub) => (
-                    <Box key={sub.path + sub.label} onClick={() => { navigate(sub.path); setHoveredModule(null); }}
-                      sx={{ display: "flex", alignItems: "center", gap: 1.2, px: 1.75, py: 1, cursor: "pointer", transition: "all 0.12s", "&:hover": { bgcolor: C.accentLight }, "&:hover .sub-label": { color: C.accent } }}
-                    >
-                      <Box sx={{ width: 28, height: 28, borderRadius: "7px", bgcolor: C.bgPage, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Box component="i" className={`ti ti-${sub.icon}`} sx={{ fontSize: 15, color: C.textMuted }} />
+                  {subItems.map((sub) => {
+                    const subActive = location.pathname === sub.path;
+                    return (
+                      <Box
+                        key={sub.path}
+                        onClick={() => { navigate(sub.path); setOpenDropdown(null); }}
+                        sx={{
+                          display: "flex", alignItems: "center", gap: 1.2,
+                          px: 1.75, py: 1, cursor: "pointer", transition: "all 0.12s",
+                          bgcolor: subActive ? C.accentLight : "transparent",
+                          "&:hover": { bgcolor: C.accentLight },
+                          "&:hover .sub-label": { color: C.accent },
+                        }}
+                      >
+                        <Box sx={{ width: 28, height: 28, borderRadius: "7px", bgcolor: subActive ? C.accentMid : C.bgPage, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Box component="i" className={`ti ti-${sub.icon}`} sx={{ fontSize: 15, color: subActive ? C.accent : C.textMuted }} />
+                        </Box>
+                        <Typography className="sub-label" sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: subActive ? C.accent : C.textSecondary, fontWeight: subActive ? 600 : 400, transition: "color 0.12s" }}>
+                          {sub.label}
+                        </Typography>
+                        {subActive && <Box sx={{ ml: "auto", width: 6, height: 6, borderRadius: "50%", bgcolor: C.accent }} />}
                       </Box>
-                      <Typography className="sub-label" sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary, transition: "color 0.12s" }}>
-                        {sub.label}
-                      </Typography>
-                    </Box>
-                  ))}
+                    );
+                  })}
                 </Box>
               )}
             </Box>
           );
         })}
+
+        {/* ── More ▼ ── */}
+        {visibleMore.length > 0 && (
+          <Box
+            onMouseEnter={() => handleMouseEnter("more")}
+            onMouseLeave={handleMouseLeave}
+            sx={{ position: "relative", ml: 0.5 }}
+          >
+            <Box
+              sx={{
+                display: "flex", alignItems: "center", gap: 0.8,
+                px: 1.75, py: 0.875, borderRadius: "8px",
+                cursor: "pointer", transition: "all 0.18s",
+                bgcolor: isMoreActive() ? "rgba(95,194,186,0.12)" : openDropdown === "more" ? "rgba(255,255,255,0.05)" : "transparent",
+                position: "relative",
+                "&::after": isMoreActive() ? {
+                  content: '""', position: "absolute",
+                  bottom: -9, left: 14, right: 14,
+                  height: "2px", bgcolor: "#5FC2BA", borderRadius: "2px 2px 0 0",
+                } : {},
+                "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+              }}
+            >
+              <Typography sx={{ fontSize: "13px", fontFamily: "Inter, sans-serif", color: isMoreActive() ? "#5FC2BA" : "rgba(255,255,255,0.65)", fontWeight: isMoreActive() ? 600 : 400, whiteSpace: "nowrap" }}>
+                Plus
+              </Typography>
+              <ArrowIcon sx={{ fontSize: 14, color: "rgba(255,255,255,0.3)", transition: "transform 0.2s", transform: openDropdown === "more" ? "rotate(180deg)" : "rotate(0deg)" }} />
+            </Box>
+
+            {openDropdown === "more" && (
+              <Box
+                onMouseEnter={() => handleMouseEnter("more")}
+                onMouseLeave={handleMouseLeave}
+                sx={{
+                  position: "absolute", top: "calc(100% + 10px)", left: 0,
+                  bgcolor: "#fff", borderRadius: "12px",
+                  border: `1px solid ${C.border}`,
+                  boxShadow: "0 8px 32px rgba(11,22,44,0.14)",
+                  minWidth: 220, py: 1, zIndex: 2000,
+                  animation: "fadeSlide 0.15s ease",
+                  "@keyframes fadeSlide": {
+                    from: { opacity: 0, transform: "translateY(-6px)" },
+                    to:   { opacity: 1, transform: "translateY(0)" },
+                  },
+                }}
+              >
+                <Box sx={{ px: 1.75, py: 1, borderBottom: `1px solid ${C.divider}`, mb: 0.5 }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Plus de modules
+                  </Typography>
+                </Box>
+                {visibleMore.map((item) => {
+                  const active = location.pathname.startsWith(item.path);
+                  return (
+                    <Box
+                      key={item.path}
+                      onClick={() => { navigate(item.path); setOpenDropdown(null); }}
+                      sx={{ display: "flex", alignItems: "center", gap: 1.2, px: 1.75, py: 1, cursor: "pointer", transition: "all 0.12s", bgcolor: active ? C.accentLight : "transparent", "&:hover": { bgcolor: C.accentLight }, "&:hover .more-label": { color: C.accent } }}
+                    >
+                      <Box sx={{ width: 28, height: 28, borderRadius: "7px", bgcolor: active ? C.accentMid : C.bgPage, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Box component="i" className={`ti ti-${item.icon}`} sx={{ fontSize: 15, color: active ? C.accent : C.textMuted }} />
+                      </Box>
+                      <Typography className="more-label" sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: active ? C.accent : C.textSecondary, fontWeight: active ? 600 : 400, transition: "color 0.12s" }}>
+                        {item.label}
+                      </Typography>
+                      {active && <Box sx={{ ml: "auto", width: 6, height: 6, borderRadius: "50%", bgcolor: C.accent }} />}
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </Box>
+        )}
       </Box>
 
       {/* ══ Profile Dropdown ══ */}
-      <Popover open={Boolean(profileAnchor)} anchorEl={profileAnchor} onClose={() => setProfileAnchor(null)}
+      <Popover
+        open={Boolean(profileAnchor)}
+        anchorEl={profileAnchor}
+        onClose={() => setProfileAnchor(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
         PaperProps={{ sx: { mt: 1, borderRadius: "12px", border: `1px solid ${C.border}`, boxShadow: C.shadowLg, minWidth: 210, overflow: "hidden" } }}
       >
         <Box sx={{ px: 2, py: 1.5, bgcolor: C.bgPage }}>
-          <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.85rem", color: C.textPrimary }}>{user?.name}</Typography>
-          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted }}>{user?.email}</Typography>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.85rem", color: C.textPrimary }}>
+            {user?.name}
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted }}>
+            {user?.email}
+          </Typography>
           <Box sx={{ mt: 0.8, display: "inline-flex", px: 1, py: 0.3, borderRadius: "20px", bgcolor: `${getRoleBadgeColor(role)}20` }}>
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, color: getRoleBadgeColor(role) }}>
               {getRoleLabel(role)}
@@ -210,7 +465,7 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
         </Box>
         <Divider sx={{ borderColor: C.border }} />
         <List dense disablePadding>
-          <ListItemButton onClick={() => { navigate("/settings"); setProfileAnchor(null); }} sx={{ px: 2, py: 1, "&:hover": { bgcolor: C.accentLight } }}>
+          <ListItemButton onClick={() => { navigate("/profile"); setProfileAnchor(null); }} sx={{ px: 2, py: 1, "&:hover": { bgcolor: C.accentLight } }}>
             <PersonIcon sx={{ fontSize: 16, mr: 1.5, color: C.textMuted }} />
             <ListItemText primary="Mon profil" primaryTypographyProps={{ fontFamily: "Inter, sans-serif", fontSize: "0.83rem", color: C.textPrimary }} />
           </ListItemButton>

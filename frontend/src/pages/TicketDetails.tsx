@@ -19,6 +19,8 @@ import {
   Comment as CommentIcon,
 } from "@mui/icons-material";
 import { C, statusColors, priorityColors, roleColors } from "../theme";
+import { SLABadge } from "../components/SLABadge";
+import { api } from "../api";
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
@@ -39,6 +41,10 @@ interface Ticket {
   category: string;
   createdAt: string;
   resolvedAt?: string;
+  slaDeadline?: string | null;
+  slaBreached?: boolean;
+  escalationLevel?: number;
+  waitingReason?: string;
   createdBy: { _id: string; name: string; role: string };
   assignedTo: { _id: string; name: string; role: string } | null;
   assignedBy: { _id: string; name: string } | null;
@@ -108,8 +114,11 @@ export default function TicketDetails() {
   const [assignDialog,   setAssignDialog]   = useState(false);
   const [selectedTech,   setSelectedTech]   = useState("");
   const [assigning,      setAssigning]      = useState(false);
-  const [statusUpdating, setStatusUpdating] = useState(false);
-  const [error,          setError]          = useState<string | null>(null);
+  const [statusUpdating,   setStatusUpdating]   = useState(false);
+  const [escalating,       setEscalating]       = useState(false);
+  const [waitingDialog,    setWaitingDialog]    = useState(false);
+  const [waitingReason,    setWaitingReason]    = useState("");
+  const [error,            setError]            = useState<string | null>(null);
 
   // ── Current user ──
   const storedUser  = localStorage.getItem("user");
@@ -119,9 +128,10 @@ export default function TicketDetails() {
   const isLeader    = userRole === "leader";
   const isTech      = userRole === "tech";
 
-  const canAssign  = isAdmin || isLeader;
-  const canResolve = isAdmin || isLeader || isTech;
-  const canDelete  = isAdmin;
+  const canAssign    = isAdmin || isLeader;
+  const canResolve   = isAdmin || isLeader || isTech;
+  const canDelete    = isAdmin;
+  const canEscalate  = isAdmin || isLeader;
   const isAssignedToMe = ticket?.assignedTo?._id === currentUser?.id;
 
   const token = localStorage.getItem("token");
@@ -233,6 +243,37 @@ export default function TicketDetails() {
     } catch (err) { console.log(err); }
   };
 
+  // ── Escalate ──
+  const handleEscalate = async () => {
+    setEscalating(true);
+    setError(null);
+    try {
+      const data = await api.put<Ticket>(`/api/tickets/${id}/escalate`, {});
+      setTicket(data);
+      fetchHistory();
+    } catch (err: any) {
+      setError(err.message);
+    } finally { setEscalating(false); }
+  };
+
+  // ── Set waiting ──
+  const handleSetWaiting = async () => {
+    if (!waitingReason.trim()) return;
+    setStatusUpdating(true);
+    setError(null);
+    try {
+      const res = await fetch(`${apiUrl}/api/tickets/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "waiting", waitingReason }),
+      });
+      const data = await res.json();
+      if (res.ok) { setTicket(data); setWaitingDialog(false); setWaitingReason(""); fetchHistory(); }
+      else setError(data.message);
+    } catch { setError("Erreur serveur"); }
+    finally { setStatusUpdating(false); }
+  };
+
   if (loading) return (
     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
       <CircularProgress sx={{ color: C.accent }} />
@@ -285,6 +326,20 @@ export default function TicketDetails() {
               sx={{ bgcolor: "#22C55E", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#16A34A" } }}>
               <Box component="i" className="ti ti-circle-check" sx={{ fontSize: 16 }} />
               Marquer résolu
+            </Button>
+          )}
+          {canEscalate && ticket && !["resolved","closed"].includes(ticket.status) && (ticket.escalationLevel ?? 0) < 2 && (
+            <Button onClick={handleEscalate} disabled={escalating}
+              sx={{ bgcolor: "#EF4444", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#DC2626" } }}>
+              <Box component="i" className="ti ti-alert-triangle" sx={{ fontSize: 16 }} />
+              Escalader
+            </Button>
+          )}
+          {canResolve && ticket && ticket.status === "in_progress" && (
+            <Button onClick={() => setWaitingDialog(true)}
+              sx={{ bgcolor: "#F59E0B", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#D97706" } }}>
+              <Box component="i" className="ti ti-pause" sx={{ fontSize: 16 }} />
+              En attente
             </Button>
           )}
           {canDelete && (
@@ -506,6 +561,46 @@ export default function TicketDetails() {
             </Box>
           </Box>
 
+          {/* SLA */}
+          {ticket.slaDeadline && (
+            <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${ticket.slaBreached ? "#EF444433" : C.border}`, p: "18px 20px" }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
+                SLA
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Échéance</Typography>
+                  <SLABadge slaDeadline={ticket.slaDeadline} slaBreached={ticket.slaBreached ?? false} status={ticket.status} />
+                </Box>
+                {(ticket.escalationLevel ?? 0) > 0 && (
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Niveau d'escalade</Typography>
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "6px", bgcolor: (ticket.escalationLevel ?? 0) >= 2 ? C.dangerBg : C.warningBg }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: (ticket.escalationLevel ?? 0) >= 2 ? C.danger : C.warning }}>
+                        Niveau {ticket.escalationLevel}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {/* Waiting reason */}
+          {ticket.status === "waiting" && ticket.waitingReason && (
+            <Box sx={{ bgcolor: "rgba(234,179,8,.08)", borderRadius: "14px", border: "1px solid rgba(234,179,8,.25)", p: "18px 20px" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                <Box component="i" className="ti ti-pause" sx={{ fontSize: 14, color: "#B45309" }} />
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: "#B45309", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  En attente
+                </Typography>
+              </Box>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: "#92400E", lineHeight: 1.5 }}>
+                {ticket.waitingReason}
+              </Typography>
+            </Box>
+          )}
+
           {/* Dates */}
           <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
@@ -588,6 +683,34 @@ export default function TicketDetails() {
           <Button onClick={handleAssign} disabled={!selectedTech || assigning} variant="contained"
             sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: "#3B82F6", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: "#2563EB" } }}>
             {assigning ? "Assignation..." : "Assigner"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Waiting Dialog ── */}
+      <Dialog open={waitingDialog} onClose={() => setWaitingDialog(false)} PaperProps={{ sx: { borderRadius: "16px", minWidth: 420 } }}>
+        <DialogTitle sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "16px", color: C.textPrimary }}>
+          Mettre en attente
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, mb: 2 }}>
+            Précisez la raison de la mise en attente (ex: attente réponse client, pièce commandée…)
+          </Typography>
+          <TextField
+            fullWidth multiline rows={3}
+            placeholder="Raison de l'attente..."
+            value={waitingReason}
+            onChange={e => setWaitingReason(e.target.value)}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", fontFamily: "Inter, sans-serif", fontSize: "13px" } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setWaitingDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none" }}>
+            Annuler
+          </Button>
+          <Button onClick={handleSetWaiting} disabled={!waitingReason.trim() || statusUpdating} variant="contained"
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: "#F59E0B", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: "#D97706" } }}>
+            {statusUpdating ? "En cours..." : "Confirmer"}
           </Button>
         </DialogActions>
       </Dialog>

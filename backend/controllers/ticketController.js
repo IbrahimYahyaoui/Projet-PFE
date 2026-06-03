@@ -1,315 +1,465 @@
 // backend/controllers/ticketController.js
-const Ticket = require("../schemas/ticket");
-const Notification = require("../schemas/notification");
+const Ticket  = require("../schemas/ticket");
 const History = require("../schemas/history");
-const Team = require("../schemas/team");
+const Team    = require("../schemas/team");
+const User    = require("../schemas/user");
+const { createNotification, notifyMany } = require("../utils/notifications");
 
-// ── Helpers ──
-const createNotification = async (userId, type, ticketId, message, triggeredBy) => {
-  try {
-    if (!userId || userId.toString() === triggeredBy.toString()) return;
-    await Notification.create({ userId, type, ticketId, message, triggeredBy });
-  } catch (err) {
-    console.log("Notification error:", err);
-  }
+// ── SLA hours per priority ──
+const SLA_HOURS = { critical: 4, high: 24, medium: 72, low: 168 };
+
+const calcSlaDeadline = (priority) => {
+  const hours = SLA_HOURS[priority] ?? 72;
+  return new Date(Date.now() + hours * 3600000);
 };
 
 const createHistory = async (ticketId, userId, action, oldValue = null, newValue = null) => {
   try {
     await History.create({ ticketId, userId, action, oldValue, newValue });
   } catch (err) {
-    console.log("History error:", err);
+    console.error("History error:", err.message);
   }
 };
 
-// ── GET all tickets (admin only) ──
+// ════════════════════════════════════════════════════
+// GET endpoints
+// ════════════════════════════════════════════════════
+
 const getAllTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find()
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role")
-      .populate("teamId", "name category")
-      .sort({ createdAt: -1 });
-    res.json(tickets);
-  } catch (error) {
-    console.log(error);
+    const { status, priority, category, page = 1, limit = 50 } = req.query;
+    const filter = {};
+    if (status)   filter.status   = status;
+    if (priority) filter.priority = priority;
+    if (category) filter.category = category;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [tickets, total] = await Promise.all([
+      Ticket.find(filter)
+        .populate("createdBy", "name email role")
+        .populate("assignedTo", "name email role")
+        .populate("assignedBy", "name email role")
+        .populate("teamId", "name category tag color")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Ticket.countDocuments(filter),
+    ]);
+    res.json({ tickets, total, page: parseInt(page) });
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── GET my tickets (employé) ──
+// Admin queue: open tickets not yet assigned to a team
+const getAdminQueue = async (req, res) => {
+  try {
+    const tickets = await Ticket.find({ status: 'open', teamId: null })
+      .populate("createdBy", "name email role")
+      .sort({ priority: 1, createdAt: 1 }); // critical first, then oldest
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// SLA alerts: tickets where deadline < now + 2h and not resolved
+const getSlaAlerts = async (req, res) => {
+  try {
+    const twoHoursLater = new Date(Date.now() + 2 * 3600000);
+    const tickets = await Ticket.find({
+      slaDeadline: { $ne: null, $lt: twoHoursLater },
+      status: { $nin: ['resolved', 'closed'] },
+    })
+      .populate("createdBy", "name email role")
+      .populate("assignedTo", "name email role")
+      .populate("teamId", "name tag")
+      .sort({ slaDeadline: 1 });
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 const getMyTickets = async (req, res) => {
   try {
     const tickets = await Ticket.find({ createdBy: req.user.id })
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
+      .populate("teamId", "name tag color")
       .sort({ createdAt: -1 });
     res.json(tickets);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── GET assigned tickets (technicien) ──
 const getAssignedTickets = async (req, res) => {
   try {
     const tickets = await Ticket.find({ assignedTo: req.user.id })
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate("assignedBy", "name email role")
+      .populate("teamId", "name tag color")
       .sort({ createdAt: -1 });
     res.json(tickets);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── GET team tickets (leader) ──
+// Team tickets — uses teamId (not category) for accuracy
 const getTeamTickets = async (req, res) => {
   try {
     const team = await Team.findOne({
-      $or: [
-        { leaderId: req.user.id },
-        { members: req.user.id }
-      ]
+      $or: [{ leaderId: req.user.id }, { members: req.user.id }],
     });
+    if (!team) return res.status(404).json({ message: "Équipe non trouvée" });
 
-    if (!team) {
-      return res.status(404).json({ message: "Équipe non trouvée" });
-    }
-
-    const tickets = await Ticket.find({ category: team.category })
+    const tickets = await Ticket.find({ teamId: team._id })
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate("assignedBy", "name email role")
       .sort({ createdAt: -1 });
-
     res.json(tickets);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── GET ticket by ID ──
 const getTicketById = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate("assignedBy", "name email role")
-      .populate("teamId", "name category")
+      .populate("teamId", "name category tag color")
+      .populate("relatedProject", "name status")
       .populate("comments.userId", "name email role");
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
     res.json(ticket);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── CREATE ticket (employé) ──
+// ════════════════════════════════════════════════════
+// CREATE
+// ════════════════════════════════════════════════════
+
 const createTicket = async (req, res) => {
   try {
-    const { title, description, priority, category } = req.body;
-
+    const { title, description, priority = 'medium', category = 'other' } = req.body;
     if (!title || !description) {
       return res.status(400).json({ message: "Title and description are required" });
     }
 
-    // Trouver l'équipe correspondante à la catégorie
-    const team = await Team.findOne({ category });
+    // Auto-suggest team by category (admin still confirms)
+    const suggestedTeam = await Team.findOne({ category });
 
-    const ticket = new Ticket({
+    const ticket = await Ticket.create({
       title,
       description,
-      priority: priority || 'medium',
-      category: category || 'other',
+      priority,
+      category,
       createdBy: req.user.id,
-      teamId: team?._id || null,
+      teamId: null, // admin must confirm via assignToTeam
       status: 'open',
+      slaDeadline: calcSlaDeadline(priority),
     });
 
-    await ticket.save();
     await ticket.populate("createdBy", "name email role");
-
     await createHistory(ticket._id, req.user.id, 'created', null, title);
 
-    // Notifier le leader de l'équipe
-    if (team?.leaderId) {
-      await createNotification(
-        team.leaderId,
-        'new_ticket',
-        ticket._id,
-        `Nouveau ticket "${title}" dans votre équipe`,
-        req.user.id
-      );
+    // Notify all admins
+    const admins = await User.find({ role: 'admin' }).select('_id');
+    await notifyMany(
+      admins.map(a => a._id),
+      {
+        type: 'new_ticket',
+        message: `Nouveau ticket : "${title}" (${priority}) — catégorie ${category}`,
+        triggeredBy: req.user.id,
+        ticketId: ticket._id,
+      }
+    );
+
+    // Also hint the likely team leader if team was found
+    if (suggestedTeam?.leaderId) {
+      await createNotification({
+        userId: suggestedTeam.leaderId,
+        type: 'new_ticket',
+        message: `Ticket potentiellement pour votre équipe : "${title}"`,
+        triggeredBy: req.user.id,
+        ticketId: ticket._id,
+      });
     }
 
     res.status(201).json(ticket);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── ASSIGN ticket (leader) ──
+// ════════════════════════════════════════════════════
+// STEP 1: Admin assigns ticket to a Team
+// ════════════════════════════════════════════════════
+
+const assignToTeam = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const { teamId } = req.body;
+    if (!teamId) return res.status(400).json({ message: "teamId is required" });
+
+    const team = await Team.findById(teamId).populate('leaderId', 'name email');
+    if (!team) return res.status(404).json({ message: "Team not found" });
+
+    const oldTicket = await Ticket.findById(req.params.id);
+    if (!oldTicket) return res.status(404).json({ message: "Ticket not found" });
+
+    const ticket = await Ticket.findByIdAndUpdate(
+      req.params.id,
+      { teamId, escalationLevel: 0, escalatedAt: null },
+      { new: true }
+    )
+      .populate("createdBy", "name email role")
+      .populate("assignedTo", "name email role")
+      .populate("teamId", "name category tag color");
+
+    await createHistory(ticket._id, req.user.id, 'assigned', oldTicket.teamId?.toString() ?? null, teamId);
+
+    // Notify team leader
+    if (team.leaderId) {
+      await createNotification({
+        userId: team.leaderId._id,
+        type: 'team_assigned',
+        message: `Votre équipe "${team.name}" a reçu le ticket : "${ticket.title}"`,
+        triggeredBy: req.user.id,
+        ticketId: ticket._id,
+      });
+    }
+
+    // Notify ticket creator
+    await createNotification({
+      userId: ticket.createdBy._id,
+      type: 'team_assigned',
+      message: `Votre ticket "${ticket.title}" a été attribué à l'équipe ${team.name}`,
+      triggeredBy: req.user.id,
+      ticketId: ticket._id,
+    });
+
+    res.json(ticket);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ════════════════════════════════════════════════════
+// STEP 2: Leader assigns ticket to a Technician
+// ════════════════════════════════════════════════════
+
 const assignTicket = async (req, res) => {
   try {
-    const { assignedTo } = req.body;
     const role = req.user.role;
-
     if (role !== 'leader' && role !== 'admin') {
-      return res.status(403).json({ message: "Seul un leader peut assigner des tickets" });
+      return res.status(403).json({ message: "Leader ou Admin requis" });
     }
+
+    const { assignedTo } = req.body;
+    if (!assignedTo) return res.status(400).json({ message: "assignedTo is required" });
 
     const oldTicket = await Ticket.findById(req.params.id).populate("assignedTo", "name");
     if (!oldTicket) return res.status(404).json({ message: "Ticket not found" });
 
     const ticket = await Ticket.findByIdAndUpdate(
       req.params.id,
-      {
-        assignedTo,
-        assignedBy: req.user.id,
-        status: 'assigned',
-      },
+      { assignedTo, assignedBy: req.user.id, status: 'assigned' },
       { new: true }
     )
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role");
+      .populate("assignedBy", "name email role")
+      .populate("teamId", "name tag");
 
-    // History
     await createHistory(
       ticket._id, req.user.id, 'assigned',
       oldTicket.assignedTo?.name ?? null,
       ticket.assignedTo?.name ?? null
     );
 
-    // Notifier le technicien assigné
-    await createNotification(
-      assignedTo,
-      'assigned',
-      ticket._id,
-      `Vous avez été assigné au ticket "${ticket.title}"`,
-      req.user.id
-    );
+    // Notify assigned tech
+    await createNotification({
+      userId: assignedTo,
+      type: 'assigned',
+      message: `Vous avez été assigné au ticket : "${ticket.title}"`,
+      triggeredBy: req.user.id,
+      ticketId: ticket._id,
+    });
 
-    // Notifier l'employé créateur
-    await createNotification(
-      ticket.createdBy._id,
-      'status_changed',
-      ticket._id,
-      `Votre ticket "${ticket.title}" a été assigné à un technicien`,
-      req.user.id
-    );
+    // Notify ticket creator
+    await createNotification({
+      userId: ticket.createdBy._id,
+      type: 'status_changed',
+      message: `Votre ticket "${ticket.title}" a été assigné à un technicien`,
+      triggeredBy: req.user.id,
+      ticketId: ticket._id,
+    });
 
     res.json(ticket);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── UPDATE ticket status ──
+// ════════════════════════════════════════════════════
+// UPDATE ticket (status, priority, waitingReason, relatedProject)
+// ════════════════════════════════════════════════════
+
 const updateTicket = async (req, res) => {
   try {
-    const { status, priority, category } = req.body;
+    const { status, priority, category, waitingReason, relatedProject } = req.body;
     const role = req.user.role;
 
     const oldTicket = await Ticket.findById(req.params.id)
-      .populate("assignedTo", "name")
-      .populate("createdBy", "name");
-
+      .populate("assignedTo", "name _id")
+      .populate("createdBy", "name _id");
     if (!oldTicket) return res.status(404).json({ message: "Ticket not found" });
 
-    // Vérifier les permissions selon le rôle
     if (role === 'user') {
       return res.status(403).json({ message: "Vous ne pouvez pas modifier le statut" });
     }
 
-    // Technicien peut seulement changer in_progress et resolved
     if (role === 'tech') {
-      if (status && !['in_progress', 'resolved'].includes(status)) {
+      const allowed = ['in_progress', 'waiting', 'resolved'];
+      if (status && !allowed.includes(status)) {
         return res.status(403).json({ message: "Action non autorisée" });
       }
-      // Vérifier que c'est son ticket
       if (oldTicket.assignedTo?._id?.toString() !== req.user.id) {
         return res.status(403).json({ message: "Ce ticket n'est pas assigné à vous" });
       }
     }
 
     const updateData = {};
-    if (status)   updateData.status   = status;
-    if (priority) updateData.priority = priority;
-    if (category) updateData.category = category;
-    if (status === 'resolved') updateData.resolvedAt = new Date();
+    if (status)          updateData.status          = status;
+    if (priority)        updateData.priority        = priority;
+    if (category)        updateData.category        = category;
+    if (relatedProject !== undefined) updateData.relatedProject = relatedProject || null;
+    if (status === 'waiting' && waitingReason) updateData.waitingReason = waitingReason;
+    if (status === 'resolved') {
+      updateData.resolvedAt = new Date();
+      // Mark SLA breach flag
+      if (oldTicket.slaDeadline && new Date() > oldTicket.slaDeadline) {
+        updateData.slaBreached = true;
+      }
+    }
+    if (priority && priority !== oldTicket.priority) {
+      updateData.slaDeadline = calcSlaDeadline(priority);
+    }
 
-    const ticket = await Ticket.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    )
+    const ticket = await Ticket.findByIdAndUpdate(req.params.id, updateData, { new: true })
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role");
+      .populate("assignedBy", "name email role")
+      .populate("teamId", "name tag");
 
-    // History status
     if (status && status !== oldTicket.status) {
       await createHistory(ticket._id, req.user.id, 'status_changed', oldTicket.status, status);
 
-      // Notifier le créateur
-      await createNotification(
-        ticket.createdBy._id,
-        'status_changed',
-        ticket._id,
-        `Le statut de votre ticket "${ticket.title}" est passé à : ${status}`,
-        req.user.id
-      );
+      await createNotification({
+        userId: ticket.createdBy._id,
+        type: 'status_changed',
+        message: `Statut du ticket "${ticket.title}" → ${status}`,
+        triggeredBy: req.user.id,
+        ticketId: ticket._id,
+      });
 
-      // Notifier le leader si résolu
       if (status === 'resolved') {
         const team = await Team.findById(ticket.teamId);
         if (team?.leaderId) {
-          await createNotification(
-            team.leaderId,
-            'resolved',
-            ticket._id,
-            `Le ticket "${ticket.title}" a été résolu`,
-            req.user.id
-          );
+          await createNotification({
+            userId: team.leaderId,
+            type: 'resolved',
+            message: `Ticket résolu : "${ticket.title}"`,
+            triggeredBy: req.user.id,
+            ticketId: ticket._id,
+          });
         }
       }
     }
 
-    // History priority
     if (priority && priority !== oldTicket.priority) {
       await createHistory(ticket._id, req.user.id, 'priority_changed', oldTicket.priority, priority);
     }
 
     res.json(ticket);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── DELETE ticket ──
+// ════════════════════════════════════════════════════
+// ESCALATE
+// ════════════════════════════════════════════════════
+
+const escalateTicket = async (req, res) => {
+  try {
+    const role = req.user.role;
+    if (!['admin', 'leader'].includes(role)) {
+      return res.status(403).json({ message: "Admin ou Leader requis" });
+    }
+
+    const ticket = await Ticket.findById(req.params.id).populate("teamId");
+    if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+    const newLevel = Math.min((ticket.escalationLevel ?? 0) + 1, 2);
+    await Ticket.findByIdAndUpdate(req.params.id, { escalationLevel: newLevel, escalatedAt: new Date() });
+    await createHistory(ticket._id, req.user.id, 'status_changed', `escalation:${ticket.escalationLevel}`, `escalation:${newLevel}`);
+
+    const admins = await User.find({ role: 'admin' }).select('_id');
+    const team   = ticket.teamId ? await Team.findById(ticket.teamId) : null;
+
+    const recipients = [
+      ...(newLevel >= 2 ? admins.map(a => a._id.toString()) : []),
+      team?.leaderId?.toString(),
+    ].filter(Boolean);
+
+    await notifyMany(recipients, {
+      type: 'escalated',
+      message: `Ticket escaladé (niveau ${newLevel}) : "${ticket.title}"`,
+      triggeredBy: req.user.id,
+      ticketId: ticket._id,
+    });
+
+    res.json({ escalationLevel: newLevel });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ════════════════════════════════════════════════════
+// DELETE / COMMENT
+// ════════════════════════════════════════════════════
+
 const deleteTicket = async (req, res) => {
   try {
+    if (!['admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Admin only" });
+    }
     const ticket = await Ticket.findByIdAndDelete(req.params.id);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
-    res.json({ message: "Ticket deleted successfully" });
-  } catch (error) {
-    console.log(error);
+    res.json({ message: "Ticket deleted" });
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── ADD comment ──
 const addComment = async (req, res) => {
   try {
     const { content } = req.body;
@@ -324,42 +474,46 @@ const addComment = async (req, res) => {
 
     await createHistory(ticket._id, req.user.id, 'commented', null, content);
 
-    // Notifier créateur
-    await createNotification(
-      ticket.createdBy,
-      'commented',
-      ticket._id,
-      `${req.user.name} a commenté votre ticket "${ticket.title}"`,
-      req.user.id
-    );
+    // Notify creator
+    await createNotification({
+      userId: ticket.createdBy,
+      type: 'commented',
+      message: `${req.user.name} a commenté votre ticket "${ticket.title}"`,
+      triggeredBy: req.user.id,
+      ticketId: ticket._id,
+    });
 
-    // Notifier technicien assigné
+    // Notify assigned tech (if different)
     if (ticket.assignedTo && ticket.assignedTo.toString() !== req.user.id) {
-      await createNotification(
-        ticket.assignedTo,
-        'commented',
-        ticket._id,
-        `${req.user.name} a commenté le ticket "${ticket.title}"`,
-        req.user.id
-      );
+      await createNotification({
+        userId: ticket.assignedTo,
+        type: 'commented',
+        message: `${req.user.name} a commenté le ticket "${ticket.title}"`,
+        triggeredBy: req.user.id,
+        ticketId: ticket._id,
+      });
     }
 
     res.status(201).json(ticket);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 module.exports = {
   getAllTickets,
+  getAdminQueue,
+  getSlaAlerts,
   getMyTickets,
   getAssignedTickets,
   getTeamTickets,
   getTicketById,
   createTicket,
+  assignToTeam,
   assignTicket,
   updateTicket,
+  escalateTicket,
   deleteTicket,
   addComment,
 };

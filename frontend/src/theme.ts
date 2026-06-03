@@ -57,6 +57,11 @@ export const statusColors: Record<string, { bg: string; text: string; border: st
     text: "#EA580C",
     border: "rgba(249, 115, 22, 0.25)",
   },
+  waiting: {
+    bg: "rgba(234, 179, 8, 0.10)",
+    text: "#B45309",
+    border: "rgba(234, 179, 8, 0.30)",
+  },
   resolved: {
     bg: "rgba(34, 197, 94, 0.10)",
     text: "#16A34A",
@@ -126,14 +131,28 @@ export const chartColors = {
 };
 
 export const PERMISSIONS: Record<UserRole, {
+  // Visibility
   canSeeUsers: boolean;
   canSeeAllTickets: boolean;
   canSeeAnalytics: boolean;
   canSeeTeam: boolean;
   canSeeProjects: boolean;
+  canSeeKnowledgeBase: boolean;
+  // Ticket actions
   canManageUsers: boolean;
-  canAssignTickets: boolean;
+  canAssignTickets: boolean;      // leader assigns to tech
+  canAssignToTeam: boolean;       // admin assigns to team (step 1)
   canResolveTickets: boolean;
+  canEscalateTickets: boolean;
+  canSeeAdminQueue: boolean;
+  // Knowledge Base
+  canManageKnowledge: boolean;
+  // Analytics
+  canSeeTeamAnalytics: boolean;
+  canSeeProjectAnalytics: boolean;
+  // Projects
+  canCreateProjects: boolean;
+  canManageProjects: boolean;
 }> = {
   admin: {
     canSeeUsers: true,
@@ -141,9 +160,18 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeAnalytics: true,
     canSeeTeam: true,
     canSeeProjects: true,
+    canSeeKnowledgeBase: true,
     canManageUsers: true,
     canAssignTickets: true,
-    canResolveTickets: false,
+    canAssignToTeam: true,
+    canResolveTickets: true,
+    canEscalateTickets: true,
+    canSeeAdminQueue: true,
+    canManageKnowledge: true,
+    canSeeTeamAnalytics: true,
+    canSeeProjectAnalytics: true,
+    canCreateProjects: true,
+    canManageProjects: true,
   },
   leader: {
     canSeeUsers: false,
@@ -151,9 +179,18 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeAnalytics: true,
     canSeeTeam: true,
     canSeeProjects: true,
+    canSeeKnowledgeBase: true,
     canManageUsers: false,
     canAssignTickets: true,
+    canAssignToTeam: false,
     canResolveTickets: true,
+    canEscalateTickets: true,
+    canSeeAdminQueue: false,
+    canManageKnowledge: true,
+    canSeeTeamAnalytics: true,
+    canSeeProjectAnalytics: true,
+    canCreateProjects: false,
+    canManageProjects: true,
   },
   tech: {
     canSeeUsers: false,
@@ -161,18 +198,36 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeAnalytics: false,
     canSeeTeam: true,
     canSeeProjects: true,
+    canSeeKnowledgeBase: true,
     canManageUsers: false,
     canAssignTickets: false,
+    canAssignToTeam: false,
     canResolveTickets: true,
+    canEscalateTickets: false,
+    canSeeAdminQueue: false,
+    canManageKnowledge: false,
+    canSeeTeamAnalytics: false,
+    canSeeProjectAnalytics: false,
+    canCreateProjects: false,
+    canManageProjects: false,
   },
   user: {
     canSeeUsers: false,
     canSeeAllTickets: false,
     canSeeAnalytics: false,
     canSeeTeam: false,
-    canSeeProjects: true,
+    canSeeProjects: false,
+    canSeeKnowledgeBase: true,
     canManageUsers: false,
     canAssignTickets: false,
+    canAssignToTeam: false,
     canResolveTickets: false,
+    canEscalateTickets: false,
+    canSeeAdminQueue: false,
+    canManageKnowledge: false,
+    canSeeTeamAnalytics: false,
+    canSeeProjectAnalytics: false,
+    canCreateProjects: false,
+    canManageProjects: false,
   },
 };

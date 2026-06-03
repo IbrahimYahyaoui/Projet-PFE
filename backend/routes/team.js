@@ -4,6 +4,7 @@ const {
   getMyTeam,
   getAllTeams,
   getTeamTickets,
+  getTeamWorkload,
   createTeam,
   updateTeam,
   addMember,
@@ -14,13 +15,14 @@ const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/all',           verifyToken, getAllTeams);
-router.get('/my',            verifyToken, getMyTeam);
-router.get('/my/tickets',    verifyToken, getTeamTickets);
-router.post('/',             verifyToken, createTeam);
-router.put('/:id',           verifyToken, updateTeam);
-router.post('/:id/members',  verifyToken, addMember);
+router.get('/all',                    verifyToken, getAllTeams);
+router.get('/my',                     verifyToken, getMyTeam);
+router.get('/my/tickets',             verifyToken, getTeamTickets);
+router.get('/:id/workload',           verifyToken, getTeamWorkload);
+router.post('/',                      verifyToken, createTeam);
+router.put('/:id',                    verifyToken, updateTeam);
+router.post('/:id/members',           verifyToken, addMember);
 router.delete('/:id/members/:userId', verifyToken, removeMember);
-router.delete('/:id',        verifyToken, deleteTeam);
+router.delete('/:id',                 verifyToken, deleteTeam);
 
 module.exports = router;

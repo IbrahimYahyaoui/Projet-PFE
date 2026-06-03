@@ -25,6 +25,7 @@ import {
   FilterList,
 } from "@mui/icons-material";
 import { C, statusColors, priorityColors } from "../theme";
+import { SLABadge } from "../components/SLABadge";
 
 interface Ticket {
   _id: string;
@@ -34,6 +35,9 @@ interface Ticket {
   priority: string;
   category: string;
   createdAt: string;
+  slaDeadline?: string | null;
+  slaBreached?: boolean;
+  escalationLevel?: number;
   createdBy: { _id: string; name: string };
   assignedTo: { _id: string; name: string } | null;
 }
@@ -184,6 +188,16 @@ const AllTickets = () => {
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1.5 }}>
+          {isAdmin && (
+            <Button
+              variant="outlined"
+              onClick={() => navigate("/tickets/admin-queue")}
+              sx={{ borderColor: C.accent, color: C.accent, textTransform: "none", borderRadius: "8px", fontSize: 13, fontWeight: 600, fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: C.accentLight } }}
+            >
+              <Box component="i" className="ti ti-inbox" sx={{ fontSize: 16 }} />
+              File d'attente
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<Download />}
@@ -293,7 +307,9 @@ const AllTickets = () => {
         >
           <MenuItem value="all">All Status</MenuItem>
           <MenuItem value="open">Open</MenuItem>
+          <MenuItem value="assigned">Assigned</MenuItem>
           <MenuItem value="in_progress">In Progress</MenuItem>
+          <MenuItem value="waiting">Waiting</MenuItem>
           <MenuItem value="resolved">Resolved</MenuItem>
           <MenuItem value="closed">Closed</MenuItem>
         </TextField>
@@ -357,7 +373,7 @@ const AllTickets = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: "#F8FAFC" }}>
-                  {["Title", "Status", "Priority", "Category", "Created By", "Assigned To", "Date", "Actions"].map((col) => (
+                  {["Title", "Status", "Priority", "SLA", "Category", "Created By", "Assigned To", "Date", "Actions"].map((col) => (
                     <TableCell
                       key={col}
                       sx={{
@@ -440,6 +456,24 @@ const AllTickets = () => {
                           fontFamily: "Inter, sans-serif",
                         }}
                       />
+                    </TableCell>
+
+                    <TableCell>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                        {ticket.slaDeadline ? (
+                          <SLABadge slaDeadline={ticket.slaDeadline} slaBreached={ticket.slaBreached ?? false} status={ticket.status} />
+                        ) : (
+                          <Typography fontSize={11} color={C.textMuted} fontFamily="Inter, sans-serif">—</Typography>
+                        )}
+                        {(ticket.escalationLevel ?? 0) > 0 && (
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                            <Box component="i" className="ti ti-alert-triangle" sx={{ fontSize: 11, color: C.danger }} />
+                            <Typography fontSize={10} color={C.danger} fontFamily="Inter, sans-serif" fontWeight={600}>
+                              Escalade {ticket.escalationLevel}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
                     </TableCell>
 
                     <TableCell>

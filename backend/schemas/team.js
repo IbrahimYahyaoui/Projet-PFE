@@ -22,6 +22,11 @@ const teamSchema = new mongoose.Schema(
       type: String,
       default: '#5FC2BA',
     },
+    tag: {
+      type: String,
+      enum: ['HARD', 'NET', 'SOFT', 'ACCESS', 'GEN'],
+      default: 'GEN',
+    },
     leaderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
