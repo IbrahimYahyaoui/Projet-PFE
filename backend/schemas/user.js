@@ -35,6 +35,24 @@ const userSchema = new mongoose.Schema(
       ref: 'Team',
       default: null,
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    department: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

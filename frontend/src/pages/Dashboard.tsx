@@ -146,7 +146,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
   const avatarColors = [C.accent, "#3B82F6", "#F97316", "#8B5CF6", "#22C55E", "#EF4444"];
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
+    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto", width: "100%" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3, flexWrap: "wrap", gap: 2 }}>
         <Box>
@@ -187,7 +187,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
           { label: "En cours",         value: kpis.inProgressTickets ?? 0, icon: "loader",        color: C.warning,   bg: C.warningBg,                  sub: "Actifs" },
           { label: "Résolus",          value: kpis.resolvedTickets ?? 0,   icon: "circle-check",  color: C.success,   bg: C.successBg,                  sub: `${kpis.resolutionRate ?? 0}% taux` },
         ].map(k => (
-          <Grid item xs={12} sm={6} md={3} key={k.label}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
           </Grid>
         ))}
@@ -201,7 +201,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
           { label: "Escaladés",        value: kpis.escalatedCount ?? 0,    icon: "arrow-up",      color: "#F59E0B",   bg: "rgba(245,158,11,.10)",        sub: "À traiter" },
           { label: "Tps résolution moy",value: fmtHours(kpis.avgResolutionTime ?? 0), icon: "clock", color: C.accent, bg: C.accentLight,                sub: "Moyenne" },
         ].map(k => (
-          <Grid item xs={12} sm={6} md={3} key={k.label}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
           </Grid>
         ))}
@@ -210,7 +210,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       {/* Charts Row */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {/* Area chart */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <CardShell title="Évolution des tickets" subtitle={`${period} derniers jours — créés vs résolus`} icon="chart-line" noPad>
             {loading ? <Skeleton variant="rectangular" height={240} sx={{ m: 2 }} /> : (
               <Box sx={{ p: 2, pt: 1.5 }}>
@@ -235,7 +235,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
         </Grid>
 
         {/* Status donut */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <CardShell title="Distribution statuts" subtitle="Répartition actuelle" icon="chart-pie">
             {loading ? <Skeleton variant="circular" width={140} height={140} sx={{ mx: "auto", mt: 2, mb: 2 }} /> : statusDist.length > 0 ? (
               <>
@@ -271,7 +271,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       {/* Analytics + Projects Row */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {/* Priority distribution */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <CardShell title="Par priorité" subtitle="Répartition des tickets" icon="flag">
             {loading ? <Skeleton variant="rectangular" height={180} /> : (
               <ResponsiveContainer width="100%" height={180}>
@@ -289,7 +289,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
         </Grid>
 
         {/* Category distribution */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <CardShell title="Par catégorie" subtitle="Volume par type" icon="tag">
             {loading ? <Skeleton variant="rectangular" height={180} /> : (
               <ResponsiveContainer width="100%" height={180}>
@@ -306,7 +306,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
         </Grid>
 
         {/* Projects summary */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <CardShell title="Projets" subtitle="Vue d'ensemble" icon="folder-open" action={() => navigate("/projects")}>
             {loading || !projStats ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -346,7 +346,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       {/* Bottom Row: Tech Performance + SLA Alerts */}
       <Grid container spacing={2}>
         {/* Tech Performance */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <CardShell title="Performance techniciens" subtitle="Taux de résolution — période sélectionnée" icon="users" action={() => navigate("/teams/analytics")}>
             {loading ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -390,7 +390,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
         </Grid>
 
         {/* SLA Alerts */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <CardShell title="Alertes SLA" subtitle="Tickets proches ou dépassant l'échéance" icon="alert-triangle" action={() => navigate("/tickets/all")}>
             {loading ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -453,7 +453,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
   const avatarColors = [C.accent, "#3B82F6", "#F97316", "#8B5CF6", "#22C55E"];
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
+    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto", width: "100%" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3, flexWrap: "wrap", gap: 2 }}>
         <Box>
@@ -479,7 +479,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
           { label: "En cours",       value: kpis.inProgressTickets ?? 0, icon: "loader",       color: C.warning, bg: C.warningBg,              sub: "Actifs" },
           { label: "Résolus",        value: kpis.resolvedTickets ?? 0,   icon: "circle-check", color: C.success, bg: C.successBg,              sub: `${kpis.resolutionRate ?? 0}%` },
         ].map(k => (
-          <Grid item xs={12} sm={6} md={3} key={k.label}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
           </Grid>
         ))}
@@ -487,7 +487,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
 
       {/* Charts */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <CardShell title="Activité de l'équipe" subtitle={`${period} derniers jours`} icon="chart-line" noPad>
             {loading ? <Skeleton variant="rectangular" height={230} sx={{ m: 2 }} /> : (
               <Box sx={{ p: 2, pt: 1.5 }}>
@@ -511,7 +511,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
           </CardShell>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <CardShell title="Statuts tickets" subtitle="Distribution actuelle" icon="chart-pie">
             {loading ? <Skeleton variant="circular" width={120} height={120} sx={{ mx: "auto", mt: 2, mb: 2 }} /> : statusDist.length > 0 ? (
               <>
@@ -557,7 +557,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
         ) : (
           <Grid container spacing={1.5}>
             {techPerf.map((tech: any, i: number) => (
-              <Grid item xs={12} sm={6} key={tech._id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={tech._id}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, bgcolor: C.bgPage, borderRadius: "10px" }}>
                   <Avatar sx={{ width: 36, height: 36, bgcolor: avatarColors[i % avatarColors.length] + "22", color: avatarColors[i % avatarColors.length], fontSize: "12px", fontWeight: 700, fontFamily: "Inter, sans-serif" }}>
                     {initials(tech.name)}
@@ -613,7 +613,7 @@ function TechDashboard() {
   }).slice(0, 10);
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1300, mx: "auto" }}>
+    <Box sx={{ p: 3, maxWidth: 1300, mx: "auto", width: "100%" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3, flexWrap: "wrap", gap: 2 }}>
         <Box>
@@ -636,7 +636,7 @@ function TechDashboard() {
           { label: "Résolus",          value: resolved,       icon: "circle-check",   color: C.success, bg: C.successBg,           sub: "Terminés" },
           { label: "Risque SLA",       value: slaRisk,        icon: "alert-triangle", color: C.danger,  bg: C.dangerBg,            sub: slaRisk > 0 ? "Urgent" : "OK" },
         ].map(k => (
-          <Grid item xs={12} sm={6} md={3} key={k.label}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
           </Grid>
         ))}
@@ -645,7 +645,7 @@ function TechDashboard() {
       {/* Main content */}
       <Grid container spacing={2}>
         {/* My tickets list */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <CardShell title="Mes tickets assignés" subtitle="Triés par urgence SLA" icon="clipboard-list" action={() => navigate("/tickets/assigned")}>
             {loading ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -682,7 +682,7 @@ function TechDashboard() {
         </Grid>
 
         {/* Quick panel */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}>
             {/* Quick actions */}
             <CardShell title="Actions rapides" icon="zap">
@@ -751,7 +751,7 @@ function EmployeeDashboard() {
   const recent   = [...tickets].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8);
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1100, mx: "auto" }}>
+    <Box sx={{ p: 3, maxWidth: 1100, mx: "auto", width: "100%" }}>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "22px", fontWeight: 800, color: C.textPrimary, letterSpacing: "-0.4px" }}>
@@ -768,7 +768,7 @@ function EmployeeDashboard() {
           { label: "Base de connaissances",path: "/knowledge-base",  icon: "books",      color: "#8B5CF6",   bg: "rgba(139,92,246,.10)" },
           { label: "Assistant IA",         path: "/ai-assistant",    icon: "robot",      color: C.warning,   bg: C.warningBg },
         ].map(a => (
-          <Grid item xs={6} sm={3} key={a.label}>
+          <Grid size={{ xs: 6, sm: 3 }} key={a.label}>
             <Box
               onClick={() => navigate(a.path)}
               sx={{ bgcolor: a.primary ? C.accent : "#fff", border: `1px solid ${a.primary ? C.accent : C.border}`, borderRadius: "14px", p: 2, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, textAlign: "center", transition: "all 0.18s", "&:hover": { transform: "translateY(-2px)", boxShadow: C.shadowMd, borderColor: a.color } }}
@@ -792,7 +792,7 @@ function EmployeeDashboard() {
           { label: "En attente",   value: waiting,        icon: "pause",        color: "#F59E0B", bg: "rgba(245,158,11,.10)", sub: "Informations demandées" },
           { label: "Résolus",      value: resolved,       icon: "circle-check", color: C.success, bg: C.successBg,           sub: "Terminés" },
         ].map(k => (
-          <Grid item xs={12} sm={6} md={3} key={k.label}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
           </Grid>
         ))}
