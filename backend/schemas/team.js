@@ -15,8 +15,8 @@ const teamSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['hardware', 'software', 'network', 'access', 'other', 'general'],
-      default: 'general',
+      enum: ['hardware', 'software', 'network', 'security', 'support', 'other'],
+      required: true,
     },
     color: {
       type: String,
@@ -24,8 +24,8 @@ const teamSchema = new mongoose.Schema(
     },
     tag: {
       type: String,
-      enum: ['HARD', 'NET', 'SOFT', 'ACCESS', 'GEN'],
-      default: 'GEN',
+      enum: ['HARD', 'NET', 'SOFT', 'SEC', 'SUP', 'OTHER'],
+      required: true,
     },
     leaderId: {
       type: mongoose.Schema.Types.ObjectId,

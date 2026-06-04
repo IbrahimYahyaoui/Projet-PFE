@@ -9,6 +9,7 @@ const {
   toggleActive,
   resetPassword,
   getTechnicians,
+  getAvailableTechs,
 } = require('../controllers/userController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,7 @@ const router = express.Router();
 router.get('/',                        verifyToken, getAllUsers);
 router.get('/me',                      verifyToken, getMe);
 router.get('/technicians',             verifyToken, getTechnicians);
+router.get('/available-techs',         verifyToken, getAvailableTechs);
 router.post('/',                       verifyToken, createUser);
 router.put('/:id',                     verifyToken, updateUser);
 router.delete('/:id',                  verifyToken, deleteUser);

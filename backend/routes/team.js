@@ -2,6 +2,7 @@
 const express = require('express');
 const {
   getMyTeam,
+  getTeamById,
   getAllTeams,
   getTeamTickets,
   getTeamWorkload,
@@ -19,6 +20,7 @@ router.get('/all',                    verifyToken, getAllTeams);
 router.get('/my',                     verifyToken, getMyTeam);
 router.get('/my/tickets',             verifyToken, getTeamTickets);
 router.get('/:id/workload',           verifyToken, getTeamWorkload);
+router.get('/:id',                    verifyToken, getTeamById);
 router.post('/',                      verifyToken, createTeam);
 router.put('/:id',                    verifyToken, updateTeam);
 router.post('/:id/members',           verifyToken, addMember);

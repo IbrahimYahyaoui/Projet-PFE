@@ -162,6 +162,10 @@ export const PERMISSIONS: Record<UserRole, {
   // Projects
   canCreateProjects: boolean;
   canManageProjects: boolean;
+  // Teams
+  canManageTeams: boolean;
+  canSeeTeamDashboard: boolean;
+  canManageTeamMembers: boolean;
 }> = {
   admin: {
     canSeeUsers: true,
@@ -184,6 +188,9 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeProjectAnalytics: true,
     canCreateProjects: true,
     canManageProjects: true,
+    canManageTeams: true,
+    canSeeTeamDashboard: false,
+    canManageTeamMembers: true,
   },
   leader: {
     canSeeUsers: false,
@@ -206,6 +213,9 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeProjectAnalytics: true,
     canCreateProjects: false,
     canManageProjects: true,
+    canManageTeams: false,
+    canSeeTeamDashboard: true,
+    canManageTeamMembers: true,
   },
   tech: {
     canSeeUsers: false,
@@ -228,6 +238,9 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeProjectAnalytics: false,
     canCreateProjects: false,
     canManageProjects: false,
+    canManageTeams: false,
+    canSeeTeamDashboard: true,
+    canManageTeamMembers: false,
   },
   user: {
     canSeeUsers: false,
@@ -250,5 +263,8 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeProjectAnalytics: false,
     canCreateProjects: false,
     canManageProjects: false,
+    canManageTeams: false,
+    canSeeTeamDashboard: false,
+    canManageTeamMembers: false,
   },
 };

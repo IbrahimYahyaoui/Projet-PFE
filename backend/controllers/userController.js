@@ -202,6 +202,22 @@ const getTechnicians = async (req, res) => {
   }
 };
 
+const getAvailableTechs = async (req, res) => {
+  try {
+    const Team = require('../schemas/team');
+    const allTeams = await Team.find().select('members');
+    const assignedIds = allTeams.flatMap(t => t.members.map(m => m.toString()));
+    const techs = await User.find({
+      role: 'tech',
+      isActive: true,
+      _id: { $nin: assignedIds },
+    }).select('name email');
+    res.json(techs);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getMe,
@@ -211,4 +227,5 @@ module.exports = {
   toggleActive,
   resetPassword,
   getTechnicians,
+  getAvailableTechs,
 };

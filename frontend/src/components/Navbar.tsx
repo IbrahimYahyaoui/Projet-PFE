@@ -65,11 +65,12 @@ const MODULES: Module[] = [
     path: "/teams",
     permission: "canSeeTeam",
     subItems: [
-      { label: "Dashboard",         path: "/teams",            icon: "layout-dashboard" },
-      { label: "Membres",           path: "/teams/members",    icon: "users"            },
-      { label: "Tickets équipe",    path: "/teams/tickets",    icon: "ticket"           },
-      { label: "Charge de travail", path: "/teams/workload",   icon: "chart-bar"        },
-      { label: "Analytics",         path: "/teams/analytics",  icon: "chart-pie",       permission: "canSeeTeamAnalytics" },
+      { label: "Gestion des équipes", path: "/teams",            icon: "settings",         permission: "canManageTeams"      },
+      { label: "Mon équipe",          path: "/teams",            icon: "layout-dashboard", permission: "canSeeTeamDashboard" },
+      { label: "Membres",             path: "/teams/members",    icon: "users",            permission: "canSeeTeamDashboard" },
+      { label: "Tickets équipe",      path: "/teams/tickets",    icon: "ticket",           permission: "canSeeTeamDashboard" },
+      { label: "Charge de travail",   path: "/teams/workload",   icon: "chart-bar",        permission: "canSeeTeamDashboard" },
+      { label: "Analytics",           path: "/teams/analytics",  icon: "chart-pie",        permission: "canSeeTeamAnalytics" },
     ],
   },
   {
