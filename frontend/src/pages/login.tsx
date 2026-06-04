@@ -112,29 +112,20 @@ export const Login = () => {
         }} />
 
         {/* Logo en haut gauche */}
-        <Box sx={{
-          position: "absolute",
-          top: 32, left: 32,
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          zIndex: 2,
-        }}>
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill={C.navy} opacity="0.85" />
-            <polygon points="20,8 34,32 6,32" fill={C.accent} opacity="0.95" />
-            <polygon points="20,13 30,32 10,32" fill="white" opacity="0.15" />
-            <circle cx="20" cy="20" r="4" fill="white" opacity="0.95" />
-          </svg>
-          <Typography
-            fontSize={18}
-            fontWeight={700}
-            color="#FFFFFF"
-            fontFamily="Inter, sans-serif"
-            letterSpacing={0.5}
-          >
-            TicketFlow
-          </Typography>
+        <Box sx={{ position: "absolute", top: 32, left: 32, display: "flex", alignItems: "center", gap: 1.5, zIndex: 2 }}>
+          <Box sx={{ width: 44, height: 44, background: "linear-gradient(135deg, #1E3A5F, #152D4A)", borderRadius: "12px", border: "1px solid rgba(42,74,122,0.8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="28" height="28" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="6" width="34" height="10" rx="5" fill="white"/>
+              <path d="M 16,16 L 16,30 C 16,37 20,41 28,44 C 24,41 20,36 20,29 L 20,16 Z" fill="white"/>
+            </svg>
+          </Box>
+          <Box>
+            <Box sx={{ display: "flex", alignItems: "baseline" }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "22px", color: "#FFFFFF", lineHeight: 1, letterSpacing: "-0.5px" }}>Tusk</Typography>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "22px", color: "#60A5FA", lineHeight: 1, letterSpacing: "-0.5px" }}>Flow</Typography>
+            </Box>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "9px", fontWeight: 500, color: "#5FC2BA", letterSpacing: "0.18em", mt: 0.2 }}>TUSKENS MEA</Typography>
+          </Box>
         </Box>
 
         {/* Text en bas gauche */}

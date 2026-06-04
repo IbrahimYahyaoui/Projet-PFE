@@ -1,5 +1,6 @@
 // frontend/src/pages/AssignedTickets.tsx
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Box, Typography } from "@mui/material";
 import { C } from "../theme";
 import { TicketTable, type TicketRow } from "../components/TicketTable";
@@ -7,6 +8,8 @@ import { TicketTable, type TicketRow } from "../components/TicketTable";
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 export default function AssignedTickets() {
+  const location = useLocation();
+  const searchFromNav = (location.state as any)?.search ?? "";
   const storedUser  = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
@@ -79,6 +82,7 @@ export default function AssignedTickets() {
         onStatusChange={handleStatusChange}
         currentUserId={currentUser?.id ?? currentUser?._id}
         currentUserRole={currentUser?.role}
+        initialSearch={searchFromNav}
       />
     </Box>
   );

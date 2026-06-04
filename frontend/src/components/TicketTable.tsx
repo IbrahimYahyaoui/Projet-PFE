@@ -52,6 +52,7 @@ interface Props {
   onStatusChange?: (ticket: TicketRow, newStatus: string) => void;
   currentUserId?: string;
   currentUserRole?: string;
+  initialSearch?: string;
 }
 
 function getAllowedTransitions(status: string, role: string, ticket: TicketRow, userId: string): string[] {
@@ -123,11 +124,11 @@ export function TicketTable({
   tickets, loading, columns, actions = [],
   showFilters = true, showPagination = true,
   emptyIcon = "ticket", emptyTitle = "Aucun ticket", emptyDescription = "Aucun ticket ne correspond aux filtres.",
-  onStatusChange, currentUserId, currentUserRole,
+  onStatusChange, currentUserId, currentUserRole, initialSearch,
 }: Props) {
   const navigate = useNavigate();
 
-  const [search,           setSearch]           = useState("");
+  const [search,           setSearch]           = useState(initialSearch ?? "");
   const [statusF,          setStatusF]          = useState("all");
   const [priorityF,        setPriorityF]        = useState("all");
   const [categoryF,        setCategoryF]        = useState("all");

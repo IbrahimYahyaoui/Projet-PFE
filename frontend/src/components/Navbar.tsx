@@ -22,6 +22,16 @@ interface NavbarProps {
   onToggleSidebar?: () => void;
 }
 
+interface NotifItem {
+  _id: string;
+  type: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  triggeredBy?: { name: string };
+  ticketId?: { _id: string; title: string } | null;
+}
+
 interface SubItem {
   label: string;
   path: string;
@@ -119,6 +129,9 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
   const [openDropdown,  setOpenDropdown]  = useState<string | null>(null);
   const [searchVal,     setSearchVal]     = useState("");
   const [unreadCount,   setUnreadCount]   = useState(0);
+  const [notifAnchor,   setNotifAnchor]   = useState<HTMLElement | null>(null);
+  const [notifications, setNotifications] = useState<NotifItem[]>([]);
+  const [notifLoading,  setNotifLoading]  = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -140,10 +153,57 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>("input[placeholder*='Rechercher']")?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
+  };
+
+  const fetchNotifications = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setNotifLoading(true);
+    try {
+      const res = await fetch("/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications ?? []);
+        setUnreadCount(data.unreadCount ?? 0);
+      }
+    } catch { /* ignore */ }
+    finally { setNotifLoading(false); }
+  };
+
+  const markAllRead = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      await fetch("/api/notifications/read-all", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch { /* ignore */ }
+  };
+
+  const getSearchPath = (): string => {
+    if (role === "admin")  return "/tickets/all";
+    if (role === "leader") return "/teams/tickets";
+    if (role === "tech")   return "/tickets/assigned";
+    return "/tickets/my";
   };
 
   const getInitials = (name: string) =>
@@ -196,10 +256,10 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
           onClick={() => navigate("/dashboard")}
           sx={{ display: "flex", alignItems: "center", gap: 1.2, cursor: "pointer", flexShrink: 0 }}
         >
-          <Box sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #5FC2BA, #4AADA5)", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="18" height="18" viewBox="0 0 34 34" fill="none">
-              <polygon points="17,4 31,28 3,28" fill="white" opacity="0.9"/>
-              <circle cx="17" cy="17" r="4" fill="#5FC2BA"/>
+          <Box sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #1E3A5F, #152D4A)", borderRadius: "9px", border: "1px solid rgba(42,74,122,0.8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="6" width="34" height="10" rx="5" fill="white"/>
+              <path d="M 16,16 L 16,30 C 16,37 20,41 28,44 C 24,41 20,36 20,29 L 20,16 Z" fill="white"/>
             </svg>
           </Box>
           <Box>
@@ -222,11 +282,26 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
           transition: "all 0.2s",
           "&:focus-within": { bgcolor: "rgba(255,255,255,0.10)", border: "1px solid rgba(95,194,186,0.4)" },
         }}>
-          <SearchIcon sx={{ fontSize: 16, color: "rgba(255,255,255,0.3)", flexShrink: 0 }} />
+          <SearchIcon
+            onClick={() => {
+              if (searchVal.trim()) {
+                navigate(getSearchPath(), { state: { search: searchVal.trim() } });
+                setSearchVal("");
+              }
+            }}
+            sx={{ fontSize: 16, color: "rgba(255,255,255,0.3)", flexShrink: 0, cursor: "pointer", "&:hover": { color: "rgba(255,255,255,0.6)" }, transition: "color 0.15s" }}
+          />
           <InputBase
             placeholder="Rechercher tickets, projets..."
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchVal.trim()) {
+                navigate(getSearchPath(), { state: { search: searchVal.trim() } });
+                setSearchVal("");
+              }
+              if (e.key === "Escape") setSearchVal("");
+            }}
             sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: "#fff", flex: 1, "& input::placeholder": { color: "rgba(255,255,255,0.3)" } }}
           />
           <Typography sx={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "5px", px: 0.75, py: 0.25 }}>
@@ -236,7 +311,18 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
 
         {/* Right side: notifications + profile */}
         <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.2 }}>
-          <IconButton size="small" sx={{ width: 36, height: 36, borderRadius: "9px", bgcolor: "rgba(255,255,255,0.07)", "&:hover": { bgcolor: "rgba(255,255,255,0.12)" } }}>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              setNotifAnchor(e.currentTarget);
+              fetchNotifications();
+            }}
+            sx={{
+              width: 36, height: 36, borderRadius: "9px",
+              bgcolor: Boolean(notifAnchor) ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
+              "&:hover": { bgcolor: "rgba(255,255,255,0.12)" },
+            }}
+          >
             <Badge
               badgeContent={unreadCount > 0 ? unreadCount : undefined}
               sx={{ "& .MuiBadge-badge": { bgcolor: "#EF4444", color: "#fff", fontSize: 9, minWidth: 15, height: 15, border: "1.5px solid #0F1E35" } }}
@@ -272,6 +358,7 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
         px: 3.5,
         display: "flex",
         alignItems: "center",
+        justifyContent: "center",
         gap: 0.5,
         height: 46,
       }}>
@@ -444,6 +531,119 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
           </Box>
         )}
       </Box>
+
+      {/* ══ Notifications Popover ══ */}
+      <Popover
+        open={Boolean(notifAnchor)}
+        anchorEl={notifAnchor}
+        onClose={() => setNotifAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        PaperProps={{
+          sx: {
+            mt: 1, borderRadius: "14px",
+            border: `1px solid ${C.border}`,
+            boxShadow: C.shadowLg,
+            width: 360, maxHeight: 480,
+            overflow: "hidden",
+            display: "flex", flexDirection: "column",
+          },
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "center",
+          justifyContent: "space-between", borderBottom: `1px solid ${C.border}`,
+          bgcolor: C.bgPage, flexShrink: 0 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px",
+              fontWeight: 700, color: C.textPrimary }}>
+              Notifications
+            </Typography>
+            {unreadCount > 0 && (
+              <Box sx={{ px: 1, py: 0.2, bgcolor: "#EF4444", borderRadius: "10px" }}>
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px",
+                  fontWeight: 700, color: "#fff" }}>
+                  {unreadCount}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+          {unreadCount > 0 && (
+            <Typography
+              onClick={markAllRead}
+              sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600,
+                color: C.accent, cursor: "pointer", "&:hover": { opacity: 0.8 } }}>
+              Tout marquer lu
+            </Typography>
+          )}
+        </Box>
+
+        {/* Liste */}
+        <Box sx={{ overflow: "auto", flex: 1 }}>
+          {notifLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <Box component="i" className="ti ti-loader-2"
+                sx={{ fontSize: 24, color: C.accent,
+                  animation: "spin 1s linear infinite",
+                  "@keyframes spin": { "100%": { transform: "rotate(360deg)" } },
+                }} />
+            </Box>
+          ) : notifications.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 5 }}>
+              <Box component="i" className="ti ti-bell-off"
+                sx={{ fontSize: 36, color: C.textMuted, display: "block", mb: 1 }} />
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted }}>
+                Aucune notification
+              </Typography>
+            </Box>
+          ) : (
+            notifications.slice(0, 15).map((notif) => (
+              <Box
+                key={notif._id}
+                onClick={() => {
+                  if (notif.ticketId?._id) {
+                    navigate(`/tickets/${notif.ticketId._id}`);
+                    setNotifAnchor(null);
+                  }
+                }}
+                sx={{
+                  display: "flex", alignItems: "flex-start", gap: 1.5,
+                  px: 2, py: 1.5,
+                  bgcolor: notif.read ? "transparent" : `${C.accent}08`,
+                  borderBottom: `1px solid ${C.border}`,
+                  cursor: notif.ticketId ? "pointer" : "default",
+                  transition: "background 0.13s",
+                  "&:hover": notif.ticketId ? { bgcolor: C.accentLight } : {},
+                  "&:last-child": { borderBottom: "none" },
+                }}
+              >
+                <Box sx={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, mt: 0.7,
+                  bgcolor: notif.read ? "transparent" : C.accent }} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px",
+                    color: C.textPrimary, lineHeight: 1.5,
+                    overflow: "hidden", textOverflow: "ellipsis",
+                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                    {notif.message}
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.4 }}>
+                    {notif.triggeredBy?.name && (
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>
+                        par {notif.triggeredBy.name}
+                      </Typography>
+                    )}
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>
+                      {new Date(notif.createdAt).toLocaleString("fr-FR", {
+                        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            ))
+          )}
+        </Box>
+      </Popover>
 
       {/* ══ Profile Dropdown ══ */}
       <Popover

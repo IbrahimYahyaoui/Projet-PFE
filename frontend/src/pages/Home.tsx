@@ -13,15 +13,18 @@ export const Home = () => {
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 6, py: 2, borderBottom: `1px solid ${C.border}`, bgcolor: "rgba(255,255,255,0.95)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(8px)" }}>
         {/* Logo */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Box sx={{ width: 36, height: 36, bgcolor: C.navy, borderRadius: "8px", border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="20" height="20" viewBox="0 0 34 34" fill="none">
-              <polygon points="17,5 30,28 4,28" fill="#5FC2BA" opacity="0.95"/>
-              <circle cx="17" cy="17" r="4" fill="white" opacity="0.9"/>
+          <Box sx={{ width: 36, height: 36, background: "linear-gradient(135deg, #1E3A5F, #152D4A)", borderRadius: "9px", border: "1px solid rgba(42,74,122,0.8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="6" width="34" height="10" rx="5" fill="white"/>
+              <path d="M 16,16 L 16,30 C 16,37 20,41 28,44 C 24,41 20,36 20,29 L 20,16 Z" fill="white"/>
             </svg>
           </Box>
-          <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: C.navy, letterSpacing: "-0.3px" }}>
-            TicketFlow
-          </Typography>
+          <Box>
+            <Box sx={{ display: "flex", alignItems: "baseline" }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: C.navy, letterSpacing: "-0.3px" }}>Tusk</Typography>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "#2563EB", letterSpacing: "-0.3px" }}>Flow</Typography>
+            </Box>
+          </Box>
         </Box>
 
         {/* Links */}

@@ -1,5 +1,6 @@
 // frontend/src/pages/teams/TeamTickets.tsx
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Box, Typography, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem,
@@ -22,6 +23,8 @@ interface WorkloadMember {
 }
 
 export default function TeamTickets() {
+  const location = useLocation();
+  const searchFromNav = (location.state as any)?.search ?? "";
   const storedUser  = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
   const isLeader    = currentUser?.role === "leader";
@@ -141,6 +144,7 @@ export default function TeamTickets() {
         onStatusChange={handleStatusChange}
         currentUserId={currentUser?.id ?? currentUser?._id}
         currentUserRole={currentUser?.role}
+        initialSearch={searchFromNav}
       />
 
       {/* ── Assign dialog ── */}

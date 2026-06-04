@@ -1,6 +1,6 @@
 // frontend/src/pages/MyTickets.tsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Box, Typography, Button } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import { C } from "../theme";
@@ -10,6 +10,8 @@ const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace
 
 export default function MyTickets() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchFromNav = (location.state as any)?.search ?? "";
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +76,7 @@ export default function MyTickets() {
         emptyIcon="ticket"
         emptyTitle="Aucun ticket"
         emptyDescription="Vous n'avez pas encore soumis de ticket."
+        initialSearch={searchFromNav}
       />
     </Box>
   );
