@@ -33,6 +33,7 @@ import TeamAnalytics from "./pages/teams/TeamAnalytics";
 
 // ── Projects ──
 import Projects           from "./pages/Projects";
+import ProjectDetail      from "./pages/projects/ProjectDetail";
 import ProjectKanban      from "./pages/projects/ProjectKanban";
 import ProjectTasks       from "./pages/projects/ProjectTasks";
 import ProjectAnalytics   from "./pages/projects/ProjectAnalytics";
@@ -120,10 +121,11 @@ export default function App() {
         <Route path="/teams/analytics"   element={<P permission="canSeeTeamAnalytics"><TeamAnalytics /></P>} />
 
         {/* ── Projects ── */}
-        <Route path="/projects"           element={<P permission="canSeeProjects"><Projects /></P>} />
-        <Route path="/projects/tasks"     element={<P permission="canSeeProjects"><ProjectTasks /></P>} />
-        <Route path="/projects/kanban"    element={<P permission="canSeeProjects"><ProjectKanban /></P>} />
-        <Route path="/projects/analytics" element={<P permission="canSeeProjectAnalytics"><ProjectAnalytics /></P>} />
+        <Route path="/projects"            element={<P permission="canSeeProjects"><Projects /></P>} />
+        <Route path="/projects/tasks"      element={<P permission="canSeeProjects"><ProjectTasks /></P>} />
+        <Route path="/projects/kanban"     element={<P permission="canSeeProjects"><ProjectKanban /></P>} />
+        <Route path="/projects/analytics"  element={<P permission="canSeeProjectAnalytics"><ProjectAnalytics /></P>} />
+        <Route path="/projects/:id"        element={<P permission="canSeeProjects"><ProjectDetail /></P>} />
 
         {/* ── Knowledge Base ── */}
         <Route path="/knowledge-base"           element={<P permission="canSeeKnowledgeBase"><KnowledgeBase /></P>} />

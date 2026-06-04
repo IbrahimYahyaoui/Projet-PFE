@@ -94,6 +94,7 @@ const MODULES: Module[] = [
       { label: "Kanban",    path: "/projects/kanban",    icon: "layout-kanban" },
       { label: "Analytics", path: "/projects/analytics", icon: "chart-bar",    permission: "canSeeProjectAnalytics" },
     ],
+    // Note: /projects/tasks and /projects/kanban redirect to /projects with state tab
   },
 ];
 
@@ -433,7 +434,12 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
                     return (
                       <Box
                         key={sub.path}
-                        onClick={() => { navigate(sub.path); setOpenDropdown(null); }}
+                        onClick={() => {
+                          if (sub.path === "/projects/tasks")  { navigate("/projects", { state: { tab: "tasks" } }); }
+                          else if (sub.path === "/projects/kanban") { navigate("/projects", { state: { tab: "kanban" } }); }
+                          else { navigate(sub.path); }
+                          setOpenDropdown(null);
+                        }}
                         sx={{
                           display: "flex", alignItems: "center", gap: 1.2,
                           px: 1.75, py: 1, cursor: "pointer", transition: "all 0.12s",

@@ -1,11 +1,11 @@
 // frontend/src/pages/Projects.tsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box, Typography, Paper, Avatar, Chip, CircularProgress,
   LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, MenuItem, Select, FormControl, InputLabel,
-  IconButton, Tooltip, Divider,
+  IconButton, Tooltip, Divider, Drawer,
 } from "@mui/material";
 import {
   Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon,
@@ -91,6 +91,7 @@ const ProjectIcon = () => (
 // ════════════════════════════════════════════════════════════
 export default function Projects() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -107,6 +108,15 @@ export default function Projects() {
   const [kanbanProject, setKanbanProject] = useState<string>("");
   const [kanbanTasks, setKanbanTasks] = useState<Task[]>([]);
   const [dragTask, setDragTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [commentInput, setCommentInput] = useState("");
+
+  // Task filters
+  const [taskSearch,   setTaskSearch]   = useState("");
+  const [taskStatus,   setTaskStatus]   = useState("all");
+  const [taskPriority, setTaskPriority] = useState("all");
+  const [taskProject,  setTaskProject]  = useState("all");
+  const [myTasksOnly,  setMyTasksOnly]  = useState(false);
 
   // Forms
   const [projectForm, setProjectForm] = useState({ name: "", description: "", priority: "medium", color: "#5FC2BA", endDate: "" });
@@ -116,7 +126,9 @@ export default function Projects() {
 
   const storedUser = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin   = currentUser?.role === "admin";
+  const canCreate = ["admin", "leader"].includes(currentUser?.role ?? "");
+  const currentUserId = currentUser?.id ?? currentUser?._id ?? "";
 
   // ── Fetch ──────────────────────────────────────────────────
   const fetchAll = async () => {
@@ -167,6 +179,11 @@ export default function Projects() {
   useEffect(() => {
     fetchAll();
     fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const tab = (location.state as any)?.tab;
+    if (tab) setActiveTab(tab);
   }, []);
 
   useEffect(() => {
@@ -256,6 +273,33 @@ export default function Projects() {
     } catch (err) { console.log(err); }
   };
 
+  // ── Task drawer handlers ───────────────────────────────────
+  const handleUpdateTask = async (field: string, value: string) => {
+    if (!selectedTask) return;
+    const token = localStorage.getItem("token");
+    await fetch(`${apiUrl}/api/projects/${selectedTask.projectId}/tasks/${selectedTask._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ [field]: value }),
+    });
+    const updated = { ...selectedTask, [field]: value };
+    setAllTasks(prev => prev.map(t => t._id === selectedTask._id ? { ...t, [field]: value } : t));
+    setKanbanTasks(prev => prev.map(t => t._id === selectedTask._id ? { ...t, [field]: value } : t));
+    setSelectedTask(updated);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!selectedTask) return;
+    const token = localStorage.getItem("token");
+    await fetch(`${apiUrl}/api/projects/${selectedTask.projectId}/tasks/${selectedTask._id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setAllTasks(prev => prev.filter(t => t._id !== selectedTask._id));
+    setKanbanTasks(prev => prev.filter(t => t._id !== selectedTask._id));
+    setSelectedTask(null);
+  };
+
   // ── Sub navbar tabs ────────────────────────────────────────
   const tabs = [
     { id: "overview", label: "Overview", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
@@ -293,7 +337,7 @@ export default function Projects() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Q2 2026
           </Typography>
-          {isAdmin && (
+          {canCreate && (
             <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 14 }} />} onClick={() => setCreateDialog(true)}
               sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", fontSize: "0.78rem", px: 2, py: 0.8, "&:hover": { bgcolor: C.accentHover } }}>
               New Project
@@ -339,7 +383,7 @@ export default function Projects() {
                 </Box>
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: C.navy, mb: 0.5 }}>Aucun projet</Typography>
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.85rem", color: C.textMuted, mb: 2 }}>Créez votre premier projet pour commencer</Typography>
-                {isAdmin && (
+                {canCreate && (
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateDialog(true)}
                     sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", "&:hover": { bgcolor: C.accentHover } }}>
                     Créer un projet
@@ -352,7 +396,8 @@ export default function Projects() {
                   const sc = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.planning;
                   return (
                     <Paper key={project._id}
-                      sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", overflow: "hidden", cursor: "pointer", transition: "all 0.2s", "&:hover": { borderColor: project.color, transform: "translateY(-2px)" } }}>
+                      onClick={() => navigate(`/projects/${project._id}`)}
+                      sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", overflow: "hidden", cursor: "pointer", transition: "all 0.2s", "&:hover": { borderColor: project.color, transform: "translateY(-2px)", boxShadow: C.shadowMd } }}>
                       {/* Color top bar */}
                       <Box sx={{ height: 6, bgcolor: project.color }} />
                       <Box sx={{ p: 2.5 }}>
@@ -429,13 +474,48 @@ export default function Projects() {
         )}
 
         {/* ════ TASKS TAB ════ */}
-        {activeTab === "tasks" && (
+        {activeTab === "tasks" && (() => {
+          const filteredTasks = allTasks.filter(t =>
+            (!taskSearch   || t.title.toLowerCase().includes(taskSearch.toLowerCase())) &&
+            (taskStatus   === "all" || t.status   === taskStatus) &&
+            (taskPriority === "all" || t.priority === taskPriority) &&
+            (taskProject  === "all" || t.projectId === taskProject) &&
+            (!myTasksOnly  || t.assignedTo?._id === currentUserId)
+          );
+          return (
           <Paper sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", overflow: "hidden" }}>
-            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.border}`, bgcolor: C.bgPage, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: C.navy }}>Toutes les tâches</Typography>
-              <Box sx={{ display: "flex", gap: 1 }}>
+            {/* Filters bar */}
+            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.border}`, bgcolor: C.bgPage, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+              <TextField size="small" placeholder="Rechercher..." value={taskSearch} onChange={e => setTaskSearch(e.target.value)}
+                sx={{ ...inputSx, minWidth: 180 }} />
+              <FormControl size="small" sx={{ ...inputSx, minWidth: 130 }}>
+                <InputLabel>Statut</InputLabel>
+                <Select value={taskStatus} onChange={e => setTaskStatus(e.target.value)} label="Statut">
+                  <MenuItem value="all">Tous</MenuItem>
+                  {Object.entries(TASK_STATUS).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ ...inputSx, minWidth: 130 }}>
+                <InputLabel>Priorité</InputLabel>
+                <Select value={taskPriority} onChange={e => setTaskPriority(e.target.value)} label="Priorité">
+                  <MenuItem value="all">Toutes</MenuItem>
+                  {Object.entries(PRIORITY_CONFIG).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ ...inputSx, minWidth: 150 }}>
+                <InputLabel>Projet</InputLabel>
+                <Select value={taskProject} onChange={e => setTaskProject(e.target.value)} label="Projet">
+                  <MenuItem value="all">Tous</MenuItem>
+                  {projects.map(p => <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Chip label="Mes tâches" size="small" onClick={() => setMyTasksOnly(v => !v)}
+                sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.68rem", fontWeight: 600,
+                  bgcolor: myTasksOnly ? C.accent : C.accentLight, color: myTasksOnly ? C.navy : C.accent,
+                  cursor: "pointer", border: `1px solid ${myTasksOnly ? C.accent : "transparent"}` }} />
+              <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
                 {projects.map(p => (
-                  <Chip key={p._id} label={p.name} size="small" onClick={() => setCreateTaskDialog(p._id)}
+                  <Chip key={p._id} label={`+ ${p.name}`} size="small" onClick={() => setCreateTaskDialog(p._id)}
                     sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", fontWeight: 600, bgcolor: C.accentLight, color: C.accent, cursor: "pointer", "&:hover": { bgcolor: C.accent, color: C.navy } }} />
                 ))}
               </Box>
@@ -448,23 +528,31 @@ export default function Projects() {
               ))}
             </Box>
 
-            {allTasks.length === 0 ? (
+            {filteredTasks.length === 0 ? (
               <Box sx={{ py: 6, textAlign: "center" }}>
                 <Typography sx={{ fontFamily: "Inter, sans-serif", color: C.textMuted, fontSize: "0.875rem" }}>Aucune tâche</Typography>
               </Box>
             ) : (
-              allTasks.map((task, index) => {
+              filteredTasks.map((task, index) => {
                 const ts = TASK_STATUS[task.status] ?? TASK_STATUS.todo;
                 const tp = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium;
                 const proj = projects.find(p => p._id === task.projectId);
                 const av = avatarColors[index % avatarColors.length];
+                const isOverdue = task.dueDate && !["done"].includes(task.status) && new Date(task.dueDate) < new Date();
                 return (
-                  <Box key={task._id} sx={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", px: 2.5, py: 1.5, borderBottom: index < allTasks.length - 1 ? `1px solid ${C.border}` : "none", alignItems: "center", transition: "all 0.15s", "&:hover": { bgcolor: C.bgPage } }}>
+                  <Box key={task._id} onClick={() => setSelectedTask(task)}
+                    sx={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", px: 2.5, py: 1.5, borderBottom: index < filteredTasks.length - 1 ? `1px solid ${C.border}` : "none", alignItems: "center", transition: "all 0.15s", cursor: "pointer", "&:hover": { bgcolor: C.bgPage } }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <Box sx={{ width: 16, height: 16, borderRadius: "4px", border: `1.5px solid ${task.status === "done" ? C.accent : C.border}`, bgcolor: task.status === "done" ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         {task.status === "done" && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                       </Box>
                       <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.82rem", color: task.status === "done" ? C.textMuted : C.navy, textDecoration: task.status === "done" ? "line-through" : "none" }}>{task.title}</Typography>
+                      {isOverdue && (
+                        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.4, px: 0.8, py: 0.2, borderRadius: "5px", bgcolor: "rgba(239,68,68,0.08)", ml: 1 }}>
+                          <Box component="i" className="ti ti-clock-x" sx={{ fontSize: 11, color: "#DC2626" }} />
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", fontWeight: 700, color: "#DC2626" }}>En retard</Typography>
+                        </Box>
+                      )}
                     </Box>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       {proj && <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: proj.color, flexShrink: 0 }} />}
@@ -487,7 +575,8 @@ export default function Projects() {
               })
             )}
           </Paper>
-        )}
+          );
+        })()}
 
         {/* ════ KANBAN TAB ════ */}
         {activeTab === "kanban" && (
@@ -537,12 +626,28 @@ export default function Projects() {
                       {colTasks.map((task, i) => {
                         const tp = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium;
                         const av = avatarColors[i % avatarColors.length];
+                        const isOverdue = task.dueDate && !["done"].includes(task.status) && new Date(task.dueDate) < new Date();
                         return (
                           <Paper key={task._id} draggable onDragStart={() => setDragTask(task)}
-                            sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "10px", p: 1.5, cursor: "grab", transition: "all 0.15s", "&:hover": { borderColor: config.color }, "&:active": { cursor: "grabbing" } }}>
+                            onClick={() => setSelectedTask(task)}
+                            sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "10px", p: 1.5, cursor: "pointer", transition: "all 0.15s", "&:hover": { borderColor: config.color, boxShadow: C.shadowMd, transform: "translateY(-1px)" }, "&:active": { cursor: "grabbing" } }}>
                             <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8rem", color: C.navy, mb: 1 }}>{task.title}</Typography>
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1, flexWrap: "wrap" }}>
                               <Chip label={tp.label} size="small" sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.6rem", fontWeight: 600, bgcolor: tp.bg, color: tp.color, height: 18 }} />
+                              {isOverdue && (
+                                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.3, px: 0.7, py: 0.2, borderRadius: "5px", bgcolor: "rgba(239,68,68,0.08)" }}>
+                                  <Box component="i" className="ti ti-clock-x" sx={{ fontSize: 10, color: "#DC2626" }} />
+                                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "9px", fontWeight: 700, color: "#DC2626" }}>En retard</Typography>
+                                </Box>
+                              )}
+                            </Box>
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              {task.dueDate ? (
+                                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", color: isOverdue ? "#DC2626" : C.textMuted, display: "flex", alignItems: "center", gap: 0.3, fontWeight: isOverdue ? 600 : 400 }}>
+                                  <Box component="i" className="ti ti-calendar" sx={{ fontSize: 10 }} />
+                                  {formatDate(task.dueDate)}
+                                </Typography>
+                              ) : <Box />}
                               {task.assignedTo ? (
                                 <Avatar sx={{ width: 20, height: 20, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.55rem" }}>
                                   {getInitials(task.assignedTo.name)}
@@ -551,12 +656,6 @@ export default function Projects() {
                                 <Box sx={{ width: 20, height: 20, borderRadius: "50%", border: `1.5px dashed ${C.border}` }} />
                               )}
                             </Box>
-                            {task.dueDate && (
-                              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", color: C.textMuted, mt: 0.75, display: "flex", alignItems: "center", gap: 0.3 }}>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                {formatDate(task.dueDate)}
-                              </Typography>
-                            )}
                           </Paper>
                         );
                       })}
@@ -731,6 +830,104 @@ export default function Projects() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ════ TASK DETAIL DRAWER ════ */}
+      <Drawer anchor="right" open={Boolean(selectedTask)} onClose={() => setSelectedTask(null)}
+        PaperProps={{ sx: { width: 460, bgcolor: C.bgPage, borderLeft: `1px solid ${C.border}` } }}>
+        {selectedTask && (() => {
+          const ts = TASK_STATUS[selectedTask.status] ?? TASK_STATUS.todo;
+          const tp = PRIORITY_CONFIG[selectedTask.priority] ?? PRIORITY_CONFIG.medium;
+          const proj = projects.find(p => p._id === selectedTask.projectId);
+          return (
+            <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+              {/* Header */}
+              <Box sx={{ bgcolor: "#fff", borderBottom: `1px solid ${C.border}`, px: 2.5, py: 2, display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "15px", color: C.navy, mb: 1 }}>{selectedTask.title}</Typography>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "6px", bgcolor: ts.bg }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: ts.color }}>{ts.label}</Typography>
+                    </Box>
+                    <Box sx={{ px: 1, py: 0.3, borderRadius: "6px", bgcolor: tp.bg }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: tp.color }}>{tp.label}</Typography>
+                    </Box>
+                    {proj && (
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.3, borderRadius: "6px", bgcolor: C.bgPage }}>
+                        <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: proj.color }} />
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{proj.name}</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                <IconButton size="small" onClick={() => setSelectedTask(null)} sx={{ color: C.textMuted }}>
+                  <CloseIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Box>
+
+              {/* Body */}
+              <Box sx={{ flex: 1, overflow: "auto", p: 2.5, display: "flex", flexDirection: "column", gap: 2 }}>
+                {/* Fields */}
+                <Box sx={{ bgcolor: "#fff", borderRadius: "12px", border: `1px solid ${C.border}`, p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+                    <FormControl size="small" fullWidth sx={inputSx}>
+                      <InputLabel>Statut</InputLabel>
+                      <Select value={selectedTask.status} onChange={e => handleUpdateTask("status", e.target.value)} label="Statut">
+                        {Object.entries(TASK_STATUS).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth sx={inputSx}>
+                      <InputLabel>Priorité</InputLabel>
+                      <Select value={selectedTask.priority} onChange={e => handleUpdateTask("priority", e.target.value)} label="Priorité">
+                        {Object.entries(PRIORITY_CONFIG).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <FormControl size="small" fullWidth sx={inputSx}>
+                    <InputLabel>Assigné à</InputLabel>
+                    <Select value={selectedTask.assignedTo?._id ?? ""} onChange={e => handleUpdateTask("assignedTo", e.target.value)} label="Assigné à">
+                      <MenuItem value="">Non assigné</MenuItem>
+                      {(proj ? proj.members : allUsers).map(u => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                  <TextField size="small" label="Date limite" type="date" fullWidth value={selectedTask.dueDate?.slice(0,10) ?? ""} onChange={e => handleUpdateTask("dueDate", e.target.value)} sx={inputSx} InputLabelProps={{ shrink: true }} />
+                </Box>
+
+                {/* Description */}
+                <Box sx={{ bgcolor: "#fff", borderRadius: "12px", border: `1px solid ${C.border}`, p: 2 }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", mb: 1 }}>Description</Typography>
+                  <TextField multiline rows={3} fullWidth size="small" placeholder="Ajouter une description..." value={selectedTask.description ?? ""} onChange={e => handleUpdateTask("description", e.target.value)} sx={inputSx} />
+                </Box>
+
+                {/* Infos */}
+                <Box sx={{ bgcolor: "#fff", borderRadius: "12px", border: `1px solid ${C.border}`, p: 2 }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", mb: 1 }}>Infos</Typography>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Créé par</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 500, color: C.textPrimary }}>{selectedTask.createdBy?.name ?? "—"}</Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Créé le</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 500, color: C.textPrimary }}>{selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString("fr-FR") : "—"}</Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Footer */}
+              {canCreate && (
+                <Box sx={{ p: 2.5, borderTop: `1px solid ${C.border}`, bgcolor: "#fff" }}>
+                  <Button fullWidth onClick={handleDeleteTask}
+                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", borderRadius: "9px", bgcolor: "rgba(239,68,68,0.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { bgcolor: "rgba(239,68,68,0.14)" } }}>
+                    <Box component="i" className="ti ti-trash" sx={{ fontSize: 15, mr: 1 }} />
+                    Supprimer la tâche
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          );
+        })()}
+      </Drawer>
 
       {/* ════ DIALOG : Delete ════ */}
       <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)} maxWidth="xs" fullWidth
