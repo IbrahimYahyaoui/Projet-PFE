@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, TablePagination,
-  TextField, MenuItem, Select, InputAdornment, CircularProgress, IconButton, Tooltip, Paper,
+  TextField, MenuItem, Select, InputAdornment, CircularProgress, IconButton, Tooltip, Paper, Menu,
 } from "@mui/material";
 import { C } from "../theme";
 import { StatusChip }  from "./chips/StatusChip";
@@ -49,6 +49,29 @@ interface Props {
   emptyIcon?: string;
   emptyTitle?: string;
   emptyDescription?: string;
+  onStatusChange?: (ticket: TicketRow, newStatus: string) => void;
+  currentUserId?: string;
+  currentUserRole?: string;
+}
+
+function getAllowedTransitions(status: string, role: string, ticket: TicketRow, userId: string): string[] {
+  const isAssignedToMe = ticket.assignedTo?._id === userId;
+  if (role === "tech") {
+    if (!isAssignedToMe) return [];
+    if (status === "assigned")    return ["in_progress"];
+    if (status === "in_progress") return ["resolved", "waiting"];
+    if (status === "waiting")     return ["in_progress"];
+    return [];
+  }
+  if (role === "leader" || role === "admin") {
+    if (status === "assigned")    return ["in_progress"];
+    if (status === "in_progress") return ["resolved", "waiting", "closed"];
+    if (status === "waiting")     return ["in_progress"];
+    if (status === "resolved")    return ["closed"];
+    if (status === "closed" && role === "admin") return ["resolved"];
+    return [];
+  }
+  return [];
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -100,17 +123,20 @@ export function TicketTable({
   tickets, loading, columns, actions = [],
   showFilters = true, showPagination = true,
   emptyIcon = "ticket", emptyTitle = "Aucun ticket", emptyDescription = "Aucun ticket ne correspond aux filtres.",
+  onStatusChange, currentUserId, currentUserRole,
 }: Props) {
   const navigate = useNavigate();
 
-  const [search,       setSearch]       = useState("");
-  const [statusF,      setStatusF]      = useState("all");
-  const [priorityF,    setPriorityF]    = useState("all");
-  const [categoryF,    setCategoryF]    = useState("all");
-  const [sortBy,       setSortBy]       = useState<SortKey>("date");
-  const [sortOrder,    setSortOrder]    = useState<SortOrder>("desc");
-  const [page,         setPage]         = useState(0);
-  const [rowsPerPage,  setRowsPerPage]  = useState(25);
+  const [search,           setSearch]           = useState("");
+  const [statusF,          setStatusF]          = useState("all");
+  const [priorityF,        setPriorityF]        = useState("all");
+  const [categoryF,        setCategoryF]        = useState("all");
+  const [sortBy,           setSortBy]           = useState<SortKey>("date");
+  const [sortOrder,        setSortOrder]        = useState<SortOrder>("desc");
+  const [page,             setPage]             = useState(0);
+  const [rowsPerPage,      setRowsPerPage]      = useState(25);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null);
+  const [statusMenuTicket, setStatusMenuTicket] = useState<TicketRow | null>(null);
 
   const handleSort = (col: SortKey) => {
     if (sortBy === col) setSortOrder(o => o === "asc" ? "desc" : "asc");
@@ -233,8 +259,22 @@ export function TicketTable({
                           </TableCell>
                         );
                         if (col === "status") return (
-                          <TableCell key={col} sx={{ borderBottom: `1px solid ${C.border}`, py: 1.5 }}>
-                            <StatusChip status={t.status} size="sm" />
+                          <TableCell key={col} sx={{ borderBottom: `1px solid ${C.border}`, py: 1.5 }}
+                            onClick={e => e.stopPropagation()}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                              <StatusChip status={t.status} size="sm" />
+                              {onStatusChange && currentUserRole && currentUserId &&
+                                getAllowedTransitions(t.status, currentUserRole, t, currentUserId).length > 0 && (
+                                <Tooltip title="Changer le statut">
+                                  <IconButton size="small"
+                                    onClick={e => { e.stopPropagation(); setStatusMenuAnchor(e.currentTarget); setStatusMenuTicket(t); }}
+                                    sx={{ width: 20, height: 20, borderRadius: "6px", color: C.textMuted, opacity: 0.5,
+                                      "&:hover": { opacity: 1, color: C.accent, bgcolor: C.accentLight } }}>
+                                    <Box component="i" className="ti ti-chevron-down" sx={{ fontSize: 11 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Box>
                           </TableCell>
                         );
                         if (col === "priority") return (
@@ -331,6 +371,32 @@ export function TicketTable({
           </>
         )}
       </Paper>
+
+      <Menu
+        anchorEl={statusMenuAnchor}
+        open={Boolean(statusMenuAnchor && statusMenuTicket)}
+        onClose={() => { setStatusMenuAnchor(null); setStatusMenuTicket(null); }}
+        PaperProps={{ sx: { borderRadius: "12px", border: `1px solid ${C.border}`,
+          boxShadow: C.shadowMd, minWidth: 190, mt: 0.5 } }}
+      >
+        <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700,
+            color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Changer le statut
+          </Typography>
+        </Box>
+        {statusMenuTicket && currentUserRole && currentUserId &&
+          getAllowedTransitions(statusMenuTicket.status, currentUserRole, statusMenuTicket, currentUserId)
+          .map(s => (
+            <MenuItem key={s}
+              onClick={() => { onStatusChange?.(statusMenuTicket, s); setStatusMenuAnchor(null); setStatusMenuTicket(null); }}
+              sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", mx: 0.5, borderRadius: "8px",
+                py: 1, "&:hover": { bgcolor: C.accentLight } }}>
+              <StatusChip status={s} size="sm" />
+            </MenuItem>
+          ))
+        }
+      </Menu>
     </Box>
   );
 }

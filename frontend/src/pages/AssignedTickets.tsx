@@ -7,6 +7,9 @@ import { TicketTable, type TicketRow } from "../components/TicketTable";
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 export default function AssignedTickets() {
+  const storedUser  = localStorage.getItem("user");
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +21,18 @@ export default function AssignedTickets() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const handleStatusChange = async (ticket: TicketRow, newStatus: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/tickets/${ticket._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) setTickets(prev => prev.map(t => t._id === ticket._id ? { ...t, status: newStatus } : t));
+    } catch (err) { console.error("Erreur changement statut:", err); }
+  };
 
   const pending    = tickets.filter(t => ["pending", "assigned"].includes(t.status)).length;
   const inProgress = tickets.filter(t => t.status === "in_progress").length;
@@ -61,6 +76,9 @@ export default function AssignedTickets() {
         emptyIcon="clipboard-list"
         emptyTitle="Aucun ticket assigné"
         emptyDescription="Aucun ticket ne vous est assigné pour le moment."
+        onStatusChange={handleStatusChange}
+        currentUserId={currentUser?.id ?? currentUser?._id}
+        currentUserRole={currentUser?.role}
       />
     </Box>
   );

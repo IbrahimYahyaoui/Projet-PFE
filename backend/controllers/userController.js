@@ -194,7 +194,17 @@ const resetPassword = async (req, res) => {
 
 const getTechnicians = async (req, res) => {
   try {
-    const techs = await User.find({ role: { $in: ['tech', 'leader'] } }).select("-password");
+    if (req.user.role === 'leader') {
+      const Team = require('../schemas/team');
+      const team = await Team.findOne({ leaderId: req.user.id })
+        .populate('members', 'name email role isActive');
+      if (!team) return res.json([]);
+      const techs = team.members.filter(m =>
+        m.role === 'tech' && m.isActive && m._id.toString() !== req.user.id
+      );
+      return res.json(techs);
+    }
+    const techs = await User.find({ role: 'tech', isActive: true }).select('-password');
     res.json(techs);
   } catch (error) {
     console.log(error);

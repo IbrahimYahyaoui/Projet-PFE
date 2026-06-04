@@ -42,6 +42,18 @@ export default function AllTickets() {
     if (res.ok) setTickets(prev => prev.filter(t => t._id !== ticket._id));
   };
 
+  const handleStatusChange = async (ticket: TicketRow, newStatus: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/tickets/${ticket._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) setTickets(prev => prev.map(t => t._id === ticket._id ? { ...t, status: newStatus } : t));
+    } catch (err) { console.error("Erreur changement statut:", err); }
+  };
+
   const handleExportCSV = () => {
     const headers = ["ID", "Titre", "Statut", "Priorité", "Catégorie", "Créé par", "Assigné à", "Date"];
     const rows = tickets.map(t => [
@@ -104,6 +116,9 @@ export default function AllTickets() {
         emptyIcon="ticket"
         emptyTitle="Aucun ticket"
         emptyDescription="Aucun ticket trouvé dans le système."
+        onStatusChange={handleStatusChange}
+        currentUserId={user?.id ?? user?._id}
+        currentUserRole={user?.role}
       />
     </Box>
   );

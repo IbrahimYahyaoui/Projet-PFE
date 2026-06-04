@@ -9,6 +9,8 @@ import { api } from "../../api";
 import { TicketTable, type TicketRow } from "../../components/TicketTable";
 import { WorkloadBar } from "../../components/WorkloadBar";
 
+const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
 interface WorkloadMember {
   _id: string;
   name: string;
@@ -42,6 +44,18 @@ export default function TeamTickets() {
       setTeamId(teamData.team._id);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  const handleStatusChange = async (ticket: TicketRow, newStatus: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/tickets/${ticket._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) setTickets(prev => prev.map(t => t._id === ticket._id ? { ...t, status: newStatus } : t));
+    } catch (err) { console.error("Erreur changement statut:", err); }
+  };
 
   const openAssign = (ticket: TicketRow) => {
     setAssigning(ticket);
@@ -124,6 +138,9 @@ export default function TeamTickets() {
         emptyIcon="ticket"
         emptyTitle="Aucun ticket"
         emptyDescription="Aucun ticket n'est assigné à votre équipe pour le moment."
+        onStatusChange={handleStatusChange}
+        currentUserId={currentUser?.id ?? currentUser?._id}
+        currentUserRole={currentUser?.role}
       />
 
       {/* ── Assign dialog ── */}

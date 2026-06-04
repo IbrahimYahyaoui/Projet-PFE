@@ -1,5 +1,5 @@
 // frontend/src/pages/TicketDetails.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Typography, Button, TextField, Chip, Avatar,
@@ -99,6 +99,11 @@ const getHistoryConfig = (action: string) => {
   return map[action] ?? { icon: "circle", color: C.accent, bg: C.accentLight, label: action };
 };
 
+// ── Activity types ──
+type ActivityItem =
+  | { kind: "comment"; _id: string; content: string; userId: { _id: string; name: string; role: string }; createdAt: string }
+  | { kind: "event";   _id: string; action: string; userId: { _id: string; name: string; role: string }; oldValue: string | null; newValue: string | null; createdAt: string };
+
 // ════════════════════════════════════════════════
 export default function TicketDetails() {
   const { id }   = useParams<{ id: string }>();
@@ -122,6 +127,20 @@ export default function TicketDetails() {
   const [waitingDialog,    setWaitingDialog]    = useState(false);
   const [waitingReason,    setWaitingReason]    = useState("");
   const [error,            setError]            = useState<string | null>(null);
+
+  const activityFeed = useMemo((): ActivityItem[] => {
+    const events: ActivityItem[] = history.map(h => ({ kind: "event" as const, ...h }));
+    const comments: ActivityItem[] = (ticket?.comments ?? []).map(c => ({
+      kind: "comment" as const,
+      _id: c._id,
+      content: c.content,
+      userId: c.userId,
+      createdAt: c.createdAt,
+    }));
+    return [...events, ...comments].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }, [history, ticket?.comments]);
 
   // ── Current user ──
   const storedUser  = localStorage.getItem("user");
@@ -425,86 +444,111 @@ export default function TicketDetails() {
             </Typography>
           </Box>
 
-          {/* Comments */}
+          {/* ── Activity Log ── */}
           <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}` }}>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
-                Commentaires ({ticket.comments.length})
-              </Typography>
-            </Box>
-
-            {ticket.comments.length === 0 ? (
-              <Box sx={{ p: 3, textAlign: "center" }}>
-                <Box component="i" className="ti ti-message" sx={{ fontSize: 32, color: C.textMuted, display: "block", mb: 1 }} />
-                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted }}>Aucun commentaire</Typography>
-              </Box>
-            ) : (
-              ticket.comments.map((c) => (
-                <Box key={c._id} sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}`, "&:last-child": { borderBottom: "none" } }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
-                    <Avatar sx={{ width: 30, height: 30, bgcolor: roleColors[c.userId.role]?.bg ?? C.accentLight, color: roleColors[c.userId.role]?.text ?? C.accent, fontSize: "11px", fontWeight: 700 }}>
-                      {getInitials(c.userId.name)}
-                    </Avatar>
-                    <Box>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{c.userId.name}</Typography>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{formatDateTime(c.createdAt)}</Typography>
-                    </Box>
-                  </Box>
-                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary, lineHeight: 1.6, pl: 5.5 }}>
-                    {c.content}
+            {/* Header */}
+            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box component="i" className="ti ti-activity" sx={{ fontSize: 16, color: C.accent }} />
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 700, color: C.textPrimary }}>
+                  Activité
+                </Typography>
+                <Box sx={{ px: 1, py: 0.2, bgcolor: C.accentLight, borderRadius: "10px" }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.accent }}>
+                    {activityFeed.length}
                   </Typography>
                 </Box>
-              ))
-            )}
+              </Box>
+            </Box>
+
+            {/* Timeline */}
+            <Box sx={{ p: 2.5, position: "relative" }}>
+              {activityFeed.length > 0 && (
+                <Box sx={{ position: "absolute", left: "34px", top: 20, bottom: 20, width: "1.5px", bgcolor: C.border, zIndex: 0 }} />
+              )}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {activityFeed.map((item, idx) => {
+                  const isComment = item.kind === "comment";
+                  const isLast    = idx === activityFeed.length - 1;
+                  const conf = isComment
+                    ? { icon: "message-circle", color: "#7C3AED", bg: "rgba(124,58,237,0.10)", label: "" }
+                    : getHistoryConfig((item as any).action);
+                  return (
+                    <Box key={item._id} sx={{ display: "flex", gap: 2, pb: isLast ? 0 : 2.5, position: "relative" }}>
+                      <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: conf.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1, border: "2px solid #fff", boxShadow: `0 0 0 1.5px ${conf.color}40` }}>
+                        <Box component="i" className={`ti ti-${conf.icon}`} sx={{ fontSize: 12, color: conf.color }} />
+                      </Box>
+                      <Box sx={{ flex: 1, pt: 0.3 }}>
+                        {isComment ? (
+                          <Box sx={{ bgcolor: C.bgPage, borderRadius: "10px", p: "10px 12px", border: `1px solid ${C.border}` }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.8 }}>
+                              <Box sx={{ width: 20, height: 20, borderRadius: "50%", bgcolor: "#7C3AED22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "9px", fontWeight: 800, color: "#7C3AED" }}>
+                                  {getInitials(item.userId?.name ?? "?")}
+                                </Typography>
+                              </Box>
+                              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>
+                                {item.userId?.name}
+                              </Typography>
+                              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>
+                                {formatDateTime(item.createdAt)}
+                              </Typography>
+                            </Box>
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary, lineHeight: 1.6 }}>
+                              {(item as any).content}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Box>
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary, lineHeight: 1.5 }}>
+                              <strong style={{ color: C.textPrimary }}>{item.userId?.name}</strong>
+                              {" "}{conf.label}
+                              {(item as any).oldValue && (item as any).newValue && (
+                                <>
+                                  {" : "}
+                                  <Box component="span" sx={{ px: 0.8, py: 0.2, borderRadius: "5px", bgcolor: "rgba(239,68,68,0.08)", color: C.danger, fontSize: "12px", fontWeight: 500 }}>
+                                    {(item as any).oldValue}
+                                  </Box>
+                                  {" → "}
+                                  <Box component="span" sx={{ px: 0.8, py: 0.2, borderRadius: "5px", bgcolor: "rgba(34,197,94,0.08)", color: C.success, fontSize: "12px", fontWeight: 500 }}>
+                                    {(item as any).newValue}
+                                  </Box>
+                                </>
+                              )}
+                            </Typography>
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mt: 0.3 }}>
+                              {formatDateTime(item.createdAt)}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  );
+                })}
+                {activityFeed.length === 0 && (
+                  <Box sx={{ textAlign: "center", py: 3 }}>
+                    <Box component="i" className="ti ti-history" sx={{ fontSize: 32, color: C.textMuted, display: "block", mb: 1 }} />
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted }}>
+                      Aucune activité
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Box>
 
             {/* Add comment */}
-            <Box sx={{ px: 2.5, py: 2, borderTop: `1px solid ${C.divider}`, display: "flex", gap: 1.5, alignItems: "flex-end" }}>
-              <TextField
-                fullWidth multiline rows={2} placeholder="Ajouter un commentaire..."
-                value={comment} onChange={(e) => setComment(e.target.value)}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", fontFamily: "Inter, sans-serif", fontSize: "13px", "& fieldset": { borderColor: C.border }, "&:hover fieldset": { borderColor: C.accent }, "&.Mui-focused fieldset": { borderColor: C.accent } } }}
-              />
-              <Button onClick={handleComment} disabled={sending || !comment.trim()}
-                sx={{ bgcolor: C.accent, color: "#fff", borderRadius: "10px", minWidth: 44, height: 44, p: 0, "&:hover": { bgcolor: C.accentHover }, "&:disabled": { bgcolor: C.border } }}>
-                <Send sx={{ fontSize: 18 }} />
-              </Button>
-            </Box>
-          </Box>
-
-          {/* History */}
-          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.divider}` }}>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
-                Historique
-              </Typography>
-            </Box>
-            <Box sx={{ p: 2.5, display: "flex", flexDirection: "column", gap: 1.5 }}>
-              {history.map((h) => {
-                const conf = getHistoryConfig(h.action);
-                return (
-                  <Box key={h._id} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
-                    <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: conf.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.2 }}>
-                      <Box component="i" className={`ti ti-${conf.icon}`} sx={{ fontSize: 13, color: conf.color }} />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>
-                        <strong style={{ color: C.textPrimary }}>{h.userId?.name}</strong> {conf.label}
-                        {h.oldValue && h.newValue && (
-                          <> : <span style={{ color: C.danger }}>{h.oldValue}</span> → <span style={{ color: C.success }}>{h.newValue}</span></>
-                        )}
-                      </Typography>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mt: 0.3 }}>
-                        {formatDateTime(h.createdAt)}
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
-              })}
-              {history.length === 0 && (
-                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, textAlign: "center" }}>
-                  Aucun historique
-                </Typography>
-              )}
+            <Box sx={{ px: 2.5, pb: 2.5, borderTop: `1px solid ${C.divider}`, pt: 2 }}>
+              <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-end" }}>
+                <TextField
+                  fullWidth multiline rows={2} placeholder="Ajouter un commentaire..."
+                  value={comment} onChange={(e) => setComment(e.target.value)}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", fontFamily: "Inter, sans-serif", fontSize: "13px", "& fieldset": { borderColor: C.border }, "&:hover fieldset": { borderColor: C.accent }, "&.Mui-focused fieldset": { borderColor: C.accent } } }}
+                />
+                <Button onClick={handleComment} disabled={sending || !comment.trim()}
+                  sx={{ bgcolor: C.accent, color: "#fff", borderRadius: "10px", minWidth: 44, height: 44, p: 0, "&:hover": { bgcolor: C.accentHover }, "&:disabled": { bgcolor: C.border } }}>
+                  <Send sx={{ fontSize: 18 }} />
+                </Button>
+              </Box>
             </Box>
           </Box>
         </Box>
