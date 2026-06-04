@@ -33,6 +33,7 @@ interface Module {
   id: string;
   label: string;
   path: string;
+  pathByRole?: Partial<Record<UserRole, string>>;
   permission?: keyof typeof PERMISSIONS["admin"];
   subItems: SubItem[];
 }
@@ -48,13 +49,14 @@ const MODULES: Module[] = [
     id: "tickets",
     label: "Tickets",
     path: "/tickets/my",
+    pathByRole: { admin: "/tickets/all", leader: "/tickets/assigned", tech: "/tickets/assigned", user: "/tickets/my" },
     subItems: [
-      { label: "File Admin",       path: "/tickets/admin-queue", icon: "inbox",           permission: "canSeeAdminQueue"  },
-      { label: "Tous les tickets", path: "/tickets/all",         icon: "list",            permission: "canSeeAllTickets"  },
-      { label: "Créer un ticket",  path: "/tickets/create",      icon: "circle-plus" },
-      { label: "Mes tickets",      path: "/tickets/my",          icon: "ticket" },
-      { label: "Assignés à moi",   path: "/tickets/assigned",    icon: "clipboard-list" },
-      { label: "Historique",       path: "/tickets/history",     icon: "history",         permission: "canSeeAllTickets"  },
+      { label: "File Admin",       path: "/tickets/admin-queue", icon: "inbox",          permission: "canSeeAdminQueue"      },
+      { label: "Tous les tickets", path: "/tickets/all",         icon: "list",           permission: "canSeeAllTickets"      },
+      { label: "Créer un ticket",  path: "/tickets/create",      icon: "circle-plus",    permission: "canCreateTicket"       },
+      { label: "Mes tickets",      path: "/tickets/my",          icon: "ticket",         permission: "canSeeMyTickets"       },
+      { label: "Tickets assignés", path: "/tickets/assigned",    icon: "clipboard-list", permission: "canSeeAssignedTickets" },
+      { label: "Historique",       path: "/tickets/history",     icon: "history",        permission: "canSeeAllTickets"      },
     ],
   },
   {
@@ -74,6 +76,7 @@ const MODULES: Module[] = [
     id: "projects",
     label: "Projects",
     path: "/projects",
+    permission: "canSeeProjects",
     subItems: [
       { label: "Projets",   path: "/projects",           icon: "folder-open"   },
       { label: "Tâches",    path: "/projects/tasks",     icon: "checkbox"      },
@@ -286,7 +289,7 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
               sx={{ position: "relative" }}
             >
               <Box
-                onClick={() => navigate(mod.path)}
+                onClick={() => navigate(mod.pathByRole?.[role] ?? mod.path)}
                 sx={{
                   display: "flex", alignItems: "center", gap: 0.8,
                   px: 1.75, py: 0.875, borderRadius: "8px",

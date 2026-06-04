@@ -39,7 +39,7 @@ const getAllTickets = async (req, res) => {
         .populate("createdBy", "name email role")
         .populate("assignedTo", "name email role")
         .populate("assignedBy", "name email role")
-        .populate("teamId", "name category tag color")
+        .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -51,13 +51,35 @@ const getAllTickets = async (req, res) => {
   }
 };
 
-// Admin queue: open tickets not yet assigned to a team
+// Admin queue: open tickets not yet assigned to a team + team workload
 const getAdminQueue = async (req, res) => {
   try {
     const tickets = await Ticket.find({ status: 'open', teamId: null })
       .populate("createdBy", "name email role")
-      .sort({ priority: 1, createdAt: 1 }); // critical first, then oldest
-    res.json(tickets);
+      .sort({ priority: 1, createdAt: 1 });
+
+    const teams = await Team.find()
+      .populate('leaderId', 'name email')
+      .populate('members', 'name');
+
+    const teamsWithLoad = await Promise.all(teams.map(async (team) => {
+      const activeTickets = await Ticket.countDocuments({
+        teamId: team._id,
+        status: { $nin: ['resolved', 'closed'] },
+      });
+      return {
+        _id: team._id,
+        name: team.name,
+        category: team.category,
+        tag: team.tag,
+        color: team.color,
+        leader: team.leaderId,
+        memberCount: team.members.length,
+        activeTickets,
+      };
+    }));
+
+    res.json({ tickets, teams: teamsWithLoad });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
@@ -86,7 +108,7 @@ const getMyTickets = async (req, res) => {
     const tickets = await Ticket.find({ createdBy: req.user.id })
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
-      .populate("teamId", "name tag color")
+      .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
       .sort({ createdAt: -1 });
     res.json(tickets);
   } catch (err) {
@@ -100,7 +122,7 @@ const getAssignedTickets = async (req, res) => {
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate("assignedBy", "name email role")
-      .populate("teamId", "name tag color")
+      .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
       .sort({ createdAt: -1 });
     res.json(tickets);
   } catch (err) {
@@ -133,7 +155,7 @@ const getTicketById = async (req, res) => {
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate("assignedBy", "name email role")
-      .populate("teamId", "name category tag color")
+      .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
       .populate("relatedProject", "name status")
       .populate("comments.userId", "name email role");
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
@@ -222,13 +244,14 @@ const assignToTeam = async (req, res) => {
 
     const ticket = await Ticket.findByIdAndUpdate(
       req.params.id,
-      { teamId, escalationLevel: 0, escalatedAt: null },
+      { teamId, status: 'pending', escalationLevel: 0, escalatedAt: null },
       { new: true }
     )
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
-      .populate("teamId", "name category tag color");
+      .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } });
 
+    await createHistory(ticket._id, req.user.id, 'status_changed', 'open', 'pending');
     await createHistory(ticket._id, req.user.id, 'assigned', oldTicket.teamId?.toString() ?? null, teamId);
 
     // Notify team leader

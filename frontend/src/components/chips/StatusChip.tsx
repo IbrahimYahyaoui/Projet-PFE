@@ -4,6 +4,7 @@ import { statusColors } from "../../theme";
 
 const STATUS_LABELS: Record<string, string> = {
   open:        "Ouvert",
+  pending:     "En attente équipe",
   assigned:    "Assigné",
   in_progress: "En cours",
   waiting:     "En attente",

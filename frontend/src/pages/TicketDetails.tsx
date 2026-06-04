@@ -48,7 +48,7 @@ interface Ticket {
   createdBy: { _id: string; name: string; role: string };
   assignedTo: { _id: string; name: string; role: string } | null;
   assignedBy: { _id: string; name: string } | null;
-  teamId?: { _id: string; name: string; category: string } | null;
+  teamId?: { _id: string; name: string; category: string; tag?: string; color?: string; leaderId?: { _id: string; name: string; email: string } | null } | null;
   comments: Comment[];
 }
 
@@ -76,7 +76,7 @@ const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const getStatusLabel = (s: string) => ({
-  open: "Ouvert", assigned: "Assigné", in_progress: "En cours", resolved: "Résolu", closed: "Fermé"
+  open: "Ouvert", pending: "En attente équipe", assigned: "Assigné", in_progress: "En cours", waiting: "En attente", resolved: "Résolu", closed: "Fermé"
 }[s] ?? s);
 
 const getPriorityLabel = (p: string) => ({
@@ -109,11 +109,14 @@ export default function TicketDetails() {
   const [comment,        setComment]        = useState("");
   const [sending,        setSending]        = useState(false);
   const [history,        setHistory]        = useState<HistoryItem[]>([]);
-  const [techList,       setTechList]       = useState<User[]>([]);
-  const [deleteDialog,   setDeleteDialog]   = useState(false);
-  const [assignDialog,   setAssignDialog]   = useState(false);
-  const [selectedTech,   setSelectedTech]   = useState("");
-  const [assigning,      setAssigning]      = useState(false);
+  const [techList,         setTechList]         = useState<User[]>([]);
+  const [teamList,         setTeamList]         = useState<{ _id: string; name: string; tag: string; color: string; category: string }[]>([]);
+  const [deleteDialog,     setDeleteDialog]     = useState(false);
+  const [assignDialog,     setAssignDialog]     = useState(false);
+  const [assignTeamDialog, setAssignTeamDialog] = useState(false);
+  const [selectedTech,     setSelectedTech]     = useState("");
+  const [selectedTeam,     setSelectedTeam]     = useState("");
+  const [assigning,        setAssigning]        = useState(false);
   const [statusUpdating,   setStatusUpdating]   = useState(false);
   const [escalating,       setEscalating]       = useState(false);
   const [waitingDialog,    setWaitingDialog]    = useState(false);
@@ -139,7 +142,8 @@ export default function TicketDetails() {
   useEffect(() => {
     fetchTicket();
     fetchHistory();
-    if (canAssign) fetchTechList();
+    if (isLeader) fetchTechList();
+    if (isAdmin)  fetchTeamList();
   }, [id]);
 
   const fetchTicket = async () => {
@@ -168,7 +172,38 @@ export default function TicketDetails() {
     } catch (err) { console.log(err); }
   };
 
-  // ── Assign ticket (leader/admin) ──
+  const fetchTeamList = async () => {
+    try {
+      const res  = await fetch(`${apiUrl}/api/team/all`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setTeamList(Array.isArray(data) ? data : []);
+    } catch (err) { console.log(err); }
+  };
+
+  // ── Admin assigns to team (open → pending) ──
+  const handleAssignTeam = async () => {
+    if (!selectedTeam) return;
+    setAssigning(true);
+    try {
+      const res = await fetch(`${apiUrl}/api/tickets/${id}/assign-team`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ teamId: selectedTeam }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTicket(data);
+        setAssignTeamDialog(false);
+        setSelectedTeam("");
+        fetchHistory();
+      } else {
+        setError(data.message);
+      }
+    } catch { setError("Erreur serveur"); }
+    finally { setAssigning(false); }
+  };
+
+  // ── Leader/admin assigns tech (pending/assigned → assigned) ──
   const handleAssign = async () => {
     if (!selectedTech) return;
     setAssigning(true);
@@ -307,11 +342,18 @@ export default function TicketDetails() {
         </Box>
         {/* Actions */}
         <Box sx={{ display: "flex", gap: 1 }}>
-          {canAssign && ticket.status === "open" && (
+          {isAdmin && ticket.status === "open" && (
+            <Button onClick={() => setAssignTeamDialog(true)}
+              sx={{ bgcolor: "#3B82F6", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#2563EB" } }}>
+              <Box component="i" className="ti ti-users" sx={{ fontSize: 16 }} />
+              Assigner équipe
+            </Button>
+          )}
+          {(isLeader || isAdmin) && (ticket.status === "pending" || ticket.status === "assigned") && (
             <Button onClick={() => setAssignDialog(true)}
               sx={{ bgcolor: "#3B82F6", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#2563EB" } }}>
               <Box component="i" className="ti ti-user-check" sx={{ fontSize: 16 }} />
-              Assigner
+              Assigner technicien
             </Button>
           )}
           {canResolve && (isAssignedToMe || isLeader || isAdmin) && ticket.status === "assigned" && (
@@ -482,25 +524,17 @@ export default function TicketDetails() {
                   {getCategoryLabel(ticket.category)}
                 </Typography>
               </Box>
-              {/* Team */}
-              {ticket.teamId && (
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>Équipe</Typography>
-                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.accent }}>
-                    {ticket.teamId.name}
-                  </Typography>
-                </Box>
-              )}
             </Box>
           </Box>
 
-          {/* Personnes */}
+          {/* Chaîne d'assignation */}
           <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
-              Personnes
+              Chaîne d'assignation
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-              {/* Créateur */}
+
+              {/* 1. Créateur */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
                 <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(124,58,237,0.12)", color: "#7C3AED", fontSize: "11px", fontWeight: 700 }}>
                   {getInitials(ticket.createdBy.name)}
@@ -513,7 +547,47 @@ export default function TicketDetails() {
 
               <Divider sx={{ borderColor: C.divider }} />
 
-              {/* Assigné à */}
+              {/* 2. Équipe + Leader */}
+              {ticket.teamId ? (
+                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.2 }}>
+                  <Box sx={{ width: 30, height: 30, borderRadius: "8px", bgcolor: `${ticket.teamId.color ?? C.accent}18`, border: `1px solid ${ticket.teamId.color ?? C.accent}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Box component="i" className="ti ti-users" sx={{ fontSize: 14, color: ticket.teamId.color ?? C.accent }} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.teamId.name}</Typography>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Équipe assignée</Typography>
+                    {ticket.teamId.leaderId && (
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textSecondary, mt: 0.4 }}>
+                        Leader : {ticket.teamId.leaderId.name}
+                      </Typography>
+                    )}
+                  </Box>
+                  {isAdmin && (
+                    <Box onClick={() => setAssignTeamDialog(true)} sx={{ cursor: "pointer", color: C.accent, "&:hover": { opacity: 0.8 }, flexShrink: 0 }}>
+                      <Box component="i" className="ti ti-edit" sx={{ fontSize: 15 }} />
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                  <Box sx={{ width: 30, height: 30, borderRadius: "8px", bgcolor: C.bgPage, border: `1.5px dashed ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box component="i" className="ti ti-users" sx={{ fontSize: 14, color: C.textMuted }} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, fontStyle: "italic" }}>Pas encore assigné à une équipe</Typography>
+                  </Box>
+                  {isAdmin && ticket.status === "open" && (
+                    <Button onClick={() => setAssignTeamDialog(true)} size="small"
+                      sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.accent, textTransform: "none", p: 0, minWidth: "auto", "&:hover": { bgcolor: "transparent", opacity: 0.8 } }}>
+                      Assigner
+                    </Button>
+                  )}
+                </Box>
+              )}
+
+              <Divider sx={{ borderColor: C.divider }} />
+
+              {/* 3. Technicien */}
               {ticket.assignedTo ? (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
                   <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(249,115,22,0.12)", color: "#EA580C", fontSize: "11px", fontWeight: 700 }}>
@@ -523,7 +597,7 @@ export default function TicketDetails() {
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.assignedTo.name}</Typography>
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Technicien assigné</Typography>
                   </Box>
-                  {canAssign && (
+                  {(isLeader || isAdmin) && (
                     <Box onClick={() => setAssignDialog(true)} sx={{ cursor: "pointer", color: C.accent, "&:hover": { opacity: 0.8 } }}>
                       <Box component="i" className="ti ti-edit" sx={{ fontSize: 15 }} />
                     </Box>
@@ -535,27 +609,14 @@ export default function TicketDetails() {
                     <Box component="i" className="ti ti-user-question" sx={{ fontSize: 15, color: C.textMuted }} />
                   </Box>
                   <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, fontStyle: "italic" }}>Non assigné</Typography>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, fontStyle: "italic" }}>Non assigné à un technicien</Typography>
                   </Box>
-                  {canAssign && (
+                  {(isLeader || isAdmin) && ["pending", "assigned"].includes(ticket.status) && (
                     <Button onClick={() => setAssignDialog(true)} size="small"
                       sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.accent, textTransform: "none", p: 0, minWidth: "auto", "&:hover": { bgcolor: "transparent", opacity: 0.8 } }}>
                       Assigner
                     </Button>
                   )}
-                </Box>
-              )}
-
-              {/* Assigné par */}
-              {ticket.assignedBy && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-                  <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(59,130,246,0.12)", color: "#2563EB", fontSize: "11px", fontWeight: 700 }}>
-                    {getInitials(ticket.assignedBy.name)}
-                  </Avatar>
-                  <Box>
-                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.assignedBy.name}</Typography>
-                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>A assigné le ticket</Typography>
-                  </Box>
                 </Box>
               )}
             </Box>
@@ -647,10 +708,48 @@ export default function TicketDetails() {
         </Box>
       </Box>
 
-      {/* ── Assign Dialog ── */}
+      {/* ── Assign Team Dialog (admin) ── */}
+      <Dialog open={assignTeamDialog} onClose={() => setAssignTeamDialog(false)} PaperProps={{ sx: { borderRadius: "16px", minWidth: 420 } }}>
+        <DialogTitle sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "16px", color: C.textPrimary }}>
+          Assigner à une équipe
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, mb: 2 }}>
+            Sélectionnez l'équipe qui prendra en charge ce ticket
+          </Typography>
+          <FormControl fullWidth>
+            <InputLabel sx={{ fontFamily: "Inter, sans-serif" }}>Équipe</InputLabel>
+            <Select value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} label="Équipe"
+              sx={{ borderRadius: "10px", fontFamily: "Inter, sans-serif" }}>
+              {teamList.map((team) => (
+                <MenuItem key={team._id} value={team._id} sx={{ fontFamily: "Inter, sans-serif" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: team.color }} />
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600 }}>{team.name}</Typography>
+                    <Box sx={{ ml: "auto", px: 0.8, py: 0.2, borderRadius: "4px", bgcolor: C.bgPage }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", fontWeight: 700, color: C.textMuted }}>{team.tag}</Typography>
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setAssignTeamDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none" }}>
+            Annuler
+          </Button>
+          <Button onClick={handleAssignTeam} disabled={!selectedTeam || assigning} variant="contained"
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: "#3B82F6", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: "#2563EB" } }}>
+            {assigning ? "Assignation..." : "Confirmer"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Assign Tech Dialog (leader/admin) ── */}
       <Dialog open={assignDialog} onClose={() => setAssignDialog(false)} PaperProps={{ sx: { borderRadius: "16px", minWidth: 400 } }}>
         <DialogTitle sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "16px", color: C.textPrimary }}>
-          Assigner le ticket
+          Assigner un technicien
         </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, mb: 2 }}>
