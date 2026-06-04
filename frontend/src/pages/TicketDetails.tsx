@@ -5,7 +5,7 @@ import {
   Box, Typography, Button, TextField, Chip, Avatar,
   Divider, CircularProgress, MenuItem, Select,
   FormControl, InputLabel, Dialog, DialogTitle,
-  DialogContent, DialogActions, Alert,
+  DialogContent, DialogActions, Alert, Menu,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -87,6 +87,13 @@ const getCategoryLabel = (c: string) => ({
   hardware: "Hardware", software: "Software", network: "Réseau", access: "Accès", other: "Autre"
 }[c] ?? c);
 
+const STATUS_MENU_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
+  in_progress: { label: "En cours",        icon: "player-play",  color: "#F97316", bg: "rgba(249,115,22,0.08)"  },
+  resolved:    { label: "Résolu",           icon: "circle-check", color: "#22C55E", bg: "rgba(34,197,94,0.08)"   },
+  waiting:     { label: "En attente",       icon: "pause",        color: "#F59E0B", bg: "rgba(245,158,11,0.08)"  },
+  closed:      { label: "Fermer le ticket", icon: "lock",         color: "#6B7280", bg: "rgba(107,114,128,0.08)" },
+};
+
 const getHistoryConfig = (action: string) => {
   const map: Record<string, any> = {
     created:        { icon: "circle-plus",  color: "#16A34A", bg: "rgba(34,197,94,0.08)",   label: "a créé ce ticket" },
@@ -127,6 +134,7 @@ export default function TicketDetails() {
   const [waitingDialog,    setWaitingDialog]    = useState(false);
   const [waitingReason,    setWaitingReason]    = useState("");
   const [error,            setError]            = useState<string | null>(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null);
 
   const activityFeed = useMemo((): ActivityItem[] => {
     const events: ActivityItem[] = history.map(h => ({ kind: "event" as const, ...h }));
@@ -328,6 +336,34 @@ export default function TicketDetails() {
     finally { setStatusUpdating(false); }
   };
 
+  const getAllowedTransitions = (): string[] => {
+    if (!ticket) return [];
+    const s = ticket.status;
+    if (isTech) {
+      if (!isAssignedToMe) return [];
+      if (s === "assigned")    return ["in_progress"];
+      if (s === "in_progress") return ["resolved", "waiting"];
+      if (s === "waiting")     return ["in_progress"];
+      return [];
+    }
+    if (isLeader) {
+      if (s === "assigned")    return ["in_progress"];
+      if (s === "in_progress") return ["resolved", "waiting", "closed"];
+      if (s === "waiting")     return ["in_progress"];
+      if (s === "resolved")    return ["closed"];
+      return [];
+    }
+    if (isAdmin) {
+      if (s === "assigned")    return ["in_progress"];
+      if (s === "in_progress") return ["resolved", "waiting", "closed"];
+      if (s === "waiting")     return ["in_progress"];
+      if (s === "resolved")    return ["closed"];
+      if (s === "closed")      return ["resolved"];
+      return [];
+    }
+    return [];
+  };
+
   if (loading) return (
     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
       <CircularProgress sx={{ color: C.accent }} />
@@ -375,48 +411,56 @@ export default function TicketDetails() {
               Assigner technicien
             </Button>
           )}
-          {canResolve && (isAssignedToMe || isLeader || isAdmin) && ticket.status === "assigned" && (
-            <Button onClick={() => handleStatusChange("in_progress")} disabled={statusUpdating}
-              sx={{ bgcolor: "#F97316", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#EA580C" } }}>
-              <Box component="i" className="ti ti-player-play" sx={{ fontSize: 16 }} />
-              Prendre en charge
-            </Button>
+
+          {/* Bouton unique changement de statut */}
+          {getAllowedTransitions().length > 0 && (
+            <>
+              <Button
+                onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                disabled={statusUpdating}
+                endIcon={<Box component="i" className="ti ti-chevron-down" sx={{ fontSize: 13 }} />}
+                sx={{ bgcolor: C.accent, color: C.navy, borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: C.accentHover } }}
+              >
+                <Box component="i" className="ti ti-refresh" sx={{ fontSize: 15 }} />
+                Changer le statut
+              </Button>
+
+              <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={() => setStatusMenuAnchor(null)}
+                PaperProps={{ sx: { borderRadius: "14px", border: `1px solid ${C.border}`, boxShadow: C.shadowMd, minWidth: 220, mt: 0.5, overflow: "visible" } }}
+              >
+                <Box sx={{ px: 2, pt: 1.5, pb: 1, borderBottom: `1px solid ${C.divider}` }}>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    Statut actuel : {getStatusLabel(ticket.status)}
+                  </Typography>
+                </Box>
+                {getAllowedTransitions().map((newStatus) => {
+                  const conf = STATUS_MENU_CONFIG[newStatus];
+                  if (!conf) return null;
+                  const needsReason = newStatus === "waiting";
+                  return (
+                    <MenuItem
+                      key={newStatus}
+                      onClick={() => { setStatusMenuAnchor(null); if (needsReason) { setWaitingDialog(true); } else { handleStatusChange(newStatus); } }}
+                      sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", mx: 0.5, my: 0.25, borderRadius: "10px", py: 1.2, px: 1.5, "&:hover": { bgcolor: conf.bg } }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%" }}>
+                        <Box sx={{ width: 28, height: 28, borderRadius: "8px", bgcolor: conf.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Box component="i" className={`ti ti-${conf.icon}`} sx={{ fontSize: 14, color: conf.color }} />
+                        </Box>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 500, color: C.textPrimary }}>
+                          {conf.label}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  );
+                })}
+              </Menu>
+            </>
           )}
-          {canResolve && (isAssignedToMe || isLeader || isAdmin) && ticket.status === "in_progress" && (
-            <Button onClick={() => handleStatusChange("resolved")} disabled={statusUpdating}
-              sx={{ bgcolor: "#22C55E", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#16A34A" } }}>
-              <Box component="i" className="ti ti-circle-check" sx={{ fontSize: 16 }} />
-              Marquer résolu
-            </Button>
-          )}
-          {(isLeader || isAdmin) && ticket.status === "resolved" && (
-            <Button onClick={() => handleStatusChange("closed")} disabled={statusUpdating}
-              sx={{ bgcolor: "#6B7280", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#4B5563" } }}>
-              <Box component="i" className="ti ti-lock" sx={{ fontSize: 16 }} />
-              Fermer le ticket
-            </Button>
-          )}
-          {canEscalate && ticket && !["resolved","closed"].includes(ticket.status) && (ticket.escalationLevel ?? 0) < 2 && (
-            <Button onClick={handleEscalate} disabled={escalating}
-              sx={{ bgcolor: "#EF4444", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#DC2626" } }}>
-              <Box component="i" className="ti ti-alert-triangle" sx={{ fontSize: 16 }} />
-              Escalader
-            </Button>
-          )}
-          {canResolve && ticket && ticket.status === "in_progress" && (
-            <Button onClick={() => setWaitingDialog(true)}
-              sx={{ bgcolor: "#F59E0B", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#D97706" } }}>
-              <Box component="i" className="ti ti-pause" sx={{ fontSize: 16 }} />
-              En attente
-            </Button>
-          )}
-          {(isAssignedToMe || isLeader || isAdmin) && ticket.status === "waiting" && (
-            <Button onClick={() => handleStatusChange("in_progress")} disabled={statusUpdating}
-              sx={{ bgcolor: "#F97316", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#EA580C" } }}>
-              <Box component="i" className="ti ti-player-play" sx={{ fontSize: 16 }} />
-              Reprendre
-            </Button>
-          )}
+
           {canDelete && (
             <Box onClick={() => setDeleteDialog(true)} sx={{ width: 36, height: 36, borderRadius: "9px", bgcolor: "#fff", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", "&:hover": { borderColor: C.danger, bgcolor: C.dangerBg } }}>
               <Delete sx={{ fontSize: 17, color: C.danger }} />
@@ -739,30 +783,6 @@ export default function TicketDetails() {
             </Box>
           </Box>
 
-          {/* Actions technicien */}
-          {isTech && isAssignedToMe && (
-            <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "18px 20px" }}>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1.5 }}>
-                Mes actions
-              </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {ticket.status === "assigned" && (
-                  <Button fullWidth onClick={() => handleStatusChange("in_progress")} disabled={statusUpdating}
-                    sx={{ bgcolor: "#F97316", color: "#fff", borderRadius: "9px", py: 1.2, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", "&:hover": { bgcolor: "#EA580C" } }}>
-                    <Box component="i" className="ti ti-player-play" sx={{ fontSize: 16, mr: 1 }} />
-                    Prendre en charge
-                  </Button>
-                )}
-                {ticket.status === "in_progress" && (
-                  <Button fullWidth onClick={() => handleStatusChange("resolved")} disabled={statusUpdating}
-                    sx={{ bgcolor: "#22C55E", color: "#fff", borderRadius: "9px", py: 1.2, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", "&:hover": { bgcolor: "#16A34A" } }}>
-                    <Box component="i" className="ti ti-circle-check" sx={{ fontSize: 16, mr: 1 }} />
-                    Marquer comme résolu
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          )}
         </Box>
       </Box>
 
