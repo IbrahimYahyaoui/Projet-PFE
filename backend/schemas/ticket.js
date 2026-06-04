@@ -68,6 +68,10 @@ const ticketSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    closedAt: {
+      type: Date,
+      default: null,
+    },
     // SLA
     slaDeadline: { type: Date, default: null },
     slaBreached: { type: Boolean, default: false },

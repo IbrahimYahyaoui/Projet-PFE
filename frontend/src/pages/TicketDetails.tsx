@@ -370,6 +370,13 @@ export default function TicketDetails() {
               Marquer résolu
             </Button>
           )}
+          {(isLeader || isAdmin) && ticket.status === "resolved" && (
+            <Button onClick={() => handleStatusChange("closed")} disabled={statusUpdating}
+              sx={{ bgcolor: "#6B7280", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#4B5563" } }}>
+              <Box component="i" className="ti ti-lock" sx={{ fontSize: 16 }} />
+              Fermer le ticket
+            </Button>
+          )}
           {canEscalate && ticket && !["resolved","closed"].includes(ticket.status) && (ticket.escalationLevel ?? 0) < 2 && (
             <Button onClick={handleEscalate} disabled={escalating}
               sx={{ bgcolor: "#EF4444", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#DC2626" } }}>
@@ -382,6 +389,13 @@ export default function TicketDetails() {
               sx={{ bgcolor: "#F59E0B", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#D97706" } }}>
               <Box component="i" className="ti ti-pause" sx={{ fontSize: 16 }} />
               En attente
+            </Button>
+          )}
+          {(isAssignedToMe || isLeader || isAdmin) && ticket.status === "waiting" && (
+            <Button onClick={() => handleStatusChange("in_progress")} disabled={statusUpdating}
+              sx={{ bgcolor: "#F97316", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#EA580C" } }}>
+              <Box component="i" className="ti ti-player-play" sx={{ fontSize: 16 }} />
+              Reprendre
             </Button>
           )}
           {canDelete && (

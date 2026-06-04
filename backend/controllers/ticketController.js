@@ -367,6 +367,15 @@ const updateTicket = async (req, res) => {
       }
     }
 
+    if (status === 'closed') {
+      if (role !== 'admin' && role !== 'leader') {
+        return res.status(403).json({ message: "Seul l'admin ou le leader peut clôturer un ticket" });
+      }
+      if (oldTicket.status !== 'resolved') {
+        return res.status(400).json({ message: "Seul un ticket résolu peut être clôturé" });
+      }
+    }
+
     const updateData = {};
     if (status)          updateData.status          = status;
     if (priority)        updateData.priority        = priority;
@@ -379,6 +388,9 @@ const updateTicket = async (req, res) => {
       if (oldTicket.slaDeadline && new Date() > oldTicket.slaDeadline) {
         updateData.slaBreached = true;
       }
+    }
+    if (status === 'closed') {
+      updateData.closedAt = new Date();
     }
     if (priority && priority !== oldTicket.priority) {
       updateData.slaDeadline = calcSlaDeadline(priority);
