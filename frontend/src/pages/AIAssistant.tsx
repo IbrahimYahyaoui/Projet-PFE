@@ -232,9 +232,14 @@ export default function AIAssistant() {
     setLoading(true);
     setKbResults([]);
     try {
+      // CORRECTION 7 — la route /api/ai/chat exige verifyToken → envoyer le token
+      const token = localStorage.getItem("token");
       const res  = await fetch(`${API}/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           message: text,
           rules: buildRules(),

@@ -178,6 +178,7 @@ const getTeamTickets = async (req, res) => {
   }
 };
 
+// CORRECTION 2 — Contrôle d'accès : chaque rôle ne voit que les tickets auxquels il a droit
 const getTicketById = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
@@ -188,6 +189,30 @@ const getTicketById = async (req, res) => {
       .populate("relatedProject", "name status")
       .populate("comments.userId", "name email role");
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+    const { role, id: userId } = req.user;
+
+    if (role !== 'admin') {
+      let hasAccess = false;
+
+      if (role === 'user') {
+        hasAccess = ticket.createdBy?._id?.toString() === userId;
+      } else if (role === 'tech') {
+        hasAccess = ticket.assignedTo?._id?.toString() === userId;
+        if (!hasAccess && ticket.teamId) {
+          const team = await Team.findOne({ _id: ticket.teamId._id, $or: [{ leaderId: userId }, { members: userId }] });
+          hasAccess = !!team;
+        }
+      } else if (role === 'leader') {
+        if (ticket.teamId) {
+          const team = await Team.findOne({ _id: ticket.teamId._id, $or: [{ leaderId: userId }, { members: userId }] });
+          hasAccess = !!team;
+        }
+      }
+
+      if (!hasAccess) return res.status(403).json({ message: "Accès refusé à ce ticket" });
+    }
+
     res.json(ticket);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -567,6 +592,27 @@ const addComment = async (req, res) => {
 
     const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+    // CORRECTION 3 — Contrôle d'accès : seuls les acteurs du ticket peuvent commenter
+    const { role, id: userId } = req.user;
+    if (role !== 'admin') {
+      let hasAccess = false;
+      if (role === 'user') {
+        hasAccess = ticket.createdBy?.toString() === userId;
+      } else if (role === 'tech') {
+        hasAccess = ticket.assignedTo?.toString() === userId;
+        if (!hasAccess && ticket.teamId) {
+          const team = await Team.findOne({ _id: ticket.teamId, $or: [{ leaderId: userId }, { members: userId }] });
+          hasAccess = !!team;
+        }
+      } else if (role === 'leader') {
+        if (ticket.teamId) {
+          const team = await Team.findOne({ _id: ticket.teamId, $or: [{ leaderId: userId }, { members: userId }] });
+          hasAccess = !!team;
+        }
+      }
+      if (!hasAccess) return res.status(403).json({ message: "Vous n'avez pas accès à ce ticket" });
+    }
 
     ticket.comments.push({ content, userId: req.user.id });
     await ticket.save();

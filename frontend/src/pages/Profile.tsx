@@ -147,8 +147,8 @@ export default function Profile() {
     setInfoError(null);
     try {
       const token = localStorage.getItem("token");
-      // ✅ Correct endpoint
-      const res = await fetch(`${apiUrl}/api/users/${profile?._id}`, {
+      // CORRECTION 6 — /api/profile/:id au lieu de /api/users/:id (admin-only)
+      const res = await fetch(`${apiUrl}/api/profile/${profile?._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -161,12 +161,14 @@ export default function Profile() {
         throw new Error(d.message || "Erreur serveur.");
       }
       const updated = await res.json();
-      setProfile((p) => p ? { ...p, name: updated.name, email: updated.email } : p);
-      // ✅ Mettre à jour localStorage aussi
+      // La réponse est { message, user: { id, name, email, role, avatar } }
+      const newName  = updated.user?.name  ?? updated.name;
+      const newEmail = updated.user?.email ?? updated.email;
+      setProfile((p) => p ? { ...p, name: newName, email: newEmail } : p);
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const userData = JSON.parse(storedUser);
-        localStorage.setItem("user", JSON.stringify({ ...userData, name: updated.name, email: updated.email }));
+        localStorage.setItem("user", JSON.stringify({ ...userData, name: newName, email: newEmail }));
       }
       setInfoSuccess(true);
       setEditInfo(false);

@@ -17,18 +17,22 @@ const getProfile = async (req, res) => {
 };
 
 // ── Mettre à jour le profil ──
+// CORRECTION 5 — Accepte aussi la mise à jour de l'email (avec vérification d'unicité)
 const updateProfile = async (req, res) => {
   try {
-    const { name, avatar } = req.body;
+    const { name, email, avatar } = req.body;
 
     const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (name) user.name = name;
+    if (name)   user.name   = name;
     if (avatar) user.avatar = avatar;
+
+    if (email && email.trim().toLowerCase() !== user.email) {
+      const taken = await User.findOne({ email: email.trim().toLowerCase(), _id: { $ne: req.params.id } });
+      if (taken) return res.status(400).json({ message: "Cet email est déjà utilisé" });
+      user.email = email.trim().toLowerCase();
+    }
 
     await user.save();
 

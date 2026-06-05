@@ -210,11 +210,18 @@ const updateTask = async (req, res) => {
     const task = await ProjectTask.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    // Tech can only update status of tasks assigned to them
+    // CORRECTION 4 — Tech : uniquement le statut de ses propres tâches
     if (role === 'tech') {
       const isAssigned = task.assignedTo?.toString() === id;
       if (!isAssigned) return res.status(403).json({ message: 'Cette tâche ne vous est pas assignée' });
-      if (req.body.status === undefined) return res.status(400).json({ message: 'Seul le statut peut être modifié' });
+
+      // Rejeter si le body contient autre chose que "status"
+      const allowedKeys = ['status'];
+      const hasDisallowed = Object.keys(req.body).some(k => !allowedKeys.includes(k));
+      if (hasDisallowed || !req.body.status) {
+        return res.status(403).json({ message: "Un technicien ne peut modifier que le statut d'une tâche" });
+      }
+
       const updated = await ProjectTask.findByIdAndUpdate(
         req.params.taskId,
         { status: req.body.status },
