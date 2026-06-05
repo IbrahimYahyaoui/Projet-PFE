@@ -29,7 +29,27 @@ const verifyAdmin = (req, res, next) => {
   next();
 };
 
+// ── Analytics: admin ou leader uniquement ──
+const verifyAnalyticsAccess = (req, res, next) => {
+  const role = req.user?.role;
+  if (role !== "admin" && role !== "leader") {
+    return res.status(403).json({ message: "Accès analytics refusé" });
+  }
+  next();
+};
+
+// ── Projects: admin ou leader (manager) ──
+const verifyManagerOrAdmin = (req, res, next) => {
+  const role = req.user?.role;
+  if (role !== "admin" && role !== "leader") {
+    return res.status(403).json({ message: "Admin ou Leader requis" });
+  }
+  next();
+};
+
 module.exports = {
   verifyToken,
   verifyAdmin,
+  verifyAnalyticsAccess,
+  verifyManagerOrAdmin,
 };

@@ -3,10 +3,16 @@ const Project = require('../schemas/project');
 const ProjectTask = require('../schemas/projectTask');
 const User = require('../schemas/user');
 
-// ── GET tous les projets ──
+// ── GET tous les projets (filtrés par rôle) ──
 const getAllProjects = async (req, res) => {
   try {
-    const projects = await Project.find()
+    const { role, id } = req.user;
+    // admin: all; leader/tech: only projects they're part of; user: none
+    const filter = role === 'admin'
+      ? {}
+      : { $or: [{ createdBy: id }, { managerId: id }, { members: id }] };
+
+    const projects = await Project.find(filter)
       .populate('createdBy', 'name email role')
       .populate('managerId', 'name email role')
       .populate('members', 'name email role')
@@ -76,9 +82,18 @@ const createProject = async (req, res) => {
   }
 };
 
-// ── UPDATE projet ──
+// ── UPDATE projet (admin ou manager/créateur seulement) ──
 const updateProject = async (req, res) => {
   try {
+    const { role, id } = req.user;
+    const existing = await Project.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Project not found' });
+
+    const isOwner = existing.createdBy?.toString() === id || existing.managerId?.toString() === id;
+    if (role !== 'admin' && !isOwner) {
+      return res.status(403).json({ message: 'Non autorisé' });
+    }
+
     const { name, description, status, priority, startDate, endDate, color, managerId } = req.body;
     const project = await Project.findByIdAndUpdate(
       req.params.id,
@@ -89,7 +104,6 @@ const updateProject = async (req, res) => {
       .populate('managerId', 'name email role')
       .populate('members', 'name email role');
 
-    if (!project) return res.status(404).json({ message: 'Project not found' });
     res.json(project);
   } catch (error) {
     console.log(error);
@@ -183,8 +197,25 @@ const createTask = async (req, res) => {
 // ── UPDATE task ──
 const updateTask = async (req, res) => {
   try {
+    const { role, id } = req.user;
+    const task = await ProjectTask.findById(req.params.taskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    // Tech can only update status of tasks assigned to them
+    if (role === 'tech') {
+      const isAssigned = task.assignedTo?.toString() === id;
+      if (!isAssigned) return res.status(403).json({ message: 'Cette tâche ne vous est pas assignée' });
+      if (req.body.status === undefined) return res.status(400).json({ message: 'Seul le statut peut être modifié' });
+      const updated = await ProjectTask.findByIdAndUpdate(
+        req.params.taskId,
+        { status: req.body.status },
+        { new: true }
+      ).populate('assignedTo', 'name email role').populate('createdBy', 'name email role');
+      return res.json(updated);
+    }
+
     const { title, description, status, priority, assignedTo, dueDate } = req.body;
-    const task = await ProjectTask.findByIdAndUpdate(
+    const updated = await ProjectTask.findByIdAndUpdate(
       req.params.taskId,
       { title, description, status, priority, assignedTo, dueDate },
       { new: true }
@@ -192,8 +223,7 @@ const updateTask = async (req, res) => {
       .populate('assignedTo', 'name email role')
       .populate('createdBy', 'name email role');
 
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-    res.json(task);
+    res.json(updated);
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'Server error' });

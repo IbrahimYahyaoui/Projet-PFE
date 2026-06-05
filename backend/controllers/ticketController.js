@@ -1,8 +1,10 @@
 // backend/controllers/ticketController.js
-const Ticket  = require("../schemas/ticket");
-const History = require("../schemas/history");
-const Team    = require("../schemas/team");
-const User    = require("../schemas/user");
+const Ticket       = require("../schemas/ticket");
+const History      = require("../schemas/history");
+const Team         = require("../schemas/team");
+const User         = require("../schemas/user");
+const Project      = require("../schemas/project");
+const Notification = require("../schemas/notification");
 const { createNotification, notifyMany } = require("../utils/notifications");
 
 // ── SLA hours per priority ──
@@ -18,6 +20,18 @@ const createHistory = async (ticketId, userId, action, oldValue = null, newValue
     await History.create({ ticketId, userId, action, oldValue, newValue });
   } catch (err) {
     console.error("History error:", err.message);
+  }
+};
+
+// Keep relatedProject ↔ Project.relatedTickets in sync
+const syncTicketProject = async (ticketId, oldProjectId, newProjectId) => {
+  const oldId = oldProjectId?.toString();
+  const newId = newProjectId?.toString();
+  if (oldId && oldId !== newId) {
+    await Project.findByIdAndUpdate(oldId, { $pull: { relatedTickets: ticketId } });
+  }
+  if (newId && newId !== oldId) {
+    await Project.findByIdAndUpdate(newId, { $addToSet: { relatedTickets: ticketId } });
   }
 };
 
@@ -377,14 +391,32 @@ const updateTicket = async (req, res) => {
     }
 
     const updateData = {};
-    if (status)          updateData.status          = status;
-    if (priority)        updateData.priority        = priority;
-    if (category)        updateData.category        = category;
+    if (status)          updateData.status   = status;
+    if (priority)        updateData.priority = priority;
+    if (category)        updateData.category = category;
     if (relatedProject !== undefined) updateData.relatedProject = relatedProject || null;
     if (status === 'waiting' && waitingReason) updateData.waitingReason = waitingReason;
+
+    // SLA pause: entering waiting → record start
+    if (status === 'waiting' && oldTicket.status !== 'waiting') {
+      updateData.waitingSince = new Date();
+    }
+    // SLA resume: leaving waiting → accumulate elapsed wait time + extend SLA deadline
+    if (oldTicket.status === 'waiting' && status && status !== 'waiting') {
+      updateData.waitingSince = null;
+      if (oldTicket.waitingSince) {
+        const elapsedMs = Date.now() - new Date(oldTicket.waitingSince).getTime();
+        const elapsedMin = Math.round(elapsedMs / 60000);
+        updateData.totalWaitingTime = (oldTicket.totalWaitingTime || 0) + elapsedMin;
+        // Extend SLA deadline by the same amount
+        if (oldTicket.slaDeadline) {
+          updateData.slaDeadline = new Date(new Date(oldTicket.slaDeadline).getTime() + elapsedMs);
+        }
+      }
+    }
+
     if (status === 'resolved') {
       updateData.resolvedAt = new Date();
-      // Mark SLA breach flag
       if (oldTicket.slaDeadline && new Date() > oldTicket.slaDeadline) {
         updateData.slaBreached = true;
       }
@@ -394,6 +426,11 @@ const updateTicket = async (req, res) => {
     }
     if (priority && priority !== oldTicket.priority) {
       updateData.slaDeadline = calcSlaDeadline(priority);
+    }
+
+    // Sync project relation before update
+    if (relatedProject !== undefined) {
+      await syncTicketProject(req.params.id, oldTicket.relatedProject, relatedProject || null);
     }
 
     const ticket = await Ticket.findByIdAndUpdate(req.params.id, updateData, { new: true })
@@ -484,13 +521,26 @@ const escalateTicket = async (req, res) => {
 
 const deleteTicket = async (req, res) => {
   try {
-    if (!['admin'].includes(req.user.role)) {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ message: "Admin only" });
     }
-    const ticket = await Ticket.findByIdAndDelete(req.params.id);
+    const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+    // Cascade: remove from linked project
+    if (ticket.relatedProject) {
+      await Project.findByIdAndUpdate(ticket.relatedProject, { $pull: { relatedTickets: ticket._id } });
+    }
+
+    await Promise.all([
+      Ticket.findByIdAndDelete(req.params.id),
+      History.deleteMany({ ticketId: req.params.id }),
+      Notification.deleteMany({ ticketId: req.params.id }),
+    ]);
+
     res.json({ message: "Ticket deleted" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };

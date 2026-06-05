@@ -241,9 +241,13 @@ export const ChatBot = () => {
     addMsg({ role: "user", text });
     setLoading(true);
     try {
+      const token = localStorage.getItem("token");
       const res  = await fetch(`${API}/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ message: text, rules: buildRules(), context: chatCtx }),
       });
       const data = await res.json();

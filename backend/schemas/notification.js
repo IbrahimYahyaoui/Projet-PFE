@@ -63,5 +63,7 @@ const notificationSchema = new mongoose.Schema(
 
 // Index for fast per-user unread queries
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
+// Index for cascade-delete by ticket
+notificationSchema.index({ ticketId: 1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

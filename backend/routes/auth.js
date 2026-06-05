@@ -1,12 +1,11 @@
 const express = require("express");
-const { login, register } = require("../controllers/authController");
+const { login } = require("../controllers/authController");
 
 const router = express.Router();
 
 // ── Route POST /api/auth/login ──
 router.post("/login", login);
 
-// ── Route POST /api/auth/register ──
-router.post("/register", register);
+// /register is disabled — user creation is admin-only via /api/users
 
 module.exports = router;

@@ -222,7 +222,7 @@ export const PERMISSIONS: Record<UserRole, {
     canSeeAllTickets: false,
     canSeeAnalytics: false,
     canSeeTeam: true,
-    canSeeProjects: false,
+    canSeeProjects: true,
     canSeeKnowledgeBase: true,
     canCreateTicket: false,
     canSeeMyTickets: false,

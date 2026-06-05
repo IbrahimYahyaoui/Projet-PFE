@@ -673,13 +673,25 @@ export default function ProjectDetail() {
                       </Select>
                     </FormControl>
                   </Box>
-                  <FormControl size="small" fullWidth sx={inputSx}>
-                    <InputLabel>Assigné à</InputLabel>
-                    <Select value={selectedTask.assignedTo?._id ?? ""} onChange={e => handleUpdateTask("assignedTo", e.target.value)} label="Assigné à">
-                      <MenuItem value="">Non assigné</MenuItem>
-                      {project.members.map(u => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
-                    </Select>
-                  </FormControl>
+                  {canManage && (
+                    <FormControl size="small" fullWidth sx={inputSx}>
+                      <InputLabel>Assigné à</InputLabel>
+                      <Select value={selectedTask.assignedTo?._id ?? ""} onChange={e => handleUpdateTask("assignedTo", e.target.value)} label="Assigné à">
+                        <MenuItem value="">Non assigné</MenuItem>
+                        {project.members.map(u => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  )}
+                  {!canManage && (
+                    <Box sx={{ px: 1.5, py: 1, bgcolor: C.bgPage, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>
+                        Assigné à
+                      </Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
+                        {selectedTask.assignedTo?.name ?? "Non assigné"}
+                      </Typography>
+                    </Box>
+                  )}
                   <TextField size="small" label="Date limite" type="date" fullWidth value={selectedTask.dueDate?.slice(0,10) ?? ""} onChange={e => handleUpdateTask("dueDate", e.target.value)} sx={inputSx} InputLabelProps={{ shrink: true }} />
                 </Box>
 

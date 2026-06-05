@@ -78,8 +78,10 @@ const ticketSchema = new mongoose.Schema(
     // Escalation
     escalationLevel: { type: Number, default: 0 }, // 0=none 1=leader 2=admin
     escalatedAt: { type: Date, default: null },
-    // Waiting
+    // Waiting / SLA pause
     waitingReason: { type: String, default: '' },
+    waitingSince: { type: Date, default: null },       // set when status → waiting
+    totalWaitingTime: { type: Number, default: 0 },    // cumulative minutes paused
     // Project link
     relatedProject: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
     comments: {

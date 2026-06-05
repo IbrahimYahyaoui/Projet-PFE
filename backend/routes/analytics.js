@@ -1,11 +1,11 @@
 // backend/routes/analytics.js
 const express = require('express');
 const { getAnalytics, getProjectAnalytics } = require('../controllers/analyticsController');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { verifyToken, verifyAnalyticsAccess } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/',        verifyToken, getAnalytics);
-router.get('/projects',verifyToken, getProjectAnalytics);
+router.get('/',        verifyToken, verifyAnalyticsAccess, getAnalytics);
+router.get('/projects',verifyToken, verifyAnalyticsAccess, getProjectAnalytics);
 
 module.exports = router;
