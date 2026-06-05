@@ -7,10 +7,19 @@ const User = require('../schemas/user');
 const getAllProjects = async (req, res) => {
   try {
     const { role, id } = req.user;
-    // admin: all; leader/tech: only projects they're part of; user: none
-    const filter = role === 'admin'
-      ? {}
-      : { $or: [{ createdBy: id }, { managerId: id }, { members: id }] };
+
+    // FIX 6 — employé ne voit aucun projet
+    if (role === 'user') return res.json([]);
+
+    let filter = {};
+    if (role === 'leader') {
+      // leader : projets qu'il manage ou dont il est membre
+      filter = { $or: [{ managerId: id }, { members: id }, { createdBy: id }] };
+    } else if (role === 'tech') {
+      // tech : uniquement les projets dont il est membre
+      filter = { members: id };
+    }
+    // admin : filter vide = tous les projets
 
     const projects = await Project.find(filter)
       .populate('createdBy', 'name email role')
@@ -22,8 +31,8 @@ const getAllProjects = async (req, res) => {
     const projectsWithStats = await Promise.all(
       projects.map(async (p) => {
         const totalTasks = await ProjectTask.countDocuments({ projectId: p._id });
-        const doneTasks = await ProjectTask.countDocuments({ projectId: p._id, status: 'done' });
-        const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+        const doneTasks  = await ProjectTask.countDocuments({ projectId: p._id, status: 'done' });
+        const progress   = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
         return { ...p.toObject(), progress, totalTasks, doneTasks };
       })
     );

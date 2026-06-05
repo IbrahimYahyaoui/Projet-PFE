@@ -153,6 +153,47 @@ const getLeaderAnalytics = async (userId, startDate) => {
   };
 };
 
+// ── Tech: ses tickets assignés ──
+const getTechAnalytics = async (userId, startDate) => {
+  const myTickets = await Ticket.find({ assignedTo: userId, createdAt: { $gte: startDate } });
+  const resolvedList = await Ticket.find({
+    assignedTo: userId,
+    status: { $in: ['resolved', 'closed'] },
+    createdAt: { $gte: startDate },
+  }).select('createdAt resolvedAt updatedAt');
+
+  return {
+    scope: 'personal',
+    kpis: {
+      totalTickets:      myTickets.length,
+      resolvedTickets:   myTickets.filter(t => ['resolved', 'closed'].includes(t.status)).length,
+      inProgressTickets: myTickets.filter(t => t.status === 'in_progress').length,
+      waitingTickets:    myTickets.filter(t => t.status === 'waiting').length,
+      avgResolutionTime: calcAvgResolution(resolvedList),
+      resolutionRate: myTickets.length > 0
+        ? Math.round((myTickets.filter(t => ['resolved','closed'].includes(t.status)).length / myTickets.length) * 100) : 0,
+    },
+  };
+};
+
+// ── Employé: ses tickets soumis ──
+const getUserAnalytics = async (userId) => {
+  const myTickets = await Ticket.find({ createdBy: userId });
+  const total    = myTickets.length;
+  const resolved = myTickets.filter(t => ['resolved', 'closed'].includes(t.status)).length;
+  return {
+    scope: 'personal',
+    kpis: {
+      totalTickets:      total,
+      resolvedTickets:   resolved,
+      openTickets:       myTickets.filter(t => t.status === 'open').length,
+      inProgressTickets: myTickets.filter(t => t.status === 'in_progress').length,
+      waitingTickets:    myTickets.filter(t => t.status === 'waiting').length,
+      resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
+    },
+  };
+};
+
 // ── GET /api/analytics ──
 const getAnalytics = async (req, res) => {
   try {
@@ -160,9 +201,12 @@ const getAnalytics = async (req, res) => {
     const startDate = new Date(Date.now() - parseInt(period) * 24 * 3600000);
     const { role, id } = req.user;
 
-    const data = role === 'admin'
-      ? await getAdminAnalytics(startDate)
-      : await getLeaderAnalytics(id, startDate);
+    // FIX 7 — données filtrées selon le rôle (pas de 403 pour aucun rôle)
+    let data;
+    if (role === 'admin')       data = await getAdminAnalytics(startDate);
+    else if (role === 'leader') data = await getLeaderAnalytics(id, startDate);
+    else if (role === 'tech')   data = await getTechAnalytics(id, startDate);
+    else                        data = await getUserAnalytics(id);  // role === 'user'
 
     res.json(data);
   } catch (err) {
@@ -176,29 +220,35 @@ const getProjectAnalytics = async (req, res) => {
   try {
     const { role, id } = req.user;
 
-    // Build project filter based on role
-    const projectFilter = role === 'admin'
-      ? {}
-      : { $or: [{ createdBy: id }, { managerId: id }, { members: id }] };
+    // FIX 7 — employé : aucune donnée projet
+    if (role === 'user') {
+      return res.json({ scope: 'personal', totalProjects: 0, totalTasks: 0, doneTasks: 0, overdueTasks: 0, completionRate: 0, statusBreakdown: [], projects: [] });
+    }
 
-    const [totalProjects, projects, totalTasks, doneTasks, overdueTasks] = await Promise.all([
-      Project.countDocuments(projectFilter),
-      Project.find(projectFilter).select('name status priority progress'),
-      ProjectTask.countDocuments(),
-      ProjectTask.countDocuments({ status: 'done' }),
-      ProjectTask.countDocuments({ status: { $nin: ['done'] }, dueDate: { $lt: new Date() } }),
-    ]);
+    // Filtre projet selon le rôle
+    let projectFilter = {};
+    if (role === 'tech')        projectFilter = { members: id };
+    else if (role === 'leader') projectFilter = { $or: [{ managerId: id }, { members: id }, { createdBy: id }] };
+    // admin : pas de filtre
 
-    const statusBreakdown = await Project.aggregate([
-      { $match: projectFilter },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
+    const projects = await Project.find(projectFilter).select('_id name status priority progress');
+    const projectIds = projects.map(p => p._id);
+
+    const [totalTasks, doneTasks, overdueTasks, statusBreakdown] = await Promise.all([
+      ProjectTask.countDocuments({ projectId: { $in: projectIds } }),
+      ProjectTask.countDocuments({ projectId: { $in: projectIds }, status: 'done' }),
+      ProjectTask.countDocuments({ projectId: { $in: projectIds }, status: { $nin: ['done'] }, dueDate: { $lt: new Date() } }),
+      Project.aggregate([
+        { $match: projectFilter },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]),
     ]);
 
     const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
     res.json({
       scope: role === 'admin' ? 'global' : 'own',
-      totalProjects, totalTasks, doneTasks, overdueTasks, completionRate, statusBreakdown, projects,
+      totalProjects: projects.length, totalTasks, doneTasks, overdueTasks, completionRate, statusBreakdown, projects,
     });
   } catch (err) {
     console.error(err);

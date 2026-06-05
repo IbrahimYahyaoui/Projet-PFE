@@ -41,6 +41,11 @@ const syncTicketProject = async (ticketId, oldProjectId, newProjectId) => {
 
 const getAllTickets = async (req, res) => {
   try {
+    // FIX 5 — Seuls admin et leader peuvent voir tous les tickets
+    if (!['admin', 'leader'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
     const { status, priority, category, page = 1, limit = 50 } = req.query;
     const filter = {};
     if (status)   filter.status   = status;
@@ -68,6 +73,11 @@ const getAllTickets = async (req, res) => {
 // Admin queue: open tickets not yet assigned to a team + team workload
 const getAdminQueue = async (req, res) => {
   try {
+    // FIX 5 — File admin : accès admin uniquement
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès admin requis' });
+    }
+
     const tickets = await Ticket.find({ status: 'open', teamId: null })
       .populate("createdBy", "name email role")
       .sort({ priority: 1, createdAt: 1 });
@@ -102,6 +112,11 @@ const getAdminQueue = async (req, res) => {
 // SLA alerts: tickets where deadline < now + 2h and not resolved
 const getSlaAlerts = async (req, res) => {
   try {
+    // FIX 5 — Alertes SLA : admin et leader uniquement
+    if (!['admin', 'leader'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
     const twoHoursLater = new Date(Date.now() + 2 * 3600000);
     const tickets = await Ticket.find({
       slaDeadline: { $ne: null, $lt: twoHoursLater },
