@@ -1,5 +1,5 @@
 // frontend/src/pages/Dashboard.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box, Typography, Grid, CircularProgress, LinearProgress,
@@ -159,7 +159,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
           <PeriodSelector value={period} onChange={setPeriod} />
           <Box
             onClick={() => navigate("/tickets/create")}
-            sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 2, py: 1, borderRadius: "10px", bgcolor: C.accent, cursor: "pointer", "&:hover": { bgcolor: C.accentHover }, transition: "background 0.15s" }}
+            sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 2, py: 1, borderRadius: "10px", bgcolor: C.navy, cursor: "pointer", "&:hover": { bgcolor: C.navyMid }, transition: "background 0.15s" }}
           >
             <Box component="i" className="ti ti-plus" sx={{ fontSize: 15, color: "#fff" }} />
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: "#fff" }}>Nouveau ticket</Typography>
@@ -182,10 +182,10 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       {/* KPI Row 1 */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {[
-          { label: "Total Tickets",    value: kpis.totalTickets ?? 0,      icon: "ticket",        color: C.accent,    bg: C.accentLight,               sub: `Période ${period}j`,   onClick: () => navigate("/tickets/all") },
-          { label: "Ouverts",          value: kpis.openTickets ?? 0,       icon: "inbox",         color: "#3B82F6",   bg: "rgba(59,130,246,.10)",       sub: "Sans équipe",           onClick: () => navigate("/tickets/admin-queue") },
-          { label: "En cours",         value: kpis.inProgressTickets ?? 0, icon: "loader",        color: C.warning,   bg: C.warningBg,                  sub: "Actifs" },
-          { label: "Résolus",          value: kpis.resolvedTickets ?? 0,   icon: "circle-check",  color: C.success,   bg: C.successBg,                  sub: `${kpis.resolutionRate ?? 0}% taux` },
+          { label: "Total Tickets",    value: kpis.totalTickets ?? 0,      icon: "ticket",          color: C.accent,    bg: C.accentLight,               sub: `Période ${period}j`,   onClick: () => navigate("/tickets/all") },
+          { label: "Ouverts",          value: kpis.openTickets ?? 0,       icon: "inbox",           color: "#3B82F6",   bg: "rgba(59,130,246,.10)",       sub: "Sans équipe",           onClick: () => navigate("/tickets/admin-queue") },
+          { label: "En cours",         value: kpis.inProgressTickets ?? 0, icon: "progress",        color: C.warning,   bg: C.warningBg,                  sub: "Actifs" },
+          { label: "Résolus",          value: kpis.resolvedTickets ?? 0,   icon: "check",           color: C.success,   bg: C.successBg,                  sub: `${kpis.resolutionRate ?? 0}% taux` },
         ].map(k => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
@@ -196,10 +196,10 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       {/* KPI Row 2 */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: "SLA Dépassé",      value: kpis.slaBreachedCount ?? 0,  icon: "alert-triangle", color: C.danger,   bg: C.dangerBg,                   sub: "Urgence" },
-          { label: "Conformité SLA",   value: `${kpis.slaComplianceRate ?? 100}%`, icon: "shield-check", color: "#8B5CF6", bg: "rgba(139,92,246,.08)", sub: "Performance" },
-          { label: "Escaladés",        value: kpis.escalatedCount ?? 0,    icon: "arrow-up",      color: "#F59E0B",   bg: "rgba(245,158,11,.10)",        sub: "À traiter" },
-          { label: "Tps résolution moy",value: fmtHours(kpis.avgResolutionTime ?? 0), icon: "clock", color: C.accent, bg: C.accentLight,                sub: "Moyenne" },
+          { label: "SLA Dépassé",       value: kpis.slaBreachedCount ?? 0,           icon: "alert",           color: C.danger,   bg: C.dangerBg,                   sub: "Urgence" },
+          { label: "Conformité SLA",    value: `${kpis.slaComplianceRate ?? 100}%`,  icon: "shield",          color: "#8B5CF6",  bg: "rgba(139,92,246,.08)",        sub: "Performance" },
+          { label: "Escaladés",         value: kpis.escalatedCount ?? 0,             icon: "arrow-narrow-up", color: "#F59E0B",  bg: "rgba(245,158,11,.10)",        sub: "À traiter" },
+          { label: "Tps résolution moy",value: fmtHours(kpis.avgResolutionTime ?? 0),icon: "clock",           color: C.accent,   bg: C.accentLight,                sub: "Moyenne" },
         ].map(k => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
@@ -211,7 +211,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {/* Area chart */}
         <Grid size={{ xs: 12, lg: 8 }}>
-          <CardShell title="Évolution des tickets" subtitle={`${period} derniers jours — créés vs résolus`} icon="chart-line" noPad>
+          <CardShell title="Évolution des tickets" icon="trending-up" noPad>
             {loading ? <Skeleton variant="rectangular" height={240} sx={{ m: 2 }} /> : (
               <Box sx={{ p: 2, pt: 1.5 }}>
                 <ResponsiveContainer width="100%" height={230}>
@@ -236,7 +236,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
 
         {/* Status donut */}
         <Grid size={{ xs: 12, lg: 4 }}>
-          <CardShell title="Distribution statuts" subtitle="Répartition actuelle" icon="chart-pie">
+          <CardShell title="Distribution statuts" icon="chart-pie">
             {loading ? <Skeleton variant="circular" width={140} height={140} sx={{ mx: "auto", mt: 2, mb: 2 }} /> : statusDist.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={150}>
@@ -272,7 +272,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {/* Priority distribution */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <CardShell title="Par priorité" subtitle="Répartition des tickets" icon="flag">
+          <CardShell title="Par priorité" icon="flag">
             {loading ? <Skeleton variant="rectangular" height={180} /> : (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={priorityDist} layout="vertical" margin={{ left: 8, right: 16 }}>
@@ -290,7 +290,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
 
         {/* Category distribution */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <CardShell title="Par catégorie" subtitle="Volume par type" icon="tag">
+          <CardShell title="Par catégorie" icon="tag">
             {loading ? <Skeleton variant="rectangular" height={180} /> : (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={categoryDist} margin={{ left: -8, right: 4 }}>
@@ -298,7 +298,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
                   <XAxis dataKey="name" {...CHART_STYLE.axis} />
                   <YAxis {...CHART_STYLE.axis} allowDecimals={false} />
                   <ChartTip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" name="Tickets" fill={C.accent} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" name="Tickets" fill={C.navy} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -307,7 +307,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
 
         {/* Projects summary */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <CardShell title="Projets" subtitle="Vue d'ensemble" icon="folder-open" action={() => navigate("/projects")}>
+          <CardShell title="Projets" icon="folder" action={() => navigate("/projects")}>
             {loading || !projStats ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={28} />)}
@@ -315,10 +315,10 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                 {[
-                  { label: "Total projets",     value: projStats.totalProjects ?? 0,   color: C.accent,   icon: "folder-open" },
-                  { label: "Total tâches",       value: projStats.totalTasks ?? 0,      color: "#3B82F6",  icon: "checkbox" },
-                  { label: "Tâches terminées",   value: projStats.doneTasks ?? 0,       color: C.success,  icon: "circle-check" },
-                  { label: "Tâches en retard",   value: projStats.overdueTasks ?? 0,    color: C.danger,   icon: "alert-circle" },
+                  { label: "Total projets",   value: projStats.totalProjects ?? 0, color: C.accent,  icon: "folder" },
+                  { label: "Total tâches",     value: projStats.totalTasks ?? 0,    color: "#3B82F6", icon: "square-check" },
+                  { label: "Tâches terminées", value: projStats.doneTasks ?? 0,     color: C.success, icon: "check" },
+                  { label: "Tâches en retard", value: projStats.overdueTasks ?? 0,  color: C.danger,  icon: "info-circle" },
                 ].map(item => (
                   <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1, borderRadius: "10px", bgcolor: C.bgPage }}>
                     <Box sx={{ width: 28, height: 28, borderRadius: "8px", bgcolor: item.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -347,7 +347,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
       <Grid container spacing={2}>
         {/* Tech Performance */}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <CardShell title="Performance techniciens" subtitle="Taux de résolution — période sélectionnée" icon="users" action={() => navigate("/teams/analytics")}>
+          <CardShell title="Performance techniciens" icon="users" action={() => navigate("/teams/analytics")}>
             {loading ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                 {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={52} />)}
@@ -391,7 +391,7 @@ function AdminDashboard({ period, setPeriod }: { period: string; setPeriod: (v: 
 
         {/* SLA Alerts */}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <CardShell title="Alertes SLA" subtitle="Tickets proches ou dépassant l'échéance" icon="alert-triangle" action={() => navigate("/tickets/all")}>
+          <CardShell title="Alertes SLA" icon="alert" action={() => navigate("/tickets/all")}>
             {loading ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={48} />)}
@@ -445,10 +445,11 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
       .finally(() => setLoading(false));
   }, [period]);
 
-  const kpis    = analytics?.kpis ?? {};
-  const byDay   = (analytics?.ticketsByDay ?? []).slice(-14);
+  const kpis     = analytics?.kpis ?? {};
+  const byDay    = (analytics?.ticketsByDay ?? []).slice(-14);
   const techPerf = (analytics?.techPerformance ?? []).slice(0, 5);
   const statusDist = (analytics?.statusDistribution ?? []).map((d: any) => ({ name: STATUS_LABELS[d._id] ?? d._id, value: d.count, color: STATUS_COLORS[d._id] ?? C.accent }));
+  const categoryDist = (analytics?.categoryDistribution ?? []).slice(0, 6).map((d: any) => ({ name: CAT_LABELS[d._id] ?? d._id, value: d.count }));
 
   const avatarColors = [C.accent, "#3B82F6", "#F97316", "#8B5CF6", "#22C55E"];
 
@@ -474,10 +475,10 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
       {/* KPI Row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: "Total Tickets",  value: kpis.totalTickets ?? 0,      icon: "ticket",       color: C.accent,  bg: C.accentLight,            sub: `Période ${period}j`, onClick: () => navigate("/teams/tickets") },
-          { label: "Ouverts",        value: kpis.openTickets ?? 0,       icon: "circle-dot",   color: "#3B82F6", bg: "rgba(59,130,246,.10)",    sub: "À assigner" },
-          { label: "En cours",       value: kpis.inProgressTickets ?? 0, icon: "loader",       color: C.warning, bg: C.warningBg,              sub: "Actifs" },
-          { label: "Résolus",        value: kpis.resolvedTickets ?? 0,   icon: "circle-check", color: C.success, bg: C.successBg,              sub: `${kpis.resolutionRate ?? 0}%` },
+          { label: "Total Tickets",  value: kpis.totalTickets ?? 0,      icon: "ticket",     color: C.accent,  bg: C.accentLight,          sub: `Période ${period}j`, onClick: () => navigate("/teams/tickets") },
+          { label: "Ouverts",        value: kpis.openTickets ?? 0,       icon: "circle-dot", color: "#3B82F6", bg: "rgba(59,130,246,.10)", sub: "À assigner" },
+          { label: "En cours",       value: kpis.inProgressTickets ?? 0, icon: "progress",   color: C.warning, bg: C.warningBg,            sub: "Actifs" },
+          { label: "Résolus",        value: kpis.resolvedTickets ?? 0,   icon: "check",      color: C.success, bg: C.successBg,            sub: `${kpis.resolutionRate ?? 0}%` },
         ].map(k => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
@@ -488,7 +489,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
       {/* Charts */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <CardShell title="Activité de l'équipe" subtitle={`${period} derniers jours`} icon="chart-line" noPad>
+          <CardShell title="Activité de l'équipe" icon="trending-up" noPad>
             {loading ? <Skeleton variant="rectangular" height={230} sx={{ m: 2 }} /> : (
               <Box sx={{ p: 2, pt: 1.5 }}>
                 <ResponsiveContainer width="100%" height={220}>
@@ -512,7 +513,7 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
         </Grid>
 
         <Grid size={{ xs: 12, lg: 4 }}>
-          <CardShell title="Statuts tickets" subtitle="Distribution actuelle" icon="chart-pie">
+          <CardShell title="Statuts tickets" icon="chart-pie">
             {loading ? <Skeleton variant="circular" width={120} height={120} sx={{ mx: "auto", mt: 2, mb: 2 }} /> : statusDist.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={140}>
@@ -542,10 +543,26 @@ function LeaderDashboard({ period, setPeriod }: { period: string; setPeriod: (v:
             )}
           </CardShell>
         </Grid>
+
+        <Grid size={{ xs: 12, md: 4 }}>
+          <CardShell title="Par catégorie" icon="tag">
+            {loading ? <Skeleton variant="rectangular" height={180} /> : (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={categoryDist} margin={{ left: -8, right: 4 }}>
+                  <CartesianGrid {...CHART_STYLE.grid} />
+                  <XAxis dataKey="name" {...CHART_STYLE.axis} />
+                  <YAxis {...CHART_STYLE.axis} allowDecimals={false} />
+                  <ChartTip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" name="Tickets" fill={C.navy} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardShell>
+        </Grid>
       </Grid>
 
       {/* Tech performance */}
-      <CardShell title="Performance des techniciens" subtitle="Taux de résolution sur la période" icon="users" action={() => navigate("/teams/analytics")}>
+      <CardShell title="Performance des techniciens" icon="users" action={() => navigate("/teams/analytics")}>
         {loading ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={52} />)}
@@ -592,6 +609,7 @@ function TechDashboard() {
   const user      = getCurrentUser();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy]   = useState<"sla" | "priority" | "status">("sla");
 
   useEffect(() => {
     api.get<any[]>("/api/tickets/assigned")
@@ -605,12 +623,17 @@ function TechDashboard() {
   const resolved   = tickets.filter(t => ["resolved","closed"].includes(t.status)).length;
   const slaRisk    = tickets.filter(t => t.slaDeadline && !["resolved","closed"].includes(t.status) && new Date(t.slaDeadline).getTime() - Date.now() < 4 * 3600000).length;
 
-  const sorted = [...tickets].sort((a, b) => {
-    if (a.slaDeadline && b.slaDeadline) return new Date(a.slaDeadline).getTime() - new Date(b.slaDeadline).getTime();
-    if (a.slaDeadline) return -1;
-    if (b.slaDeadline) return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  }).slice(0, 10);
+  const sorted = useMemo(() => {
+    const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    const STATUS_ORDER: Record<string, number> = { in_progress: 0, assigned: 1, waiting: 2, open: 3, resolved: 4, closed: 5 };
+    return [...tickets].sort((a: any, b: any) => {
+      if (sortBy === "priority") return (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99);
+      if (sortBy === "status")   return (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+      if (a.slaBreached && !b.slaBreached) return -1;
+      if (!a.slaBreached && b.slaBreached) return 1;
+      return new Date(a.slaDeadline ?? 0).getTime() - new Date(b.slaDeadline ?? 0).getTime();
+    });
+  }, [tickets, sortBy]);
 
   return (
     <Box sx={{ p: 3, maxWidth: 1300, mx: "auto", width: "100%" }}>
@@ -631,10 +654,10 @@ function TechDashboard() {
       {/* KPIs */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: "Total assignés",   value: tickets.length, icon: "clipboard-list", color: C.accent,  bg: C.accentLight,         sub: "Mes tickets", onClick: () => navigate("/tickets/assigned") },
-          { label: "En cours",         value: inProgress,     icon: "loader",         color: C.warning, bg: C.warningBg,           sub: "Actifs" },
-          { label: "Résolus",          value: resolved,       icon: "circle-check",   color: C.success, bg: C.successBg,           sub: "Terminés" },
-          { label: "Risque SLA",       value: slaRisk,        icon: "alert-triangle", color: C.danger,  bg: C.dangerBg,            sub: slaRisk > 0 ? "Urgent" : "OK" },
+          { label: "Total assignés", value: tickets.length, icon: "clipboard", color: C.accent,  bg: C.accentLight, sub: "Mes tickets", onClick: () => navigate("/tickets/assigned") },
+          { label: "En cours",       value: inProgress,     icon: "progress",  color: C.warning, bg: C.warningBg,   sub: "Actifs" },
+          { label: "Résolus",        value: resolved,       icon: "check",     color: C.success, bg: C.successBg,   sub: "Terminés" },
+          { label: "Risque SLA",     value: slaRisk,        icon: "alert",     color: C.danger,  bg: C.dangerBg,    sub: slaRisk > 0 ? "Urgent" : "OK" },
         ].map(k => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
@@ -646,37 +669,64 @@ function TechDashboard() {
       <Grid container spacing={2}>
         {/* My tickets list */}
         <Grid size={{ xs: 12, lg: 8 }}>
-          <CardShell title="Mes tickets assignés" subtitle="Triés par urgence SLA" icon="clipboard-list" action={() => navigate("/tickets/assigned")}>
+          <CardShell title="Mes tickets assignés" icon="clipboard" action={() => navigate("/tickets/assigned")}>
             {loading ? (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} variant="rounded" height={56} />)}
               </Box>
-            ) : sorted.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 4 }}>
-                <Box component="i" className="ti ti-clipboard-check" sx={{ fontSize: 40, color: C.success, display: "block", mb: 1 }} />
-                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 600, color: C.success }}>Aucun ticket assigné</Typography>
-                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, mt: 0.5 }}>Profitez de votre temps libre !</Typography>
-              </Box>
             ) : (
-              <Box sx={{ display: "flex", flexDirection: "column" }}>
-                {sorted.map((t: any, i: number) => (
-                  <Box
-                    key={t._id}
-                    onClick={() => navigate(`/tickets/${t._id}`)}
-                    sx={{ display: "flex", alignItems: "center", gap: 2, py: 1.5, px: 0.5, borderBottom: i < sorted.length - 1 ? `1px solid ${C.divider}` : "none", cursor: "pointer", borderRadius: "8px", "&:hover": { bgcolor: C.bgPage }, transition: "background 0.12s" }}
-                  >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</Typography>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.3 }}>
-                        <StatusChip status={t.status} size="xs" />
-                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{fmtDate(t.createdAt)}</Typography>
-                      </Box>
+              <>
+                <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+                  {([
+                    { key: "sla",      label: "SLA",      icon: "clock" },
+                    { key: "priority", label: "Priorité", icon: "flag"  },
+                    { key: "status",   label: "Statut",   icon: "list"  },
+                  ] as const).map(opt => (
+                    <Box key={opt.key} onClick={() => setSortBy(opt.key)}
+                      sx={{
+                        display: "flex", alignItems: "center", gap: 0.5,
+                        px: 1.5, py: 0.5, borderRadius: "8px", cursor: "pointer",
+                        bgcolor: sortBy === opt.key ? C.accentLight : "transparent",
+                        border: `1px solid ${sortBy === opt.key ? C.accent : C.border}`,
+                        transition: "all 0.15s",
+                      }}>
+                      <Box component="i" className={`ti ti-${opt.icon}`}
+                        sx={{ fontSize: 12, color: sortBy === opt.key ? C.accent : C.textMuted }} />
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600,
+                        color: sortBy === opt.key ? C.accent : C.textMuted }}>
+                        {opt.label}
+                      </Typography>
                     </Box>
-                    <PriorityChip priority={t.priority} size="sm" />
-                    {t.slaDeadline && <SLABadge slaDeadline={t.slaDeadline} slaBreached={t.slaBreached ?? false} status={t.status} />}
+                  ))}
+                </Box>
+                {sorted.length === 0 ? (
+                  <Box sx={{ textAlign: "center", py: 4 }}>
+                    <Box component="i" className="ti ti-clipboard-check" sx={{ fontSize: 40, color: C.success, display: "block", mb: 1 }} />
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 600, color: C.success }}>Aucun ticket assigné</Typography>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, mt: 0.5 }}>Profitez de votre temps libre !</Typography>
                   </Box>
-                ))}
-              </Box>
+                ) : (
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    {sorted.map((t: any, i: number) => (
+                      <Box
+                        key={t._id}
+                        onClick={() => navigate(`/tickets/${t._id}`)}
+                        sx={{ display: "flex", alignItems: "center", gap: 2, py: 1.5, px: 0.5, borderBottom: i < sorted.length - 1 ? `1px solid ${C.divider}` : "none", cursor: "pointer", borderRadius: "8px", "&:hover": { bgcolor: C.bgPage }, transition: "background 0.12s" }}
+                      >
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</Typography>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.3 }}>
+                            <StatusChip status={t.status} size="xs" />
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{fmtDate(t.createdAt)}</Typography>
+                          </Box>
+                        </Box>
+                        <PriorityChip priority={t.priority} size="sm" />
+                        {t.slaDeadline && <SLABadge slaDeadline={t.slaDeadline} slaBreached={t.slaBreached ?? false} status={t.status} />}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </>
             )}
           </CardShell>
         </Grid>
@@ -685,13 +735,13 @@ function TechDashboard() {
         <Grid size={{ xs: 12, lg: 4 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}>
             {/* Quick actions */}
-            <CardShell title="Actions rapides" icon="zap">
+            <CardShell title="Actions rapides" icon="bolt">
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {[
-                  { label: "Mes tickets",          path: "/tickets/assigned",    icon: "clipboard-list", color: C.accent },
-                  { label: "Base de connaissances", path: "/knowledge-base",      icon: "books",          color: "#8B5CF6" },
-                  { label: "Mes projets",           path: "/projects",            icon: "folder-open",    color: "#3B82F6" },
-                  { label: "Assistant IA",          path: "/ai-assistant",        icon: "robot",          color: C.warning },
+                  { label: "Mes tickets",           path: "/tickets/assigned", icon: "clipboard", color: C.accent },
+                  { label: "Base de connaissances", path: "/knowledge-base",   icon: "books",     color: "#8B5CF6" },
+                  { label: "Mes projets",            path: "/projects",         icon: "folder",    color: "#3B82F6" },
+                  { label: "Assistant IA",           path: "/ai-assistant",     icon: "robot",     color: C.warning },
                 ].map(a => (
                   <Box key={a.label} onClick={() => navigate(a.path)} sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1, borderRadius: "10px", cursor: "pointer", "&:hover": { bgcolor: a.color + "10" }, transition: "background 0.12s" }}>
                     <Box sx={{ width: 28, height: 28, borderRadius: "8px", bgcolor: a.color + "15", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -705,12 +755,12 @@ function TechDashboard() {
             </CardShell>
 
             {/* Work stats */}
-            <CardShell title="Mon activité" subtitle="Vue d'ensemble" icon="chart-bar">
+            <CardShell title="Mon activité" icon="chart-bar">
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                 {[
-                  { label: "Ouverts",    value: open,       max: tickets.length, color: "#3B82F6" },
-                  { label: "En cours",   value: inProgress, max: tickets.length, color: C.warning },
-                  { label: "Résolus",    value: resolved,   max: tickets.length, color: C.success },
+                  { label: "Ouverts",  value: open,       max: tickets.length, color: "#3B82F6" },
+                  { label: "En cours", value: inProgress, max: tickets.length, color: C.warning },
+                  { label: "Résolus",  value: resolved,   max: tickets.length, color: C.success },
                 ].map(bar => (
                   <Box key={bar.label}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.4 }}>
@@ -763,15 +813,14 @@ function EmployeeDashboard() {
       {/* Quick Actions */}
       <Grid container spacing={1.5} sx={{ mb: 3 }}>
         {[
-          { label: "Créer un ticket",      path: "/tickets/create",  icon: "plus",       color: C.accent,    bg: C.accentLight,            primary: true },
-          { label: "Mes tickets",          path: "/tickets/my",      icon: "ticket",     color: "#3B82F6",   bg: "rgba(59,130,246,.10)" },
-          { label: "Base de connaissances",path: "/knowledge-base",  icon: "books",      color: "#8B5CF6",   bg: "rgba(139,92,246,.10)" },
-          { label: "Assistant IA",         path: "/ai-assistant",    icon: "robot",      color: C.warning,   bg: C.warningBg },
+          { label: "Créer un ticket",       path: "/tickets/create", icon: "plus",   color: C.accent,  bg: C.accentLight,         primary: true },
+          { label: "Mes tickets",           path: "/tickets/my",     icon: "ticket", color: "#3B82F6", bg: "rgba(59,130,246,.10)" },
+          { label: "Base de connaissances", path: "/knowledge-base", icon: "books",  color: "#8B5CF6", bg: "rgba(139,92,246,.10)" },
         ].map(a => (
           <Grid size={{ xs: 6, sm: 3 }} key={a.label}>
             <Box
               onClick={() => navigate(a.path)}
-              sx={{ bgcolor: a.primary ? C.accent : "#fff", border: `1px solid ${a.primary ? C.accent : C.border}`, borderRadius: "14px", p: 2, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, textAlign: "center", transition: "all 0.18s", "&:hover": { transform: "translateY(-2px)", boxShadow: C.shadowMd, borderColor: a.color } }}
+              sx={{ bgcolor: a.primary ? C.navy : "#fff", border: `1px solid ${a.primary ? C.accent : C.border}`, borderRadius: "14px", p: 2, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, textAlign: "center", transition: "all 0.18s", "&:hover": { transform: "translateY(-2px)", boxShadow: C.shadowMd, borderColor: a.color } }}
             >
               <Box sx={{ width: 42, height: 42, borderRadius: "12px", bgcolor: a.primary ? "rgba(255,255,255,0.2)" : a.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Box component="i" className={`ti ti-${a.icon}`} sx={{ fontSize: 20, color: a.primary ? "#fff" : a.color }} />
@@ -782,15 +831,41 @@ function EmployeeDashboard() {
             </Box>
           </Grid>
         ))}
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Box
+            onClick={() => navigate("/ai-assistant")}
+            sx={{
+              bgcolor: "#fff",
+              border: `2px solid ${C.warning}`,
+              borderRadius: "14px",
+              p: 2,
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 1,
+              textAlign: "center",
+              transition: "all 0.18s",
+              "&:hover": { transform: "translateY(-2px)", boxShadow: C.shadowMd, bgcolor: C.warningBg }
+            }}
+          >
+            <Box sx={{ width: 42, height: 42, borderRadius: "12px", bgcolor: C.warningBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Box component="i" className="ti ti-robot" sx={{ fontSize: 20, color: C.warning }} />
+            </Box>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 700, color: C.warning, lineHeight: 1.3 }}>
+              Assistant IA
+            </Typography>
+          </Box>
+        </Grid>
       </Grid>
 
       {/* KPIs */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: "Total",        value: tickets.length, icon: "ticket",       color: C.accent,  bg: C.accentLight,         sub: "Mes tickets", onClick: () => navigate("/tickets/my") },
-          { label: "Ouverts",      value: open,           icon: "circle-dot",   color: "#3B82F6", bg: "rgba(59,130,246,.10)", sub: "En attente de traitement" },
-          { label: "En attente",   value: waiting,        icon: "pause",        color: "#F59E0B", bg: "rgba(245,158,11,.10)", sub: "Informations demandées" },
-          { label: "Résolus",      value: resolved,       icon: "circle-check", color: C.success, bg: C.successBg,           sub: "Terminés" },
+          { label: "Total",      value: tickets.length, icon: "ticket",     color: C.accent,  bg: C.accentLight,         sub: "Mes tickets", onClick: () => navigate("/tickets/my") },
+          { label: "Ouverts",    value: open,           icon: "circle-dot", color: "#3B82F6", bg: "rgba(59,130,246,.10)", sub: "En attente de traitement" },
+          { label: "En attente", value: waiting,        icon: "pause",      color: "#F59E0B", bg: "rgba(245,158,11,.10)", sub: "Informations demandées" },
+          { label: "Résolus",    value: resolved,       icon: "check",      color: C.success, bg: C.successBg,           sub: "Terminés" },
         ].map(k => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={k.label}>
             {loading ? <SkeletonKPI /> : <KPI {...k} />}
@@ -799,7 +874,7 @@ function EmployeeDashboard() {
       </Grid>
 
       {/* Recent tickets */}
-      <CardShell title="Mes tickets récents" subtitle="Dernières demandes de support" icon="history" action={() => navigate("/tickets/my")}>
+      <CardShell title="Mes tickets récents" icon="clock-history" action={() => navigate("/tickets/my")}>
         {loading ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rounded" height={56} />)}
@@ -811,7 +886,7 @@ function EmployeeDashboard() {
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, mt: 0.5, mb: 2 }}>
               Créez votre premier ticket si vous rencontrez un problème
             </Typography>
-            <Box onClick={() => navigate("/tickets/create")} sx={{ display: "inline-flex", alignItems: "center", gap: 0.8, px: 2.5, py: 1, borderRadius: "10px", bgcolor: C.accent, cursor: "pointer", "&:hover": { bgcolor: C.accentHover } }}>
+            <Box onClick={() => navigate("/tickets/create")} sx={{ display: "inline-flex", alignItems: "center", gap: 0.8, px: 2.5, py: 1, borderRadius: "10px", bgcolor: C.navy, cursor: "pointer", "&:hover": { bgcolor: C.navyMid } }}>
               <Box component="i" className="ti ti-plus" sx={{ fontSize: 15, color: "#fff" }} />
               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: "#fff" }}>Créer un ticket</Typography>
             </Box>
