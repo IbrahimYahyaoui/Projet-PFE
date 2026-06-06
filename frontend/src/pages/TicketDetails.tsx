@@ -419,7 +419,7 @@ export default function TicketDetails() {
                 onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                 disabled={statusUpdating}
                 endIcon={<Box component="i" className="ti ti-chevron-down" sx={{ fontSize: 13 }} />}
-                sx={{ bgcolor: C.accent, color: C.navy, borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: C.accentHover } }}
+                sx={{ bgcolor: C.accent, color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: C.accentHover } }}
               >
                 <Box component="i" className="ti ti-refresh" sx={{ fontSize: 15 }} />
                 Changer le statut

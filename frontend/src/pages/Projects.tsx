@@ -339,7 +339,7 @@ export default function Projects() {
           </Typography>
           {canCreate && (
             <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 14 }} />} onClick={() => setCreateDialog(true)}
-              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", fontSize: "0.78rem", px: 2, py: 0.8, "&:hover": { bgcolor: C.accentHover } }}>
+              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.78rem", px: 2, py: 0.8, "&:hover": { bgcolor: C.accentHover } }}>
               New Project
             </Button>
           )}
@@ -385,7 +385,7 @@ export default function Projects() {
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.85rem", color: C.textMuted, mb: 2 }}>Créez votre premier projet pour commencer</Typography>
                 {canCreate && (
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateDialog(true)}
-                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", "&:hover": { bgcolor: C.accentHover } }}>
+                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", "&:hover": { bgcolor: C.accentHover } }}>
                     Créer un projet
                   </Button>
                 )}
@@ -594,7 +594,7 @@ export default function Projects() {
                 ))}
                 {kanbanProject && (
                   <Button size="small" startIcon={<AddIcon />} onClick={() => setCreateTaskDialog(kanbanProject)}
-                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.5, "&:hover": { bgcolor: C.accentHover } }}>
+                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.5, "&:hover": { bgcolor: C.accentHover } }}>
                     Add Task
                   </Button>
                 )}
@@ -746,7 +746,7 @@ export default function Projects() {
           <Button onClick={() => setCreateDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, textTransform: "none", borderRadius: "10px" }}>Annuler</Button>
           <Button variant="contained" onClick={handleCreateProject} disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={14} sx={{ color: C.navy }} /> : <AddIcon />}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
             {formLoading ? "Création..." : "Créer le projet"}
           </Button>
         </DialogActions>
@@ -778,7 +778,7 @@ export default function Projects() {
                   </Box>
                   <Chip label={u.role} size="small" sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", textTransform: "capitalize", height: 20 }} />
                   <Button size="small" variant="contained" onClick={() => { handleAddMember(addMemberDialog!, u._id); }}
-                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", minWidth: 70, "&:hover": { bgcolor: C.accentHover } }}>
+                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", minWidth: 70, "&:hover": { bgcolor: C.accentHover } }}>
                     Ajouter
                   </Button>
                 </Box>
@@ -825,7 +825,7 @@ export default function Projects() {
           <Button onClick={() => setCreateTaskDialog(null)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, textTransform: "none", borderRadius: "10px" }}>Annuler</Button>
           <Button variant="contained" onClick={() => handleCreateTask(createTaskDialog!)} disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={14} sx={{ color: C.navy }} /> : <AddIcon />}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
             {formLoading ? "Création..." : "Créer la tâche"}
           </Button>
         </DialogActions>

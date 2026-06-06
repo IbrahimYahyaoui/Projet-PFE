@@ -45,7 +45,7 @@ export default function MyTickets() {
           startIcon={<Add />}
           disableElevation
           onClick={() => navigate("/tickets/create")}
-          sx={{ bgcolor: C.accent, color: C.navy, textTransform: "none", borderRadius: "8px", fontWeight: 700, fontSize: 13, fontFamily: "Inter, sans-serif", boxShadow: "0 4px 12px rgba(95,194,186,0.3)", "&:hover": { bgcolor: C.accentHover } }}
+          sx={{ bgcolor: C.accent, color: "#fff", textTransform: "none", borderRadius: "8px", fontWeight: 700, fontSize: 13, fontFamily: "Inter, sans-serif", "&:hover": { bgcolor: C.accentHover } }}
         >
           Nouveau ticket
         </Button>

@@ -374,7 +374,7 @@ export default function ProjectDetail() {
             {canManage && (
               <Button onClick={() => { setNewTaskStatus("todo"); setCreateTaskDialog(true); }}
                 startIcon={<Box component="i" className="ti ti-plus" sx={{ fontSize: 14 }} />}
-                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "9px", textTransform: "none", fontSize: "13px", px: 2, "&:hover": { bgcolor: C.accentHover } }}>
+                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "9px", textTransform: "none", fontSize: "13px", px: 2, "&:hover": { bgcolor: C.accentHover } }}>
                 Nouvelle tâche
               </Button>
             )}
@@ -468,7 +468,7 @@ export default function ProjectDetail() {
               {canManage && (
                 <Button size="small" startIcon={<AddIcon sx={{ fontSize: 13 }} />}
                   onClick={() => { setNewTaskStatus("todo"); setCreateTaskDialog(true); }}
-                  sx={{ ml: "auto", fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", "&:hover": { bgcolor: C.accentHover } }}>
+                  sx={{ ml: "auto", fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", "&:hover": { bgcolor: C.accentHover } }}>
                   Nouvelle tâche
                 </Button>
               )}
@@ -530,7 +530,7 @@ export default function ProjectDetail() {
               </Typography>
               {canManage && (
                 <Button startIcon={<AddIcon />} onClick={() => setAddMemberDialog(true)}
-                  sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "9px", textTransform: "none", fontSize: "13px", "&:hover": { bgcolor: C.accentHover } }}>
+                  sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "9px", textTransform: "none", fontSize: "13px", "&:hover": { bgcolor: C.accentHover } }}>
                   Ajouter un membre
                 </Button>
               )}
@@ -730,7 +730,7 @@ export default function ProjectDetail() {
                       onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
                       sx={inputSx} />
                     <Button onClick={handleAddComment} disabled={!commentInput.trim()}
-                      sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "9px", textTransform: "none", px: 2, flexShrink: 0, "&:hover": { bgcolor: C.accentHover } }}>
+                      sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "9px", textTransform: "none", px: 2, flexShrink: 0, "&:hover": { bgcolor: C.accentHover } }}>
                       Envoyer
                     </Button>
                   </Box>
@@ -812,7 +812,7 @@ export default function ProjectDetail() {
           <Button onClick={() => setCreateTaskDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, textTransform: "none", borderRadius: "10px" }}>Annuler</Button>
           <Button variant="contained" onClick={handleCreateTask} disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={14} sx={{ color: C.navy }} /> : <AddIcon />}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
             {formLoading ? "Création..." : "Créer"}
           </Button>
         </DialogActions>
@@ -861,7 +861,7 @@ export default function ProjectDetail() {
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
           <Button onClick={() => setEditDialog(false)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, textTransform: "none", borderRadius: "10px" }}>Annuler</Button>
           <Button variant="contained" onClick={handleUpdateProject}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { bgcolor: C.accentHover } }}>
             Enregistrer
           </Button>
         </DialogActions>
@@ -887,7 +887,7 @@ export default function ProjectDetail() {
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{u.email}</Typography>
                   </Box>
                   <Button size="small" variant="contained" onClick={() => handleAddMember(u._id)}
-                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", "&:hover": { bgcolor: C.accentHover } }}>
+                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", "&:hover": { bgcolor: C.accentHover } }}>
                     Ajouter
                   </Button>
                 </Box>

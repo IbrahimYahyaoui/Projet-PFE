@@ -359,7 +359,7 @@ export default function Analytics() {
             startIcon={exporting ? <CircularProgress size={16} sx={{ color: C.navy }} /> : <DownloadIcon />}
             onClick={handleExportPDF}
             disabled={exporting}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 2.5, "&:hover": { bgcolor: C.accentHover } }}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 2.5, "&:hover": { bgcolor: C.accentHover } }}
           >
             {exporting ? "Export..." : "Export PDF"}
           </Button>

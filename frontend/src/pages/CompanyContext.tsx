@@ -190,7 +190,7 @@ export default function CompanyContext() {
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <Button variant="contained" onClick={handleSave} disabled={loading}
           startIcon={loading ? <CircularProgress size={16} sx={{ color: C.navy }} /> : <SaveIcon />}
-          sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 4, py: 1.2, "&:hover": { bgcolor: C.accentHover }, "&.Mui-disabled": { bgcolor: C.slate, color: C.textMuted } }}>
+          sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 4, py: 1.2, "&:hover": { bgcolor: C.accentHover }, "&.Mui-disabled": { bgcolor: C.slate, color: C.textMuted } }}>
           {loading ? "Saving…" : "Save to Database"}
         </Button>
       </Box>

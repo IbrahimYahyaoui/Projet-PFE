@@ -75,7 +75,7 @@ export const Home = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.75, mb: 6 }}>
             <Box
               onClick={() => navigate("/login")}
-              sx={{ display: "flex", alignItems: "center", gap: 1, bgcolor: C.accent, color: C.navy, borderRadius: "10px", px: 3.5, py: 1.75, fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif", transition: "all 0.2s", "&:hover": { bgcolor: C.accentHover, transform: "translateY(-1px)" } }}
+              sx={{ display: "flex", alignItems: "center", gap: 1, bgcolor: C.accent, color: "#fff", borderRadius: "10px", px: 3.5, py: 1.75, fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif", transition: "all 0.2s", "&:hover": { bgcolor: C.accentHover, transform: "translateY(-1px)" } }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               Commencer maintenant
