@@ -100,7 +100,7 @@ const ROLE_SUGGESTIONS: Record<string, { icon: string; label: string; msg: strin
 const CAT_COLORS: Record<string, string> = { hardware: "#EA580C", software: "#2563EB", network: "#16A34A", access: "#7C3AED", general: C.accent, other: "#64748B" };
 
 const BASE_RULES =
-  "Tu es l'assistant IA de TicketFlow, une plateforme de gestion de tickets IT. " +
+  "Tu es l'assistant IA de TuskFlow, une plateforme de gestion de tickets IT. " +
   "Tu aides les utilisateurs à gérer leurs tickets de support, projets et équipes. " +
   "Sois professionnel, bienveillant et concis. " +
   "RÈGLE LANGUE CRITIQUE : Détecte automatiquement la langue du message et réponds TOUJOURS dans cette même langue. " +
@@ -381,7 +381,7 @@ export default function AIAssistant() {
               <Box component="i" className="ti ti-robot" sx={{ fontSize: 18, color: "#fff" }} />
             </Box>
             <Box>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>TicketFlow AI</Typography>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>TuskFlow AI</Typography>
               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Assistant IA</Typography>
             </Box>
           </Box>
@@ -492,7 +492,7 @@ export default function AIAssistant() {
                   Bonjour {userName} !
                 </Typography>
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, lineHeight: 1.6 }}>
-                  Je suis votre assistant IA TicketFlow. Je peux vous aider à gérer vos tickets,<br />trouver des solutions et analyser vos données.
+                  Je suis votre assistant IA TuskFlow. Je peux vous aider à gérer vos tickets,<br />trouver des solutions et analyser vos données.
                 </Typography>
               </Box>
 

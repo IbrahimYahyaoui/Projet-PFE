@@ -257,18 +257,24 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
           onClick={() => navigate("/dashboard")}
           sx={{ display: "flex", alignItems: "center", gap: 1.2, cursor: "pointer", flexShrink: 0 }}
         >
-          <Box sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #1E3A5F, #152D4A)", borderRadius: "9px", border: "1px solid rgba(42,74,122,0.8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="5" y="6" width="34" height="10" rx="5" fill="white"/>
-              <path d="M 16,16 L 16,30 C 16,37 20,41 28,44 C 24,41 20,36 20,29 L 20,16 Z" fill="white"/>
-            </svg>
-          </Box>
-          <Box>
-            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "13px", color: "#fff", lineHeight: 1, letterSpacing: "-0.2px" }}>
-              TicketFlow
+          <svg width="34" height="34" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gD_nav" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#173A57" />
+                <stop offset="1" stopColor="#0C2235" />
+              </linearGradient>
+            </defs>
+            <rect x="4" y="4" width="112" height="112" rx="30" fill="url(#gD_nav)" />
+            <rect x="4" y="4" width="112" height="112" rx="30" fill="none" stroke="#5BB8FF" strokeOpacity="0.25" strokeWidth="1.5" />
+            <rect x="30" y="32" width="60" height="13" rx="6.5" fill="#FFFFFF" />
+            <path d="M54 38 C54 64 52 78 70 92 C58 88 47 78 44 60 C43 50 44 42 47 38 Z" fill="#5BB8FF" />
+          </svg>
+          <Box sx={{ display: "flex", alignItems: "baseline" }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "15px", color: "#fff", letterSpacing: "-0.3px", lineHeight: 1 }}>
+              Tusk
             </Typography>
-            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "9px", color: "#5FC2BA", letterSpacing: "0.12em", fontWeight: 500 }}>
-              TUSKENS MEA
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "15px", color: "#60A5FA", letterSpacing: "-0.3px", lineHeight: 1 }}>
+              Flow
             </Typography>
           </Box>
         </Box>

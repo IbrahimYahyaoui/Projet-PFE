@@ -78,7 +78,7 @@ const chat = async (req, res) => {
     const roleTone   = getRoleTone(userContext?.role ?? req.user?.role ?? 'user');
 
     const systemParts = [
-      "You are the TicketFlow AI Support Assistant — an enterprise IT support platform.",
+      "You are the TuskFlow AI Support Assistant — an enterprise IT support platform.",
       roleTone,
       companyStr ? `\n[Company Context]\n${companyStr}` : '',
       rules ? `\n[Additional Rules]\n${rules}` : '',

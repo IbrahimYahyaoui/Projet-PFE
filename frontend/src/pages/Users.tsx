@@ -373,7 +373,7 @@ export default function Users() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href     = url;
-    a.download = `utilisateurs_ticketflow_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `utilisateurs_tuskflow_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -113,18 +113,21 @@ export const Login = () => {
 
         {/* Logo en haut gauche */}
         <Box sx={{ position: "absolute", top: 32, left: 32, display: "flex", alignItems: "center", gap: 1.5, zIndex: 2 }}>
-          <Box sx={{ width: 44, height: 44, background: "linear-gradient(135deg, #1E3A5F, #152D4A)", borderRadius: "12px", border: "1px solid rgba(42,74,122,0.8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="28" height="28" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="5" y="6" width="34" height="10" rx="5" fill="white"/>
-              <path d="M 16,16 L 16,30 C 16,37 20,41 28,44 C 24,41 20,36 20,29 L 20,16 Z" fill="white"/>
-            </svg>
-          </Box>
-          <Box>
-            <Box sx={{ display: "flex", alignItems: "baseline" }}>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "22px", color: "#FFFFFF", lineHeight: 1, letterSpacing: "-0.5px" }}>Tusk</Typography>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "22px", color: "#60A5FA", lineHeight: 1, letterSpacing: "-0.5px" }}>Flow</Typography>
-            </Box>
-            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "9px", fontWeight: 500, color: "#5FC2BA", letterSpacing: "0.18em", mt: 0.2 }}>TUSKENS MEA</Typography>
+          <svg width="44" height="44" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gD_login" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#173A57" />
+                <stop offset="1" stopColor="#0C2235" />
+              </linearGradient>
+            </defs>
+            <rect x="4" y="4" width="112" height="112" rx="30" fill="url(#gD_login)" />
+            <rect x="4" y="4" width="112" height="112" rx="30" fill="none" stroke="#5BB8FF" strokeOpacity="0.25" strokeWidth="1.5" />
+            <rect x="30" y="32" width="60" height="13" rx="6.5" fill="#FFFFFF" />
+            <path d="M54 38 C54 64 52 78 70 92 C58 88 47 78 44 60 C43 50 44 42 47 38 Z" fill="#5BB8FF" />
+          </svg>
+          <Box sx={{ display: "flex", alignItems: "baseline" }}>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "22px", color: "#FFFFFF", lineHeight: 1, letterSpacing: "-0.5px" }}>Tusk</Typography>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "22px", color: "#60A5FA", lineHeight: 1, letterSpacing: "-0.5px" }}>Flow</Typography>
           </Box>
         </Box>
 
@@ -146,9 +149,7 @@ export const Login = () => {
               letterSpacing: "-0.5px",
             }}
           >
-            Manage your support
-            <br />
-            tickets efficiently
+            Chaque problème mérite une solution rapide.
           </Typography>
           <Typography
             fontSize={14}
@@ -156,48 +157,9 @@ export const Login = () => {
             fontFamily="Inter, sans-serif"
             sx={{ mb: 3, lineHeight: 1.6 }}
           >
-            Track, prioritize, and resolve issues faster
-            <br />
-            than ever before with TicketFlow.
+            TuskFlow centralise vos tickets, vos équipes et vos projets en un seul endroit intelligent.
           </Typography>
 
-          {/* Stats */}
-          <Box sx={{ display: "flex", gap: 2 }}>
-            {[
-              { value: "10K+", label: "Users" },
-              { value: "50K+", label: "Tickets resolved" },
-              { value: "99%", label: "Satisfaction" },
-            ].map((stat) => (
-              <Box
-                key={stat.label}
-                sx={{
-                  px: 2, py: 1.5,
-                  borderRadius: "10px",
-                  bgcolor: "rgba(255,255,255,0.1)",
-                  backdropFilter: "blur(10px)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  textAlign: "center",
-                  minWidth: 90,
-                }}
-              >
-                <Typography
-                  fontSize={18}
-                  fontWeight={700}
-                  color={C.accent}
-                  fontFamily="Inter, sans-serif"
-                >
-                  {stat.value}
-                </Typography>
-                <Typography
-                  fontSize={11}
-                  color="rgba(255,255,255,0.65)"
-                  fontFamily="Inter, sans-serif"
-                >
-                  {stat.label}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
         </Box>
       </Box>
 
@@ -229,7 +191,7 @@ export const Login = () => {
               color={C.textMuted}
               fontFamily="Inter, sans-serif"
             >
-              Sign in to your TicketFlow account
+              Sign in to your TuskFlow account
             </Typography>
           </Box>
 
@@ -400,7 +362,7 @@ export const Login = () => {
               color={C.textMuted}
               fontFamily="Inter, sans-serif"
             >
-              © 2026 TicketFlow • Internal Platform
+              © 2026 TuskFlow • Internal Platform
             </Typography>
           </Box>
         </Box>

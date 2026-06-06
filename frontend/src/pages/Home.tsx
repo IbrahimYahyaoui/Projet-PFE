@@ -68,7 +68,7 @@ export const Home = () => {
 
           {/* Description */}
           <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "1.05rem", color: C.textMuted, lineHeight: 1.7, mb: 4.5, maxWidth: 480 }}>
-            TicketFlow transforme la gestion des incidents en expérience fluide. Notifications temps réel, analytics avancés, collaboration d'équipe — tout en un.
+            TuskFlow transforme la gestion des incidents en expérience fluide. Notifications temps réel, analytics avancés, collaboration d'équipe — tout en un.
           </Typography>
 
           {/* Buttons */}
@@ -298,10 +298,10 @@ export const Home = () => {
               <circle cx="17" cy="17" r="4" fill="white" opacity="0.9"/>
             </svg>
           </Box>
-          <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.95rem", color: "#FFFFFF" }}>TicketFlow</Typography>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.95rem", color: "#FFFFFF" }}>TuskFlow</Typography>
         </Box>
         <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.8rem", color: "rgba(255,255,255,0.4)" }}>
-          © 2026 TicketFlow — Projet PFE Tuskens
+          © 2026 TuskFlow — Projet PFE Tuskens
         </Typography>
         <Box sx={{ display: "flex", gap: 3 }}>
           {["Confidentialité", "Contact", "GitHub"].map((link) => (

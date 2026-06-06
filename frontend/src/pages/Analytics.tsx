@@ -125,7 +125,7 @@ export default function Analytics() {
         <html>
         <head>
           <meta charset="UTF-8">
-          <title>TicketFlow Analytics Report</title>
+          <title>TuskFlow Analytics Report</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: 'Inter', Arial, sans-serif; color: #0B162C; background: #fff; padding: 40px; }
@@ -169,7 +169,7 @@ export default function Analytics() {
                 </svg>
               </div>
               <div>
-                <div class="title">TicketFlow Analytics</div>
+                <div class="title">TuskFlow Analytics</div>
                 <div class="subtitle">Rapport de performance — ${periodLabel}</div>
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Analytics() {
           </table>
 
           <div class="footer">
-            <span>TicketFlow — Rapport généré le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <span>TuskFlow — Rapport généré le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             <span>Période : ${periodLabel}</span>
           </div>
         </body>

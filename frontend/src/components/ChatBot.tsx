@@ -101,7 +101,7 @@ const QUICK_SUGGESTIONS = [
 ];
 
 const BASE_RULES =
-  "Tu es l'assistant IA de TUSKENS MEA, une entreprise de développement web et mobile. " +
+  "Tu es l'assistant IA de TuskFlow, une plateforme de gestion de tickets et de projets. " +
   "Tu aides les utilisateurs à gérer leurs tickets de support, projets et équipes. " +
   "Sois professionnel, bienveillant et concis. " +
   "RÈGLE LANGUE CRITIQUE : Détecte automatiquement la langue du message de l'utilisateur et réponds TOUJOURS dans cette même langue. Français → français, Arabe → arabe, Anglais → anglais. Ne mélange jamais les langues. " +
@@ -483,9 +483,9 @@ export const ChatBot = () => {
                 ✦
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>TicketFlow AI</Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>TuskFlow AI</Typography>
                 <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.7)" }}>
-                  TUSKENS MEA • {mode === "ticket" ? "Création ticket" : "Assistant"}
+                  TuskFlow • {mode === "ticket" ? "Création ticket" : "Assistant"}
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", gap: 0.5 }}>

@@ -5,7 +5,6 @@ import type { UserRole } from "./theme";
 import { getCurrentUser } from "./hooks/useAuth";
 
 // ── Public pages ──
-import { Home }     from "./pages/Home";
 import { Login }    from "./pages/login";
 import { NotFound } from "./pages/NotFound";
 
@@ -98,7 +97,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* ── Public ── */}
-        <Route path="/"      element={<Home />} />
+        <Route path="/"      element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
 
         {/* ── Dashboard ── */}

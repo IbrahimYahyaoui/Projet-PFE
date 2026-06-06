@@ -76,7 +76,7 @@ export const NotFound = () => {
 
       {/* Footer */}
       <Typography sx={{ position: "absolute", bottom: 24, fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted }}>
-        TicketFlow — Tuskens © {new Date().getFullYear()}
+        TuskFlow — Tuskens © {new Date().getFullYear()}
       </Typography>
     </Box>
   );

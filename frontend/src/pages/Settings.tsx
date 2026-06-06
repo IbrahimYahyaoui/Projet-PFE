@@ -155,7 +155,7 @@ export default function Settings() {
             Paramètres
           </Typography>
           <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "Inter, sans-serif" }}>
-            Configurez votre expérience TicketFlow
+            Configurez votre expérience TuskFlow
           </Typography>
         </Box>
       </Box>

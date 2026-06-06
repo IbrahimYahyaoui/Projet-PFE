@@ -51,12 +51,12 @@ const createUser = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: "TicketFlow <onboarding@resend.dev>",
+        from: "TuskFlow <onboarding@resend.dev>",
         to: email,
-        subject: "Your TicketFlow Account",
+        subject: "Your TuskFlow Account",
         html: `
           <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px;">
-            <h2 style="color:#111;">Welcome to TicketFlow!</h2>
+            <h2 style="color:#111;">Welcome to TuskFlow!</h2>
             <p style="color:#666;">Hi ${name}, your account has been created.</p>
             <div style="background:#f5f5f5;border-radius:8px;padding:20px;margin:20px 0;">
               <p style="margin:5px 0;"><strong>Email:</strong> ${email}</p>
@@ -176,9 +176,9 @@ const resetPassword = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: "TicketFlow <onboarding@resend.dev>",
+        from: "TuskFlow <onboarding@resend.dev>",
         to: user.email,
-        subject: "TicketFlow — Mot de passe réinitialisé",
+        subject: "TuskFlow — Mot de passe réinitialisé",
         html: `<div style="font-family:Arial;max-width:500px;margin:0 auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px;"><h2>Mot de passe réinitialisé</h2><p>Bonjour ${user.name},</p><p>Votre nouveau mot de passe : <strong>${newPassword}</strong></p><p style="font-size:13px;color:#666;">Veuillez le changer après connexion.</p></div>`,
       });
     } catch (emailErr) {
