@@ -100,14 +100,17 @@ export default function ProjectKanban() {
                     </Box>
                   </Box>
 
-                  {colTasks.map(task => (
+                  {colTasks.map(task => {
+                    const isOverdue = task.dueDate && task.status !== "done" && new Date(task.dueDate) < new Date();
+                    return (
                     <Box
                       key={task._id}
                       draggable
                       onDragStart={() => setDragging(task._id)}
                       onDragEnd={() => setDragging(null)}
                       sx={{
-                        bgcolor: "#fff", borderRadius: "10px", border: `1px solid ${C.border}`,
+                        bgcolor: "#fff", borderRadius: "10px",
+                        border: `1px solid ${isOverdue ? "#DC2626" : C.border}`,
                         p: 1.8, mb: 1.2, cursor: "grab",
                         opacity: dragging === task._id ? 0.5 : 1,
                         transition: "box-shadow 0.15s, opacity 0.15s",
@@ -115,6 +118,12 @@ export default function ProjectKanban() {
                         "&:active": { cursor: "grabbing" },
                       }}
                     >
+                      {isOverdue && (
+                        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.4, bgcolor: "rgba(239,68,68,0.1)", borderRadius: "4px", px: 0.8, py: 0.2, mb: 0.5 }}>
+                          <Box component="i" className="ti ti-alert" sx={{ fontSize: 10, color: "#DC2626" }} />
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", fontWeight: 700, color: "#DC2626" }}>En retard</Typography>
+                        </Box>
+                      )}
                       <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary, mb: 1 }}>{task.title}</Typography>
                       {task.description && (
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, mb: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
@@ -138,8 +147,8 @@ export default function ProjectKanban() {
                         </Box>
                       )}
                     </Box>
-                  ))}
-
+                  );
+                  })}
                   {colTasks.length === 0 && (
                     <Box sx={{ textAlign: "center", py: 4, opacity: 0.4 }}>
                       <Box component="i" className="ti ti-inbox" sx={{ fontSize: 28, color: col.color }} />

@@ -92,12 +92,11 @@ const MODULES: Module[] = [
     path: "/projects",
     permission: "canSeeProjects",
     subItems: [
-      { label: "Projets",   path: "/projects",           icon: "folder-open"   },
-      { label: "Tâches",    path: "/projects/tasks",     icon: "checkbox"      },
-      { label: "Kanban",    path: "/projects/kanban",    icon: "layout-kanban" },
-      { label: "Analytics", path: "/projects/analytics", icon: "chart-bar",    permission: "canSeeProjectAnalytics" },
+      { label: "Tous les projets", path: "/projects",           icon: "folder-open"   },
+      { label: "Mes tâches",       path: "/projects/tasks",     icon: "list-check",   hideForRoles: ["admin"] },
+      { label: "Kanban",           path: "/projects/kanban",    icon: "layout-kanban",hideForRoles: ["admin"] },
+      { label: "Analytics",        path: "/projects/analytics", icon: "chart-donut",  permission: "canSeeProjectAnalytics", hideForRoles: ["tech"] },
     ],
-    // Note: /projects/tasks and /projects/kanban redirect to /projects with state tab
   },
 ];
 

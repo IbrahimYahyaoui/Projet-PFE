@@ -15,11 +15,13 @@ import { C, priorityColors, statusColors } from "../theme";
 
 // ─── Types ───────────────────────────────────────────────────
 interface Member { _id: string; name: string; email: string; role: string }
+interface TeamRef { _id: string; name: string; color: string; tag: string }
 interface Project {
   _id: string; name: string; description: string; status: string;
   priority: string; startDate: string; endDate: string; color: string;
   createdBy: Member; managerId: Member; members: Member[];
   progress: number; totalTasks: number; doneTasks: number; createdAt: string;
+  teamId?: TeamRef | null;
 }
 interface Task {
   _id: string; title: string; description: string; status: string;
@@ -118,8 +120,11 @@ export default function Projects() {
   const [taskProject,  setTaskProject]  = useState("all");
   const [myTasksOnly,  setMyTasksOnly]  = useState(false);
 
+  // Teams list for admin
+  const [allTeams, setAllTeams] = useState<TeamRef[]>([]);
+
   // Forms
-  const [projectForm, setProjectForm] = useState({ name: "", description: "", priority: "medium", color: "#5FC2BA", endDate: "" });
+  const [projectForm, setProjectForm] = useState({ name: "", description: "", priority: "medium", color: "#5FC2BA", endDate: "", teamId: "" });
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "medium", assignedTo: "", dueDate: "" });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -179,6 +184,11 @@ export default function Projects() {
   useEffect(() => {
     fetchAll();
     fetchUsers();
+    if (isAdmin) {
+      const token = localStorage.getItem("token");
+      fetch(`${apiUrl}/api/team/all`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => setAllTeams(Array.isArray(d) ? d : [])).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -208,7 +218,7 @@ export default function Projects() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setCreateDialog(false);
-      setProjectForm({ name: "", description: "", priority: "medium", color: "#5FC2BA", endDate: "" });
+      setProjectForm({ name: "", description: "", priority: "medium", color: "#5FC2BA", endDate: "", teamId: "" });
       fetchAll();
     } catch (err: any) { setFormError(err.message); }
     finally { setFormLoading(false); }
@@ -408,6 +418,12 @@ export default function Projects() {
                         </Box>
 
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.9rem", color: C.navy, mb: 0.5 }}>{project.name}</Typography>
+                        {project.teamId && (
+                          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, bgcolor: `${project.teamId.color}15`, border: `1px solid ${project.teamId.color}40`, borderRadius: "6px", px: 1, py: 0.3, mb: 0.8 }}>
+                            <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: project.teamId.color }} />
+                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, color: project.teamId.color }}>{project.teamId.name}</Typography>
+                          </Box>
+                        )}
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: C.textMuted, mb: 1.5, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                           {project.description || "Aucune description"}
                         </Typography>
@@ -440,7 +456,7 @@ export default function Projects() {
                             )}
                           </Box>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                            {isAdmin && (
+                            {canCreate && (
                               <>
                                 <Tooltip title="Ajouter membre">
                                   <IconButton size="small" onClick={(e) => { e.stopPropagation(); setAddMemberDialog(project._id); }}
@@ -513,12 +529,14 @@ export default function Projects() {
                 sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.68rem", fontWeight: 600,
                   bgcolor: myTasksOnly ? C.accent : C.accentLight, color: myTasksOnly ? C.navy : C.accent,
                   cursor: "pointer", border: `1px solid ${myTasksOnly ? C.accent : "transparent"}` }} />
-              <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
-                {projects.map(p => (
-                  <Chip key={p._id} label={`+ ${p.name}`} size="small" onClick={() => setCreateTaskDialog(p._id)}
-                    sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", fontWeight: 600, bgcolor: C.accentLight, color: C.accent, cursor: "pointer", "&:hover": { bgcolor: C.accent, color: C.navy } }} />
-                ))}
-              </Box>
+              {canCreate && (
+                <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+                  {projects.map(p => (
+                    <Chip key={p._id} label={`+ ${p.name}`} size="small" onClick={() => setCreateTaskDialog(p._id)}
+                      sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", fontWeight: 600, bgcolor: C.accentLight, color: C.accent, cursor: "pointer", "&:hover": { bgcolor: C.accent, color: C.navy } }} />
+                  ))}
+                </Box>
+              )}
             </Box>
 
             {/* Table header */}
@@ -592,9 +610,9 @@ export default function Projects() {
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", fontWeight: 600, color: kanbanProject === p._id ? p.color : C.textMuted }}>{p.name}</Typography>
                   </Box>
                 ))}
-                {kanbanProject && (
+                {kanbanProject && canCreate && (
                   <Button size="small" startIcon={<AddIcon />} onClick={() => setCreateTaskDialog(kanbanProject)}
-                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.5, "&:hover": { bgcolor: C.accentHover } }}>
+                    sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.5, "&:hover": { bgcolor: C.navyMid } }}>
                     Add Task
                   </Button>
                 )}
@@ -719,6 +737,28 @@ export default function Projects() {
           {formError && <Box sx={{ bgcolor: "rgba(239,68,68,0.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "10px", p: 1.5, fontFamily: "Inter, sans-serif", fontSize: "0.82rem" }}>{formError}</Box>}
           <TextField label="Nom du projet" fullWidth value={projectForm.name} onChange={e => setProjectForm(f => ({ ...f, name: e.target.value }))} sx={inputSx} />
           <TextField label="Description" fullWidth multiline rows={3} value={projectForm.description} onChange={e => setProjectForm(f => ({ ...f, description: e.target.value }))} sx={inputSx} />
+          {isAdmin && (
+            <Box>
+              <FormControl fullWidth size="small" sx={inputSx}>
+                <InputLabel>Équipe (optionnel)</InputLabel>
+                <Select value={projectForm.teamId} onChange={e => setProjectForm(f => ({ ...f, teamId: e.target.value }))} label="Équipe (optionnel)">
+                  <MenuItem value=""><em>Aucune équipe</em></MenuItem>
+                  {allTeams.map(t => (
+                    <MenuItem key={t._id} value={t._id}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: t.color, flexShrink: 0 }} />
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px" }}>{t.name}</Typography>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, ml: "auto" }}>{t.tag}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mt: 0.5 }}>
+                Si une équipe est sélectionnée, ses membres sont automatiquement ajoutés au projet.
+              </Typography>
+            </Box>
+          )}
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
             <FormControl fullWidth size="small" sx={inputSx}>
               <InputLabel>Priorité</InputLabel>

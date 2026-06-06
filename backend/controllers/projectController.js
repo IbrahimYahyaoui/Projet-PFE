@@ -2,6 +2,7 @@
 const Project = require('../schemas/project');
 const ProjectTask = require('../schemas/projectTask');
 const User = require('../schemas/user');
+const Team = require('../schemas/team');
 
 // ── GET tous les projets (filtrés par rôle) ──
 const getAllProjects = async (req, res) => {
@@ -25,6 +26,7 @@ const getAllProjects = async (req, res) => {
       .populate('createdBy', 'name email role')
       .populate('managerId', 'name email role')
       .populate('members', 'name email role')
+      .populate('teamId', 'name color tag')
       .sort({ createdAt: -1 });
 
     // Ajouter stats pour chaque projet
@@ -68,19 +70,35 @@ const getProjectById = async (req, res) => {
 // ── CREATE projet ──
 const createProject = async (req, res) => {
   try {
-    const { name, description, priority, startDate, endDate, color, managerId } = req.body;
+    const { name, description, priority, startDate, endDate, color, managerId, teamId } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
 
+    let projectMembers = [req.user.id];
+    let projectManager = managerId || req.user.id;
+    let resolvedTeamId = teamId || null;
+
+    if (teamId) {
+      const team = await Team.findById(teamId).populate('members').populate('leaderId');
+      if (team) {
+        const memberIds = team.members.map(m => m._id.toString());
+        const leaderId  = team.leaderId?._id?.toString();
+        const allIds    = new Set([...memberIds, ...(leaderId ? [leaderId] : [])]);
+        projectMembers  = Array.from(allIds);
+        projectManager  = team.leaderId?._id || req.user.id;
+      }
+    }
+
     const project = await Project.create({
-      name: name.trim(),
+      name:        name.trim(),
       description: description?.trim() || '',
-      priority: priority || 'medium',
-      startDate: startDate || null,
-      endDate: endDate || null,
-      color: color || '#5FC2BA',
-      managerId: managerId || req.user.id,
-      createdBy: req.user.id,
-      members: [req.user.id],
+      priority:    priority || 'medium',
+      startDate:   startDate || null,
+      endDate:     endDate   || null,
+      color:       color || '#5FC2BA',
+      managerId:   projectManager,
+      createdBy:   req.user.id,
+      members:     projectMembers,
+      teamId:      resolvedTeamId,
     });
 
     await project.populate('createdBy', 'name email role');
