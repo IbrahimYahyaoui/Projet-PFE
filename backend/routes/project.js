@@ -8,13 +8,7 @@ const {
 const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 const Project = require('../schemas/project');
 
-// FIX 6 — Admin ou Leader uniquement
-const verifyManagerOrAdmin = (req, res, next) => {
-  if (['admin', 'leader'].includes(req.user.role)) return next();
-  return res.status(403).json({ message: 'Admin ou Leader requis' });
-};
-
-// FIX 6 — Membre du projet, leader ou admin
+// Middleware : accès lecture au projet (admin, leader membre, tech membre)
 const verifyProjectAccess = async (req, res, next) => {
   try {
     if (req.user.role === 'admin') return next();
@@ -22,30 +16,49 @@ const verifyProjectAccess = async (req, res, next) => {
     if (!project) return res.status(404).json({ message: 'Projet non trouvé' });
     const isMember = project.members.some(m => m.toString() === req.user.id) ||
       project.managerId?.toString() === req.user.id;
-    if (!isMember) return res.status(403).json({ message: "Accès refusé : vous n'êtes pas membre de ce projet" });
+    if (!isMember) return res.status(403).json({ message: "Accès refusé" });
     next();
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
+};
+
+// Middleware : leader du projet uniquement (pas admin)
+const verifyProjectLeader = async (req, res, next) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Projet non trouvé' });
+    const isManager = project.managerId?.toString() === req.user.id ||
+      project.createdBy?.toString() === req.user.id;
+    if (req.user.role !== 'leader' || !isManager) {
+      return res.status(403).json({ message: "Seul le leader responsable du projet peut faire cela" });
+    }
+    next();
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
 };
 
 const router = express.Router();
 
-router.get('/stats',    verifyToken, verifyManagerOrAdmin, getProjectStats);
-router.get('/',         verifyToken, getAllProjects);          // controller filtre par rôle
-router.get('/:id',      verifyToken, verifyProjectAccess, getProjectById);
+// Projets — CRUD
+router.get('/stats', verifyToken, verifyAdmin, getProjectStats);
+router.get('/',      verifyToken, getAllProjects);
+router.get('/:id',   verifyToken, verifyProjectAccess, getProjectById);
 
-router.post('/',        verifyToken, verifyManagerOrAdmin, createProject);
-router.put('/:id',      verifyToken, verifyManagerOrAdmin, updateProject);
-router.delete('/:id',   verifyToken, verifyAdmin,          deleteProject); // admin seulement
+// Admin seul : créer, modifier infos, supprimer
+router.post('/',      verifyToken, verifyAdmin, createProject);
+router.put('/:id',    verifyToken, verifyAdmin, updateProject);
+router.delete('/:id', verifyToken, verifyAdmin, deleteProject);
 
-router.post('/:id/members',           verifyToken, verifyManagerOrAdmin, addMember);
-router.delete('/:id/members/:userId', verifyToken, verifyManagerOrAdmin, removeMember);
+// Leader seul : gérer les membres
+router.post('/:id/members',           verifyToken, verifyProjectLeader, addMember);
+router.delete('/:id/members/:userId', verifyToken, verifyProjectLeader, removeMember);
 
-router.get('/:id/tasks',              verifyToken, verifyProjectAccess, getProjectTasks);
-router.post('/:id/tasks',             verifyToken, verifyManagerOrAdmin, createTask);
-router.put('/:id/tasks/:taskId',      verifyToken, verifyProjectAccess,  updateTask); // controller restreint tech
-router.delete('/:id/tasks/:taskId',   verifyToken, verifyManagerOrAdmin, deleteTask);
+// Tâches
+router.get('/:id/tasks',  verifyToken, verifyProjectAccess, getProjectTasks);
+// Leader seul : créer et supprimer des tâches
+router.post('/:id/tasks',           verifyToken, verifyProjectLeader, createTask);
+router.delete('/:id/tasks/:taskId', verifyToken, verifyProjectLeader, deleteTask);
+// Modifier une tâche : leader (titre/priorité/assigné) ou tech (statut uniquement)
+router.put('/:id/tasks/:taskId', verifyToken, verifyProjectAccess, updateTask);
+// Commenter : tous les membres + admin
 router.post('/:id/tasks/:taskId/comments', verifyToken, verifyProjectAccess, addComment);
 
 module.exports = router;

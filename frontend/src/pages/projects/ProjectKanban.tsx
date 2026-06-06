@@ -26,6 +26,11 @@ const COLUMNS = [
 ];
 
 export default function ProjectKanban() {
+  const storedUser  = localStorage.getItem("user");
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const isTech      = currentUser?.role === "tech";
+  const techId      = currentUser?.id ?? currentUser?._id ?? "";
+
   const [projects,  setProjects]   = useState<Project[]>([]);
   const [tasks,     setTasks]      = useState<Task[]>([]);
   const [projectId, setProjectId]  = useState<string>("");
@@ -53,6 +58,7 @@ export default function ProjectKanban() {
   }, [projectId]);
 
   const handleDrop = async (targetStatus: string) => {
+    if (!isTech) return; // Seul le tech peut changer le statut via drag & drop
     if (!dragging || !dragOver.current) return;
     const task = tasks.find(t => t._id === dragging);
     if (!task || task.status === targetStatus) return;
@@ -105,7 +111,7 @@ export default function ProjectKanban() {
                     return (
                     <Box
                       key={task._id}
-                      draggable
+                      draggable={isTech && task.assignedTo?._id === techId}
                       onDragStart={() => setDragging(task._id)}
                       onDragEnd={() => setDragging(null)}
                       sx={{

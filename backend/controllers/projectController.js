@@ -70,21 +70,24 @@ const getProjectById = async (req, res) => {
 // ── CREATE projet ──
 const createProject = async (req, res) => {
   try {
-    const { name, description, priority, startDate, endDate, color, managerId, teamId } = req.body;
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Seul l'admin peut créer un projet" });
+    }
+    const { name, description, priority, startDate, endDate, color, teamId } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
 
-    let projectMembers = [req.user.id];
-    let projectManager = managerId || req.user.id;
+    let projectMembers = [];
+    let projectManager = null;
     let resolvedTeamId = teamId || null;
 
     if (teamId) {
-      const team = await Team.findById(teamId).populate('members').populate('leaderId');
+      const team = await Team.findById(teamId).populate('members', '_id').populate('leaderId', '_id');
       if (team) {
         const memberIds = team.members.map(m => m._id.toString());
         const leaderId  = team.leaderId?._id?.toString();
         const allIds    = new Set([...memberIds, ...(leaderId ? [leaderId] : [])]);
         projectMembers  = Array.from(allIds);
-        projectManager  = team.leaderId?._id || req.user.id;
+        projectManager  = team.leaderId?._id || null;
       }
     }
 
@@ -94,7 +97,7 @@ const createProject = async (req, res) => {
       priority:    priority || 'medium',
       startDate:   startDate || null,
       endDate:     endDate   || null,
-      color:       color || '#5FC2BA',
+      color:       color     || '#1C2942',
       managerId:   projectManager,
       createdBy:   req.user.id,
       members:     projectMembers,
@@ -102,9 +105,12 @@ const createProject = async (req, res) => {
     });
 
     await project.populate('createdBy', 'name email role');
+    await project.populate('managerId', 'name email role');
+    await project.populate('members', 'name email role');
+    await project.populate('teamId', 'name color tag');
     res.status(201).json(project);
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -228,18 +234,24 @@ const updateTask = async (req, res) => {
     const task = await ProjectTask.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    // CORRECTION 4 — Tech : uniquement le statut de ses propres tâches
+    // ADMIN : lecture seule, ne peut pas modifier les tâches
+    if (role === 'admin') {
+      return res.status(403).json({ message: "L'admin ne modifie pas les tâches" });
+    }
+
+    // TECH : uniquement le statut de ses propres tâches
     if (role === 'tech') {
       const isAssigned = task.assignedTo?.toString() === id;
-      if (!isAssigned) return res.status(403).json({ message: 'Cette tâche ne vous est pas assignée' });
-
-      // Rejeter si le body contient autre chose que "status"
-      const allowedKeys = ['status'];
-      const hasDisallowed = Object.keys(req.body).some(k => !allowedKeys.includes(k));
-      if (hasDisallowed || !req.body.status) {
-        return res.status(403).json({ message: "Un technicien ne peut modifier que le statut d'une tâche" });
+      if (!isAssigned) {
+        return res.status(403).json({ message: 'Cette tâche ne vous est pas assignée' });
       }
-
+      if (!req.body.status) {
+        return res.status(400).json({ message: 'status requis' });
+      }
+      const validStatuses = ['todo', 'in_progress', 'review', 'done'];
+      if (!validStatuses.includes(req.body.status)) {
+        return res.status(400).json({ message: 'Statut invalide' });
+      }
       const updated = await ProjectTask.findByIdAndUpdate(
         req.params.taskId,
         { status: req.body.status },
@@ -248,18 +260,27 @@ const updateTask = async (req, res) => {
       return res.json(updated);
     }
 
-    const { title, description, status, priority, assignedTo, dueDate } = req.body;
-    const updated = await ProjectTask.findByIdAndUpdate(
-      req.params.taskId,
-      { title, description, status, priority, assignedTo, dueDate },
-      { new: true }
-    )
-      .populate('assignedTo', 'name email role')
-      .populate('createdBy', 'name email role');
+    // LEADER : peut modifier tout SAUF le statut
+    if (role === 'leader') {
+      if (req.body.status !== undefined && req.body.status !== task.status) {
+        return res.status(403).json({
+          message: "Le leader ne change pas le statut. C'est le rôle du technicien assigné."
+        });
+      }
+      const { title, description, priority, assignedTo, dueDate } = req.body;
+      const updated = await ProjectTask.findByIdAndUpdate(
+        req.params.taskId,
+        { ...(title && { title }), ...(description !== undefined && { description }),
+          ...(priority && { priority }), ...(assignedTo !== undefined && { assignedTo }),
+          ...(dueDate !== undefined && { dueDate }) },
+        { new: true }
+      ).populate('assignedTo', 'name email role').populate('createdBy', 'name email role');
+      return res.json(updated);
+    }
 
-    res.json(updated);
+    return res.status(403).json({ message: 'Non autorisé' });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };

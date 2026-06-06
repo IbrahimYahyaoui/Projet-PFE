@@ -129,8 +129,12 @@ export default function ProjectDetail() {
 
   const storedUser  = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
-  const canManage   = ["admin", "leader"].includes(currentUser?.role ?? "");
-  const isAdmin     = currentUser?.role === "admin";
+  const currentRole     = currentUser?.role ?? "user";
+  const currentId       = currentUser?.id ?? currentUser?._id ?? "";
+  const isAdmin         = currentRole === "admin";
+  const isLeader        = currentRole === "leader";
+  const isTech          = currentRole === "tech";
+  const canManage       = isLeader; // legacy — leader only now
 
   const [project,    setProject]    = useState<Project | null>(null);
   const [tasks,      setTasks]      = useState<Task[]>([]);
@@ -176,6 +180,7 @@ export default function ProjectDetail() {
 
   // ── Kanban drop ────────────────────────────────────────────
   const handleDrop = async (status: string) => {
+    if (!isTech) return; // Seul le tech peut changer le statut via drag & drop
     if (!dragTask || dragTask.status === status) return;
     const token = localStorage.getItem("token");
     await fetch(`${apiUrl}/api/projects/${id}/tasks/${dragTask._id}`, {
@@ -306,6 +311,13 @@ export default function ProjectDetail() {
     );
   }
 
+  const isProjectLeader  = project.managerId?._id === currentId || (project.managerId as any) === currentId;
+  const canEditProject   = isAdmin;
+  const canManageMembers = isLeader && isProjectLeader;
+  const canManageTasks   = isLeader && isProjectLeader;
+  const canChangeStatus  = isTech;
+  const myTasks          = tasks.filter(t => t.assignedTo?._id === currentId);
+
   const sc = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.planning;
   const deadlineDays = project.endDate ? Math.ceil((new Date(project.endDate).getTime() - Date.now()) / 86400000) : null;
   const isDeadlineSoon = deadlineDays !== null && deadlineDays <= 7 && deadlineDays >= 0;
@@ -371,14 +383,14 @@ export default function ProjectDetail() {
 
           {/* Actions */}
           <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
-            {canManage && (
+            {canManageTasks && (
               <Button onClick={() => { setNewTaskStatus("todo"); setCreateTaskDialog(true); }}
                 startIcon={<Box component="i" className="ti ti-plus" sx={{ fontSize: 14 }} />}
-                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "9px", textTransform: "none", fontSize: "13px", px: 2, "&:hover": { bgcolor: C.accentHover } }}>
+                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff", borderRadius: "9px", textTransform: "none", fontSize: "13px", px: 2, "&:hover": { bgcolor: C.navyMid } }}>
                 Nouvelle tâche
               </Button>
             )}
-            {canManage && (
+            {canEditProject && (
               <Tooltip title="Paramètres du projet">
                 <IconButton onClick={() => setEditDialog(true)}
                   sx={{ border: `1px solid ${C.border}`, borderRadius: "9px", color: C.textMuted, "&:hover": { color: C.accent, borderColor: C.accent } }}>
@@ -406,6 +418,23 @@ export default function ProjectDetail() {
 
         {/* ════ BOARD TAB ════ */}
         {activeTab === "board" && (
+          <Box>
+          {isAdmin && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "10px 14px", bgcolor: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "10px", mb: 2 }}>
+              <Box component="i" className="ti ti-eye" sx={{ fontSize: 15, color: "#3B82F6" }} />
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: "#3B82F6", fontWeight: 500 }}>
+                Mode supervision — vous consultez ce projet sans intervenir sur les tâches
+              </Typography>
+            </Box>
+          )}
+          {isTech && myTasks.length === 0 && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "10px 14px", bgcolor: C.warningBg, border: `1px solid ${C.warning}40`, borderRadius: "10px", mb: 2 }}>
+              <Box component="i" className="ti ti-info-circle" sx={{ fontSize: 15, color: C.warning }} />
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.warning, fontWeight: 500 }}>
+                Aucune tâche ne vous est encore assignée dans ce projet
+              </Typography>
+            </Box>
+          )}
           <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
             {Object.entries(TASK_STATUS).map(([status, config]) => {
               const colTasks = tasks.filter(t => t.status === status);
@@ -422,7 +451,7 @@ export default function ProjectDetail() {
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "11px", color: config.color }}>{colTasks.length}</Typography>
                       </Box>
                     </Box>
-                    {canManage && (
+                    {canManageTasks && (
                       <Tooltip title="Ajouter une tâche">
                         <IconButton size="small" onClick={() => { setNewTaskStatus(status); setCreateTaskDialog(true); }}
                           sx={{ color: C.textMuted, "&:hover": { color: C.accent } }}>
@@ -448,6 +477,7 @@ export default function ProjectDetail() {
               );
             })}
           </Box>
+          </Box>
         )}
 
         {/* ════ TASKS TAB ════ */}
@@ -465,10 +495,10 @@ export default function ProjectDetail() {
                       border: `1px solid ${taskStatusFilter === s ? (cfg?.color ?? C.accent) : C.border}` }} />
                 );
               })}
-              {canManage && (
+              {canManageTasks && (
                 <Button size="small" startIcon={<AddIcon sx={{ fontSize: 13 }} />}
                   onClick={() => { setNewTaskStatus("todo"); setCreateTaskDialog(true); }}
-                  sx={{ ml: "auto", fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", "&:hover": { bgcolor: C.accentHover } }}>
+                  sx={{ ml: "auto", fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", "&:hover": { bgcolor: C.navyMid } }}>
                   Nouvelle tâche
                 </Button>
               )}
@@ -528,9 +558,9 @@ export default function ProjectDetail() {
               <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px", color: C.navy }}>
                 {project.members.length} membre{project.members.length !== 1 ? "s" : ""}
               </Typography>
-              {canManage && (
+              {canManageMembers && (
                 <Button startIcon={<AddIcon />} onClick={() => setAddMemberDialog(true)}
-                  sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "9px", textTransform: "none", fontSize: "13px", "&:hover": { bgcolor: C.accentHover } }}>
+                  sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff", borderRadius: "9px", textTransform: "none", fontSize: "13px", "&:hover": { bgcolor: C.navyMid } }}>
                   Ajouter un membre
                 </Button>
               )}
@@ -556,7 +586,7 @@ export default function ProjectDetail() {
                       <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>
                         {memberTasks.length} tâche{memberTasks.length !== 1 ? "s" : ""} assignée{memberTasks.length !== 1 ? "s" : ""}
                       </Typography>
-                      {canManage && !isCreator && (
+                      {canManageMembers && !isCreator && (
                         <Button size="small" onClick={() => handleRemoveMember(member._id)}
                           sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, textTransform: "none", color: "#DC2626", bgcolor: "rgba(239,68,68,0.06)", borderRadius: "6px", "&:hover": { bgcolor: "rgba(239,68,68,0.12)" } }}>
                           Retirer
@@ -659,21 +689,53 @@ export default function ProjectDetail() {
               <Box sx={{ flex: 1, overflow: "auto", p: 2.5, display: "flex", flexDirection: "column", gap: 2 }}>
                 {/* Fields */}
                 <Box sx={{ bgcolor: "#fff", borderRadius: "12px", border: `1px solid ${C.border}`, p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  {isAdmin && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: "8px 12px", bgcolor: "rgba(59,130,246,0.06)", borderRadius: "8px", border: "1px solid rgba(59,130,246,0.2)" }}>
+                      <Box component="i" className="ti ti-eye" sx={{ fontSize: 13, color: "#3B82F6" }} />
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: "#3B82F6", fontWeight: 500 }}>
+                        Vous supervisez ce projet. Les tâches sont gérées par le Team Lead.
+                      </Typography>
+                    </Box>
+                  )}
                   <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-                    <FormControl size="small" fullWidth sx={inputSx}>
-                      <InputLabel>Statut</InputLabel>
-                      <Select value={selectedTask.status} onChange={e => handleUpdateTask("status", e.target.value)} label="Statut">
-                        {Object.entries(TASK_STATUS).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                    <FormControl size="small" fullWidth sx={inputSx}>
-                      <InputLabel>Priorité</InputLabel>
-                      <Select value={selectedTask.priority} onChange={e => handleUpdateTask("priority", e.target.value)} label="Priorité">
-                        {Object.entries(PRIORITY_CONFIG).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
-                      </Select>
-                    </FormControl>
+                    {/* Statut — tech uniquement si tâche lui est assignée */}
+                    {isTech ? (
+                      selectedTask.assignedTo?._id === currentId ? (
+                        <FormControl size="small" fullWidth sx={inputSx}>
+                          <InputLabel>Statut</InputLabel>
+                          <Select value={selectedTask.status} onChange={e => handleUpdateTask("status", e.target.value)} label="Statut">
+                            {Object.entries(TASK_STATUS).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        <Box sx={{ px: 1.5, py: 1, bgcolor: C.bgPage, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>Statut</Typography>
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{TASK_STATUS[selectedTask.status]?.label ?? selectedTask.status}</Typography>
+                        </Box>
+                      )
+                    ) : (
+                      <Box sx={{ px: 1.5, py: 1, bgcolor: C.bgPage, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>Statut</Typography>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{TASK_STATUS[selectedTask.status]?.label ?? selectedTask.status}</Typography>
+                      </Box>
+                    )}
+                    {/* Priorité — leader uniquement */}
+                    {isLeader ? (
+                      <FormControl size="small" fullWidth sx={inputSx}>
+                        <InputLabel>Priorité</InputLabel>
+                        <Select value={selectedTask.priority} onChange={e => handleUpdateTask("priority", e.target.value)} label="Priorité">
+                          {Object.entries(PRIORITY_CONFIG).map(([k,v]) => <MenuItem key={k} value={k}>{v.label}</MenuItem>)}
+                        </Select>
+                      </FormControl>
+                    ) : (
+                      <Box sx={{ px: 1.5, py: 1, bgcolor: C.bgPage, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>Priorité</Typography>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{PRIORITY_CONFIG[selectedTask.priority]?.label ?? selectedTask.priority}</Typography>
+                      </Box>
+                    )}
                   </Box>
-                  {canManage && (
+                  {/* Assigné à — leader uniquement */}
+                  {isLeader ? (
                     <FormControl size="small" fullWidth sx={inputSx}>
                       <InputLabel>Assigné à</InputLabel>
                       <Select value={selectedTask.assignedTo?._id ?? ""} onChange={e => handleUpdateTask("assignedTo", e.target.value)} label="Assigné à">
@@ -681,18 +743,21 @@ export default function ProjectDetail() {
                         {project.members.map(u => <MenuItem key={u._id} value={u._id}>{u.name}</MenuItem>)}
                       </Select>
                     </FormControl>
-                  )}
-                  {!canManage && (
+                  ) : (
                     <Box sx={{ px: 1.5, py: 1, bgcolor: C.bgPage, borderRadius: "8px", border: `1px solid ${C.border}` }}>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>
-                        Assigné à
-                      </Typography>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>
-                        {selectedTask.assignedTo?.name ?? "Non assigné"}
-                      </Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>Assigné à</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{selectedTask.assignedTo?.name ?? "Non assigné"}</Typography>
                     </Box>
                   )}
-                  <TextField size="small" label="Date limite" type="date" fullWidth value={selectedTask.dueDate?.slice(0,10) ?? ""} onChange={e => handleUpdateTask("dueDate", e.target.value)} sx={inputSx} InputLabelProps={{ shrink: true }} />
+                  {/* Date limite — leader uniquement */}
+                  {isLeader ? (
+                    <TextField size="small" label="Date limite" type="date" fullWidth value={selectedTask.dueDate?.slice(0,10) ?? ""} onChange={e => handleUpdateTask("dueDate", e.target.value)} sx={inputSx} InputLabelProps={{ shrink: true }} />
+                  ) : selectedTask.dueDate ? (
+                    <Box sx={{ px: 1.5, py: 1, bgcolor: C.bgPage, borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 0.3 }}>Date limite</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{formatDate(selectedTask.dueDate)}</Typography>
+                    </Box>
+                  ) : null}
                 </Box>
 
                 {/* Description */}
@@ -753,7 +818,7 @@ export default function ProjectDetail() {
               </Box>
 
               {/* Footer */}
-              {canManage && (
+              {isLeader && (
                 <Box sx={{ p: 2.5, borderTop: `1px solid ${C.border}`, bgcolor: "#fff" }}>
                   <Button fullWidth onClick={handleDeleteTask}
                     sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", borderRadius: "9px", bgcolor: "rgba(239,68,68,0.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { bgcolor: "rgba(239,68,68,0.14)" } }}>

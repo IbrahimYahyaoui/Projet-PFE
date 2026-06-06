@@ -131,9 +131,14 @@ export default function Projects() {
 
   const storedUser = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
-  const isAdmin   = currentUser?.role === "admin";
-  const canCreate = ["admin", "leader"].includes(currentUser?.role ?? "");
-  const currentUserId = currentUser?.id ?? currentUser?._id ?? "";
+  const isAdmin          = currentUser?.role === "admin";
+  const isLeader         = currentUser?.role === "leader";
+  const isTech           = currentUser?.role === "tech";
+  const canCreateProject = isAdmin;
+  const canManageTasks   = isLeader;
+  const canManageMembers = isLeader;
+  const canCreate        = canCreateProject; // legacy alias
+  const currentUserId    = currentUser?.id ?? currentUser?._id ?? "";
 
   // ── Fetch ──────────────────────────────────────────────────
   const fetchAll = async () => {
@@ -270,6 +275,7 @@ export default function Projects() {
 
   // ── Kanban drag & drop ─────────────────────────────────────
   const handleDrop = async (status: string) => {
+    if (!isTech) return; // Seul le tech peut changer le statut via drag & drop
     if (!dragTask || dragTask.status === status) return;
     try {
       const token = localStorage.getItem("token");
@@ -347,7 +353,7 @@ export default function Projects() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Q2 2026
           </Typography>
-          {canCreate && (
+          {canCreateProject && (
             <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 14 }} />} onClick={() => setCreateDialog(true)}
               sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, bgcolor: C.accent, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.78rem", px: 2, py: 0.8, "&:hover": { bgcolor: C.accentHover } }}>
               New Project
@@ -456,7 +462,7 @@ export default function Projects() {
                             )}
                           </Box>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                            {canCreate && (
+                            {canManageMembers && (
                               <>
                                 <Tooltip title="Ajouter membre">
                                   <IconButton size="small" onClick={(e) => { e.stopPropagation(); setAddMemberDialog(project._id); }}
@@ -610,7 +616,7 @@ export default function Projects() {
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", fontWeight: 600, color: kanbanProject === p._id ? p.color : C.textMuted }}>{p.name}</Typography>
                   </Box>
                 ))}
-                {kanbanProject && canCreate && (
+                {kanbanProject && canManageTasks && (
                   <Button size="small" startIcon={<AddIcon />} onClick={() => setCreateTaskDialog(kanbanProject)}
                     sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.5, "&:hover": { bgcolor: C.navyMid } }}>
                     Add Task
