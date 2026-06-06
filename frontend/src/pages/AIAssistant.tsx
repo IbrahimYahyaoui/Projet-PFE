@@ -70,31 +70,35 @@ const nextMissing = (d: TicketDraft): TicketField | null => {
   return null;
 };
 
-const ROLE_SUGGESTIONS: Record<string, { icon: string; label: string; msg: string }[]> = {
+const ROLE_SUGGESTIONS: Record<string, ActionChip[]> = {
   admin: [
-    { icon: "ti ti-chart-bar", label: "Résumé des SLA",       msg: "Donne-moi un résumé des alertes SLA actuelles" },
-    { icon: "ti ti-inbox",     label: "File d'attente",        msg: "Quels tickets sont en attente d'assignation ?" },
-    { icon: "ti ti-users",     label: "Charge des équipes",    msg: "Comment se répartit la charge de travail entre les équipes ?" },
-    { icon: "ti ti-ticket",    label: "Créer un ticket",       msg: "Je veux créer un nouveau ticket de support" },
+    { label: "Résumé des SLA",     value: "Donne-moi un résumé des SLA actuels",           bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+    { label: "File d'attente",     value: "Quels tickets n'ont pas encore été assignés ?",  bgcolor: C.warningBg,   textColor: C.warning, borderColor: `${C.warning}40` },
+    { label: "Charge des équipes", value: "Quel est l'état de charge de mes équipes ?",     bgcolor: C.successBg,   textColor: C.success, borderColor: `${C.success}40` },
+    { label: "Créer un ticket",    value: "__start_ticket__",                                bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
   ],
   leader: [
-    { icon: "ti ti-user-check",  label: "Assigner tickets",   msg: "Quels tickets dois-je assigner à mon équipe ?" },
-    { icon: "ti ti-chart-line",  label: "Performance équipe",  msg: "Comment se porte la performance de mon équipe ?" },
-    { icon: "ti ti-alert-triangle", label: "Escalades",        msg: "Y a-t-il des tickets escaladés qui nécessitent mon attention ?" },
-    { icon: "ti ti-ticket",    label: "Créer un ticket",       msg: "Je veux créer un nouveau ticket" },
+    { label: "Charge de mon équipe",  value: "Quel est l'état de charge de mon équipe ?",        bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+    { label: "Tickets SLA en danger", value: "Quels tickets de mon équipe ont un SLA en danger ?",bgcolor: C.dangerBg,   textColor: C.danger, borderColor: `${C.danger}40` },
+    { label: "Résumé de mon équipe",  value: "Donne-moi un résumé de l'activité de mon équipe",  bgcolor: C.successBg,   textColor: C.success, borderColor: `${C.success}40` },
   ],
   tech: [
-    { icon: "ti ti-list-check",  label: "Mes tickets",        msg: "Quels sont mes tickets assignés en cours ?" },
-    { icon: "ti ti-tool",        label: "Dépannage",           msg: "J'ai besoin d'aide pour diagnostiquer un problème technique" },
-    { icon: "ti ti-book",        label: "Base de connaissances", msg: "Cherche-moi des articles sur la résolution de tickets réseau" },
-    { icon: "ti ti-ticket",      label: "Créer un ticket",     msg: "Je veux créer un nouveau ticket" },
+    { label: "Mes tickets assignés",  value: "Quels tickets me sont assignés en ce moment ?",      bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+    { label: "Aide au dépannage",     value: "J'ai besoin d'aide pour résoudre un problème technique", bgcolor: C.warningBg, textColor: C.warning, borderColor: `${C.warning}40` },
+    { label: "Rechercher dans la KB", value: "Cherche dans la base de connaissances",               bgcolor: C.successBg,   textColor: C.success, borderColor: `${C.success}40` },
   ],
   user: [
-    { icon: "ti ti-ticket",      label: "Créer un ticket",    msg: "Je veux créer un nouveau ticket de support" },
-    { icon: "ti ti-clock",       label: "Mes tickets",         msg: "Quels sont mes tickets en cours ?" },
-    { icon: "ti ti-help",        label: "Comment ça marche ?", msg: "Comment fonctionne le système de tickets ?" },
-    { icon: "ti ti-urgent",      label: "Problème urgent",     msg: "J'ai un problème urgent qui bloque mon travail" },
+    { label: "J'ai un problème",  value: "J'ai un problème informatique à signaler",           bgcolor: C.accentLight, textColor: C.accent, borderColor: C.accentMid },
+    { label: "Mes tickets",       value: "Quel est l'état de mes tickets ?",                   bgcolor: C.warningBg,   textColor: C.warning, borderColor: `${C.warning}40` },
+    { label: "Créer un ticket",   value: "__start_ticket__",                                   bgcolor: C.successBg,   textColor: C.success, borderColor: `${C.success}40` },
   ],
+};
+
+const WELCOME_MSG: Record<string, string> = {
+  admin:  "Je suis votre assistant IA TuskFlow. Je peux vous donner un résumé des tickets, des alertes SLA, la charge des équipes et vous aider à superviser la plateforme.",
+  leader: "Je suis votre assistant IA TuskFlow. Je peux vous aider à gérer votre équipe, analyser la charge de travail et surveiller les SLA.",
+  tech:   "Je suis votre assistant IA TuskFlow. Je peux vous aider à résoudre des problèmes techniques, rechercher dans la base de connaissances et consulter vos tickets assignés.",
+  user:   "Je suis votre assistant IA TuskFlow. Décrivez-moi votre problème et je vous aiderai à trouver une solution. Si nécessaire, je vous guiderai pour créer un ticket.",
 };
 
 const CAT_COLORS: Record<string, string> = { hardware: "#EA580C", software: "#2563EB", network: "#16A34A", access: "#7C3AED", general: C.accent, other: "#64748B" };
@@ -275,6 +279,10 @@ export default function AIAssistant() {
   };
 
   const startTicket = () => {
+    if (role === "tech") {
+      addMsg({ role: "ai", text: "En tant que technicien, vous ne créez pas de tickets. Si vous avez besoin d'aide, contactez votre Team Lead ou cherchez dans la base de connaissances." });
+      return;
+    }
     setMode("ticket");
     setDraft({});
     setAwaitField(null);
@@ -327,6 +335,7 @@ export default function AIAssistant() {
 
   const handleChip = (chip: ActionChip) => {
     if (loading) return;
+    if (chip.value === "__start_ticket__") { startTicket(); return; }
     if (chip.value.startsWith("__suggestion__")) { sendChat(chip.label); return; }
     if (chip.value === "confirm") { createTicket(); return; }
     if (chip.value === "cancel") {
@@ -402,11 +411,15 @@ export default function AIAssistant() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
             {suggestions.map(s => (
               <Box
-                key={s.msg}
-                onClick={() => { if (mode !== "chat") newConversation(); sendChat(s.msg); }}
+                key={s.value}
+                onClick={() => {
+                  if (s.value === "__start_ticket__") { startTicket(); return; }
+                  if (mode !== "chat") newConversation();
+                  sendChat(s.value);
+                }}
                 sx={{ display: "flex", alignItems: "center", gap: 1.2, px: 1.5, py: 0.9, borderRadius: "8px", cursor: "pointer", "&:hover": { bgcolor: C.bgPage }, transition: "background 0.12s" }}
               >
-                <Box component="i" className={s.icon} sx={{ fontSize: 14, color: C.accent, flexShrink: 0 }} />
+                <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: s.textColor ?? C.accent, flexShrink: 0 }} />
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary, lineHeight: 1.3 }}>{s.label}</Typography>
               </Box>
             ))}
@@ -492,7 +505,7 @@ export default function AIAssistant() {
                   Bonjour {userName} !
                 </Typography>
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted, lineHeight: 1.6 }}>
-                  Je suis votre assistant IA TuskFlow. Je peux vous aider à gérer vos tickets,<br />trouver des solutions et analyser vos données.
+                  {WELCOME_MSG[role] ?? WELCOME_MSG.user}
                 </Typography>
               </Box>
 

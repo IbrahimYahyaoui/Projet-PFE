@@ -115,10 +115,10 @@ export default function CompanyContext() {
         </Box>
         <Box>
           <Typography variant="h5" sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>
-            Company AI Context
+            Contexte IA de l'entreprise
           </Typography>
           <Typography variant="body2" sx={{ color: C.textMuted, fontFamily: "Inter, sans-serif" }}>
-            Saved to the database — the AI chatbot pulls this automatically for every user session.
+            Sauvegardé — le chatbot IA utilise ces informations pour chaque session
           </Typography>
         </Box>
       </Box>
@@ -129,7 +129,7 @@ export default function CompanyContext() {
       {saved && (
         <Alert severity="success" icon={<CheckIcon />}
           sx={{ mb: 3, bgcolor: C.successBg, color: C.success, border: `1px solid ${C.success}40`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.success } }}>
-          Saved to database — all users will now have this context in their AI sessions.
+          Sauvegardé — tous les utilisateurs bénéficient de ce contexte dans leurs sessions IA
         </Alert>
       )}
 
@@ -138,35 +138,35 @@ export default function CompanyContext() {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 3, py: 2, bgcolor: C.bgPage, borderBottom: `1px solid ${C.border}` }}>
           <BusinessIcon sx={{ color: C.accent, fontSize: 18 }} />
           <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.85rem", color: C.textPrimary, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Company Information
+            Informations de l'entreprise
           </Typography>
         </Box>
 
         <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2.5 }}>
-            <TextField label="Company Name"     value={data.name}     onChange={set("name")}     sx={inputSx} />
-            <TextField label="Industry / Sector" value={data.industry} onChange={set("industry")} sx={inputSx} />
+            <TextField label="Nom de l'entreprise" value={data.name}     onChange={set("name")}     sx={inputSx} />
+            <TextField label="Secteur d'activité"  value={data.industry} onChange={set("industry")} sx={inputSx} />
           </Box>
 
-          <TextField label="Company Description" multiline rows={3} value={data.description}
-            onChange={set("description")} placeholder="Brief description of the company, its size, location, etc." sx={inputSx} />
+          <TextField label="Description de l'entreprise" multiline rows={3} value={data.description}
+            onChange={set("description")} placeholder="Courte description de l'entreprise, sa taille, sa localisation, etc." sx={inputSx} />
 
           <Divider sx={{ borderColor: C.divider }} />
 
-          <TextField label="Products / Services" multiline rows={3} value={data.services}
-            onChange={set("services")} placeholder="List main products or services the support team handles." sx={inputSx} />
+          <TextField label="Produits / Services" multiline rows={3} value={data.services}
+            onChange={set("services")} placeholder="Listez les principaux produits ou services gérés par le support." sx={inputSx} />
 
-          <TextField label="Support Policies" multiline rows={3} value={data.supportPolicies}
-            onChange={set("supportPolicies")} placeholder="SLA targets, working hours, priority definitions, ticket types, etc." sx={inputSx} />
+          <TextField label="Politiques de support" multiline rows={3} value={data.supportPolicies}
+            onChange={set("supportPolicies")} placeholder="Objectifs SLA, heures de travail, définitions de priorité, types de tickets, etc." sx={inputSx} />
 
-          <TextField label="Common Issues & Resolutions" multiline rows={4} value={data.commonIssues}
-            onChange={set("commonIssues")} placeholder="Frequently recurring issues and their standard resolution steps. The AI uses these to suggest fixes." sx={inputSx} />
+          <TextField label="Problèmes fréquents & Résolutions" multiline rows={4} value={data.commonIssues}
+            onChange={set("commonIssues")} placeholder="Problèmes récurrents et leurs étapes de résolution standard. L'IA les utilise pour suggérer des solutions." sx={inputSx} />
 
-          <TextField label="Escalation Process" multiline rows={2} value={data.escalationProcess}
-            onChange={set("escalationProcess")} placeholder="When and how to escalate tickets — who to contact, thresholds, etc." sx={inputSx} />
+          <TextField label="Processus d'escalade" multiline rows={2} value={data.escalationProcess}
+            onChange={set("escalationProcess")} placeholder="Quand et comment escalader les tickets — qui contacter, seuils, etc." sx={inputSx} />
 
-          <TextField label="Additional AI Instructions" multiline rows={3} value={data.additionalInstructions}
-            onChange={set("additionalInstructions")} placeholder="Tone, language, what the AI should or should not do." sx={inputSx} />
+          <TextField label="Instructions supplémentaires pour l'IA" multiline rows={3} value={data.additionalInstructions}
+            onChange={set("additionalInstructions")} placeholder="Ton, langue, ce que l'IA doit ou ne doit pas faire." sx={inputSx} />
         </Box>
       </Paper>
 
@@ -176,7 +176,7 @@ export default function CompanyContext() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 3, py: 2, bgcolor: C.bgPage, borderBottom: `1px solid ${C.border}` }}>
             <AIIcon sx={{ color: C.accent, fontSize: 18 }} />
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.85rem", color: C.textPrimary, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              AI Will See This
+              Ce que l'IA reçoit
             </Typography>
           </Box>
           <Box sx={{ p: 3 }}>
@@ -191,7 +191,7 @@ export default function CompanyContext() {
         <Button variant="contained" onClick={handleSave} disabled={loading}
           startIcon={loading ? <CircularProgress size={16} sx={{ color: C.navy }} /> : <SaveIcon />}
           sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.accent, color: "#fff", borderRadius: "10px", textTransform: "none", px: 4, py: 1.2, "&:hover": { bgcolor: C.accentHover }, "&.Mui-disabled": { bgcolor: C.slate, color: C.textMuted } }}>
-          {loading ? "Saving…" : "Save to Database"}
+          {loading ? "Enregistrement..." : "Enregistrer"}
         </Button>
       </Box>
     </Box>

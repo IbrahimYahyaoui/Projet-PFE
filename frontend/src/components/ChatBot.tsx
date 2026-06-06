@@ -93,12 +93,30 @@ const nextMissing = (d: TicketDraft): TicketField | null => {
   return null;
 };
 
-const QUICK_SUGGESTIONS = [
-  { icon: "🎫", label: "Créer un ticket",      msg: "Je veux créer un nouveau ticket de support" },
-  { icon: "📋", label: "Mes tickets en cours", msg: "Quels sont mes tickets en cours ?" },
-  { icon: "🚨", label: "Problème urgent",      msg: "J'ai un problème urgent qui bloque mon travail" },
-  { icon: "❓", label: "Aide & informations",  msg: "Que peux-tu faire pour m'aider ?" },
-];
+const CHATBOT_SUGGESTIONS: Record<string, { icon: string; label: string; msg: string }[]> = {
+  admin: [
+    { icon: "📊", label: "Résumé SLA",     msg: "Donne-moi un résumé des SLA actuels" },
+    { icon: "📥", label: "File d'attente", msg: "Quels tickets n'ont pas encore été assignés ?" },
+    { icon: "👥", label: "Charge équipes", msg: "Quel est l'état de charge de mes équipes ?" },
+    { icon: "🎫", label: "Créer un ticket",msg: "__start_ticket__" },
+  ],
+  leader: [
+    { icon: "⚖️", label: "Charge équipe", msg: "Quel est l'état de charge de mon équipe ?" },
+    { icon: "🚨", label: "Tickets SLA",   msg: "Quels tickets de mon équipe ont un SLA en danger ?" },
+    { icon: "📋", label: "Résumé équipe", msg: "Donne-moi un résumé de l'activité de mon équipe" },
+  ],
+  tech: [
+    { icon: "📋", label: "Mes tickets",         msg: "Quels tickets me sont assignés en ce moment ?" },
+    { icon: "🔧", label: "Aide dépannage",       msg: "J'ai besoin d'aide pour résoudre un problème technique" },
+    { icon: "📚", label: "Base de connaissances",msg: "Cherche dans la base de connaissances" },
+  ],
+  user: [
+    { icon: "⚠️", label: "J'ai un problème",  msg: "J'ai un problème informatique à signaler" },
+    { icon: "📋", label: "Mes tickets",        msg: "Quel est l'état de mes tickets ?" },
+    { icon: "🎫", label: "Créer un ticket",    msg: "__start_ticket__" },
+    { icon: "❓", label: "Aide",               msg: "Que peux-tu faire pour m'aider ?" },
+  ],
+};
 
 const BASE_RULES =
   "Tu es l'assistant IA de TuskFlow, une plateforme de gestion de tickets et de projets. " +
@@ -112,6 +130,10 @@ const BASE_RULES =
   "À la fin de chaque réponse, si c'est pertinent, propose 2-3 suggestions courtes sous la forme : [SUGGESTIONS: suggestion1 | suggestion2 | suggestion3].";
 
 export const ChatBot = () => {
+  const storedUser  = localStorage.getItem("user");
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const currentRole = currentUser?.role ?? "user";
+
   const [open,        setOpen]        = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [mode,        setMode]        = useState<"chat" | "ticket">("chat");
@@ -282,6 +304,10 @@ export const ChatBot = () => {
   };
 
   const startTicket = () => {
+    if (currentRole === "tech") {
+      setMsgs([{ role: "ai", text: "En tant que technicien, la création de tickets n'est pas dans votre rôle. Contactez votre Team Lead." }]);
+      return;
+    }
     setMode("ticket");
     setDraft({});
     setAwaitField(null);
@@ -292,9 +318,10 @@ export const ChatBot = () => {
     addMsg({ role: "user", text });
     setLoading(true);
     try {
-      const res       = await fetch(`${API}/ai/extract-ticket`, {
+      const token = localStorage.getItem("token");
+      const res   = await fetch(`${API}/ai/extract-ticket`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ message: text }),
       });
       const extracted = await res.json();
@@ -549,8 +576,8 @@ export const ChatBot = () => {
                     Suggestions
                   </Typography>
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                    {QUICK_SUGGESTIONS.map(s => (
-                      <Box key={s.msg} onClick={() => sendChat(s.msg)} sx={{
+                    {(CHATBOT_SUGGESTIONS[currentRole] ?? CHATBOT_SUGGESTIONS.user).map(s => (
+                      <Box key={s.msg} onClick={() => s.msg === "__start_ticket__" ? startTicket() : sendChat(s.msg)} sx={{
                         px: 1.5, py: 1, borderRadius: "12px",
                         border: `1px solid ${C.border}`,
                         display: "flex", alignItems: "center", gap: 1.5,
