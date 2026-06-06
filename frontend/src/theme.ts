@@ -189,7 +189,7 @@ export const PERMISSIONS: Record<UserRole, {
     canCreateProjects: true,
     canManageProjects: true,
     canManageTeams: true,
-    canSeeTeamDashboard: false,
+    canSeeTeamDashboard: true,
     canManageTeamMembers: true,
   },
   leader: {

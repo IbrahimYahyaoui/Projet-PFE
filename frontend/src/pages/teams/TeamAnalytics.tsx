@@ -1,7 +1,7 @@
 // frontend/src/pages/teams/TeamAnalytics.tsx
 import { useState, useEffect } from "react";
-import { Box, Grid, CircularProgress } from "@mui/material";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Box, Typography, CircularProgress } from "@mui/material";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { C, chartColors } from "../../theme";
 import { api } from "../../api";
 import { PageHeader } from "../../components/PageHeader";
@@ -34,67 +34,86 @@ export default function TeamAnalytics() {
   }, [period]);
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", pt: 8 }}><CircularProgress sx={{ color: C.accent }} /></Box>;
-  if (!data)   return <EmptyState icon="chart-pie" title="Données indisponibles" />;
+  if (!data)   return <EmptyState icon="chart-donut" title="Données indisponibles" />;
 
-  const { kpis, ticketsByDay, statusDistribution, priorityDistribution, techPerformance } = data;
-  const statusData   = statusDistribution.map(s => ({ name: STATUS_LABELS[s._id] ?? s._id, value: s.count, fill: STATUS_COLORS[s._id] ?? "#94A3B8" }));
-  const priorityData = priorityDistribution.map(p => ({ name: p._id, value: p.count }));
+  const { kpis, ticketsByDay, statusDistribution, techPerformance } = data;
+  const statusData = statusDistribution.map(s => ({ name: STATUS_LABELS[s._id] ?? s._id, value: s.count, fill: STATUS_COLORS[s._id] ?? "#94A3B8" }));
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <PageHeader title="Analytics équipe" subtitle="Performance et statistiques" icon="chart-pie" />
+        <PageHeader title="Analytics équipe" subtitle="Performance et statistiques" icon="chart-donut" />
         <PeriodSelector value={period} onChange={setPeriod} />
       </Box>
 
       {/* KPIs */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" }, gap: 2, mb: 3 }}>
         {[
-          { label: "Total",           value: kpis.totalTickets,       icon: "ticket",       color: C.accent,  bg: C.accentLight },
-          { label: "Résolus",         value: kpis.resolvedTickets,     icon: "circle-check", color: C.success, bg: C.successBg },
-          { label: "Taux résolution", value: `${kpis.resolutionRate}%`,icon: "percent",      color: C.info,    bg: C.infoBg },
-          { label: "Conformité SLA",  value: `${kpis.slaComplianceRate}%`, icon: "shield-check", color: "#8B5CF6", bg: "rgba(139,92,246,0.08)" },
-          { label: "Moy. résolution", value: `${kpis.avgResolutionTime}h`, icon: "clock",    color: C.warning, bg: C.warningBg },
-          { label: "SLA dépassé",     value: kpis.slaBreachedCount,   icon: "alert-triangle",color: C.danger, bg: C.dangerBg },
+          { label: "Total",           value: kpis.totalTickets,            icon: "ticket",     color: C.accent,  bg: C.accentLight },
+          { label: "Résolus",         value: kpis.resolvedTickets,         icon: "check",      color: C.success, bg: C.successBg },
+          { label: "Taux résolution", value: `${kpis.resolutionRate}%`,    icon: "percentage", color: C.info,    bg: C.infoBg },
+          { label: "Conformité SLA",  value: `${kpis.slaComplianceRate}%`, icon: "shield",     color: "#8B5CF6", bg: "rgba(139,92,246,0.08)" },
+          { label: "Moy. résolution", value: `${kpis.avgResolutionTime}h`, icon: "clock",      color: C.warning, bg: C.warningBg },
+          { label: "SLA dépassé",     value: kpis.slaBreachedCount,        icon: "alert",      color: C.danger,  bg: C.dangerBg },
         ].map(k => (
-          <Grid item xs={12} sm={6} md={4} lg={2} key={k.label}>
-            <KpiCard {...k} tagColor={k.color} tagBg={k.bg} />
-          </Grid>
+          <KpiCard key={k.label} {...k} tagColor={k.color} tagBg={k.bg} />
         ))}
-      </Grid>
+      </Box>
 
       {/* Charts */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} lg={8}>
-          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: 2.5 }}>
-            <Box sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, mb: 2 }}>Tickets par jour</Box>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={ticketsByDay}>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                <XAxis dataKey="_id" tick={{ fontSize: 11, fontFamily: "Inter, sans-serif" }} />
-                <YAxis tick={{ fontSize: 11, fontFamily: "Inter, sans-serif" }} />
-                <Tooltip contentStyle={{ fontFamily: "Inter, sans-serif", borderRadius: 8 }} />
-                <Legend />
-                <Bar dataKey="created"  name="Créés"   fill={C.accent}   radius={[4,4,0,0]} />
-                <Bar dataKey="resolved" name="Résolus" fill={C.success}  radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: 2.5 }}>
-            <Box sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, mb: 2 }}>Par statut</Box>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`} labelLine={false}>
-                  {statusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                </Pie>
-                <Tooltip contentStyle={{ fontFamily: "Inter, sans-serif", borderRadius: 8 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </Box>
-        </Grid>
-      </Grid>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" }, gap: 2.5, mb: 3 }}>
+
+        {/* Tickets par jour */}
+        <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: 2.5 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, mb: 2 }}>
+            Tickets par jour
+          </Typography>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={ticketsByDay} margin={{ left: -10, right: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+              <XAxis dataKey="_id" tick={{ fontFamily: "Inter, sans-serif", fontSize: 11, fill: C.textMuted }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontFamily: "Inter, sans-serif", fontSize: 11, fill: C.textMuted }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ fontFamily: "Inter, sans-serif", fontSize: 12, borderRadius: 8, border: `1px solid ${C.border}` }} />
+              <Bar dataKey="created"  name="Créés"   fill={C.navy}    radius={[4, 4, 0, 0]} />
+              <Bar dataKey="resolved" name="Résolus" fill={C.success} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Box>
+
+        {/* Par statut */}
+        <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: 2.5 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, mb: 2 }}>
+            Par statut
+          </Typography>
+          {statusData.length === 0 ? (
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textMuted }}>Aucune donnée</Typography>
+            </Box>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={72} dataKey="value" strokeWidth={0} paddingAngle={2}>
+                    {statusData.map((d: any, i: number) => <Cell key={i} fill={d.fill} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ fontFamily: "Inter, sans-serif", fontSize: 12, borderRadius: 8 }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8, mt: 1 }}>
+                {statusData.map((d: any, i: number) => (
+                  <Box key={i} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: d.fill, flexShrink: 0 }} />
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>{d.name}</Typography>
+                    </Box>
+                    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 700, color: C.textPrimary }}>{d.value}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </>
+          )}
+        </Box>
+      </Box>
 
       {/* Tech performance */}
       {techPerformance.length > 0 && (

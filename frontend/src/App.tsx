@@ -24,11 +24,13 @@ import AdminQueue      from "./pages/tickets/AdminQueue";
 import TicketHistory   from "./pages/tickets/TicketHistory";
 
 // ── Teams ──
-import TeamsPage     from "./pages/teams/TeamsPage";
-import TeamMembers   from "./pages/teams/TeamMembers";
-import TeamTickets   from "./pages/teams/TeamTickets";
-import TeamWorkload  from "./pages/teams/TeamWorkload";
-import TeamAnalytics from "./pages/teams/TeamAnalytics";
+import TeamsPage           from "./pages/teams/TeamsPage";
+import TeamMembers         from "./pages/teams/TeamMembers";
+import TeamTickets         from "./pages/teams/TeamTickets";
+import TeamWorkload        from "./pages/teams/TeamWorkload";
+import TeamAnalytics       from "./pages/teams/TeamAnalytics";
+import AdminTeamsOverview  from "./pages/teams/AdminTeamsOverview";
+import AdminAllMembers     from "./pages/teams/AdminAllMembers";
 
 // ── Projects ──
 import Projects           from "./pages/Projects";
@@ -113,7 +115,9 @@ export default function App() {
         <Route path="/tickets/:id"         element={<P><TicketDetails /></P>} />
 
         {/* ── Teams ── */}
-        <Route path="/teams"             element={<P permission="canSeeTeam"><TeamsPage /></P>} />
+        <Route path="/teams"              element={<P permission="canSeeTeam"><TeamsPage /></P>} />
+        <Route path="/teams/overview"     element={<P permission="canManageTeams"><AdminTeamsOverview /></P>} />
+        <Route path="/teams/all-members" element={<P permission="canManageTeams"><AdminAllMembers /></P>} />
         <Route path="/teams/members"     element={<P permission="canSeeTeam"><TeamMembers /></P>} />
         <Route path="/teams/tickets"     element={<P permission="canSeeTeam"><TeamTickets /></P>} />
         <Route path="/teams/workload"    element={<P permission="canSeeTeam"><TeamWorkload /></P>} />

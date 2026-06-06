@@ -1,7 +1,7 @@
 // frontend/src/pages/teams/TeamMembers.tsx
 import { useState, useEffect } from "react";
 import {
-  Box, Typography, CircularProgress, Avatar, Grid,
+  Box, Typography, CircularProgress, Avatar,
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem,
 } from "@mui/material";
 import { C } from "../../theme";
@@ -100,7 +100,7 @@ export default function TeamMembers() {
   };
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", pt: 8 }}><CircularProgress sx={{ color: C.accent }} /></Box>;
-  if (!data)   return <EmptyState icon="users-group" title="Aucune équipe" />;
+  if (!data)   return <EmptyState icon="users" title="Aucune équipe" />;
 
   const { team, members } = data;
   const leaderId = team.leaderId?._id ?? (data as any).team?.leaderId;
@@ -118,15 +118,14 @@ export default function TeamMembers() {
         actions={actions}
       />
 
-      <Grid container spacing={2}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 2.5 }}>
         {members.map((m) => {
           const aColor   = AVAIL_COLOR[m.availability] ?? C.info;
           const aLabel   = AVAIL_LABEL[m.availability] ?? m.availability;
           const isLeaderMember = m._id === leaderId || m._id === (leaderId as any)?._id;
           const canRemove = isLeader && !isLeaderMember;
           return (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={m._id}>
-              <Box sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: 2.5, transition: "box-shadow 0.2s", "&:hover": { boxShadow: C.shadowMd } }}>
+            <Box key={m._id} sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "20px 22px", transition: "box-shadow 0.2s", "&:hover": { boxShadow: C.shadowMd } }}>
                 {/* Header */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
                   <Avatar sx={{ bgcolor: C.accent, width: 42, height: 42, fontSize: "14px", fontWeight: 700, fontFamily: "Inter, sans-serif" }}>
@@ -150,8 +149,8 @@ export default function TeamMembers() {
                     { label: "Actifs",    value: m.active   },
                     { label: "Résolus",   value: m.resolved },
                   ].map((s) => (
-                    <Box key={s.label} sx={{ flex: 1, textAlign: "center", py: 1, borderRadius: "8px", bgcolor: C.bgPage }}>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "18px", fontWeight: 700, color: C.textPrimary }}>{s.value}</Typography>
+                    <Box key={s.label} sx={{ flex: 1, textAlign: "center", py: 1.5, borderRadius: "10px", bgcolor: C.bgPage }}>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "20px", fontWeight: 700, color: C.textPrimary }}>{s.value}</Typography>
                       <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted, textTransform: "uppercase" }}>{s.label}</Typography>
                     </Box>
                   ))}
@@ -175,10 +174,9 @@ export default function TeamMembers() {
                   )}
                 </Box>
               </Box>
-            </Grid>
           );
         })}
-      </Grid>
+      </Box>
 
       {members.length === 0 && <EmptyState icon="users" title="Aucun membre" description="Cette équipe n'a pas encore de membres." />}
 

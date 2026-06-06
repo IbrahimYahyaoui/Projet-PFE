@@ -21,21 +21,21 @@ export const KpiCard = ({ label, value, icon, color, bg, tag, tagColor, tagBg, o
       bgcolor: "#fff",
       borderRadius: "14px",
       border: `1px solid ${C.border}`,
-      p: "18px 20px",
+      p: "20px 22px",
       transition: "all 0.2s",
       cursor: onClick ? "pointer" : "default",
       "&:hover": onClick ? { boxShadow: C.shadowMd, transform: "translateY(-2px)" } : {},
     }}
   >
     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1.3 }}>
         {label}
       </Typography>
-      <Box sx={{ width: 32, height: 32, borderRadius: "9px", bgcolor: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Box component="i" className={`ti ti-${icon}`} sx={{ fontSize: 17, color }} />
+      <Box sx={{ width: 38, height: 38, borderRadius: "11px", bgcolor: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box component="i" className={`ti ti-${icon}`} sx={{ fontSize: 20, color }} />
       </Box>
     </Box>
-    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "28px", fontWeight: 700, color, lineHeight: 1, mb: 1 }}>
+    <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "32px", fontWeight: 700, color, lineHeight: 1, mt: 1.5, mb: 0.5 }}>
       {value}
     </Typography>
     {tag && (

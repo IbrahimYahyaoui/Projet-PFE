@@ -37,6 +37,7 @@ interface SubItem {
   path: string;
   icon: string;
   permission?: keyof typeof PERMISSIONS["admin"];
+  hideForRoles?: string[];
 }
 
 interface Module {
@@ -75,12 +76,14 @@ const MODULES: Module[] = [
     path: "/teams",
     permission: "canSeeTeam",
     subItems: [
-      { label: "Gestion des équipes", path: "/teams",            icon: "settings",         permission: "canManageTeams"      },
-      { label: "Mon équipe",          path: "/teams",            icon: "layout-dashboard", permission: "canSeeTeamDashboard" },
-      { label: "Membres",             path: "/teams/members",    icon: "users",            permission: "canSeeTeamDashboard" },
-      { label: "Tickets équipe",      path: "/teams/tickets",    icon: "ticket",           permission: "canSeeTeamDashboard" },
-      { label: "Charge de travail",   path: "/teams/workload",   icon: "chart-bar",        permission: "canSeeTeamDashboard" },
-      { label: "Analytics",           path: "/teams/analytics",  icon: "chart-pie",        permission: "canSeeTeamAnalytics" },
+      { label: "Gestion des équipes", path: "/teams",              icon: "settings",       permission: "canManageTeams"      },
+      { label: "Vue d'ensemble",      path: "/teams/overview",    icon: "layout-grid",    permission: "canManageTeams",      hideForRoles: ["leader", "tech", "user"] },
+      { label: "Tous les membres",    path: "/teams/all-members", icon: "users",          permission: "canManageTeams",      hideForRoles: ["leader", "tech", "user"] },
+      { label: "Mon équipe",          path: "/teams",             icon: "layout-dashboard",permission: "canSeeTeamDashboard", hideForRoles: ["admin"] },
+      { label: "Membres",             path: "/teams/members",     icon: "users",          permission: "canSeeTeamDashboard", hideForRoles: ["admin"] },
+      { label: "Tickets équipe",      path: "/teams/tickets",     icon: "ticket",         permission: "canSeeTeamDashboard", hideForRoles: ["admin"] },
+      { label: "Charge de travail",   path: "/teams/workload",    icon: "chart-bar",      permission: "canSeeTeamDashboard", hideForRoles: ["admin"] },
+      { label: "Analytics",           path: "/teams/analytics",   icon: "chart-donut",    permission: "canSeeTeamAnalytics" },
     ],
   },
   {
@@ -229,7 +232,10 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
   };
 
   const filterSubItems = (items: SubItem[]) =>
-    items.filter(item => !item.permission || perms[item.permission]);
+    items.filter(item =>
+      (!item.permission || perms[item.permission]) &&
+      (!item.hideForRoles || !item.hideForRoles.includes(role))
+    );
 
   const filterModules = () =>
     MODULES.filter(mod => !mod.permission || perms[mod.permission]);
