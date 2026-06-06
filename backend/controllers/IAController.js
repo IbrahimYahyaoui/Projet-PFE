@@ -30,8 +30,9 @@ const getRoleTone = (role) => {
 Règles STRICTES :
 - Réponds TOUJOURS en français
 - Sois COURT et DIRECT (maximum 5 lignes)
-- Si on dit bonjour → réponds juste bonjour et demande comment tu peux aider
+- Si on dit bonjour → réponds juste "Bonjour ! Comment puis-je vous aider ?"
 - Si on pose une question → réponds uniquement à cette question avec les données disponibles
+- Si on veut créer un ticket → dis : "Allez dans Tickets > Créer un ticket dans le menu principal."
 - N'invente JAMAIS de données
 - Ne fais jamais de longs rapports non demandés`,
 
@@ -39,25 +40,28 @@ Règles STRICTES :
 Règles STRICTES :
 - Réponds TOUJOURS en français
 - Sois COURT et DIRECT (maximum 5 lignes)
-- Si on dit bonjour → réponds juste bonjour et demande comment tu peux aider
-- Si on pose une question → réponds uniquement à cette question
+- Si on dit bonjour → réponds juste "Bonjour ! Comment puis-je vous aider ?"
+- Si on pose une question sur les tickets → utilise les données disponibles
+- Si on veut assigner un ticket → dis : "Allez dans Teams > Tickets équipe pour assigner."
 - N'invente JAMAIS de données`,
 
     tech: `Tu es TuskFlow AI. Tu parles avec un Technicien.
 Règles STRICTES :
 - Réponds TOUJOURS en français
 - Sois COURT et DIRECT (maximum 5 lignes)
-- Si on dit bonjour → réponds juste bonjour et demande comment tu peux aider
-- Le technicien NE crée PAS de tickets
-- Aide uniquement avec le dépannage technique`,
+- Si on dit bonjour → réponds juste "Bonjour ! Comment puis-je vous aider ?"
+- Si on décrit un problème technique → pose 1-2 questions pour comprendre puis donne des étapes de résolution
+- Le technicien NE crée PAS de tickets → si demandé, dis : "Contactez votre Team Lead pour créer un ticket."
+- N'invente JAMAIS de données`,
 
     user: `Tu es TuskFlow AI. Tu parles avec un Employé.
 Règles STRICTES :
 - Réponds TOUJOURS en français
 - Sois COURT et DIRECT (maximum 5 lignes)
-- Si on dit bonjour → réponds juste bonjour et demande comment tu peux aider
-- Pose des questions pour comprendre le problème
-- Si aucune solution → propose de créer un ticket`,
+- Si on dit bonjour → réponds juste "Bonjour ! Comment puis-je vous aider ?"
+- Si on décrit un problème → pose 1-2 questions pour comprendre, puis propose une solution simple
+- Si aucune solution n'est trouvée → dis : "Je vous suggère de créer un ticket. Cliquez sur 'Créer un ticket' en haut à droite."
+- N'invente JAMAIS de données`,
   };
   return base[role] ?? base.user;
 };
@@ -83,6 +87,18 @@ async function buildLiveContext(userId, role) {
       } else {
         lines.push(`Tickets sans équipe : aucun`);
       }
+      const Team = require('../schemas/team');
+      const teams = await Team.find({}).select('name _id').limit(5).lean();
+      if (teams.length) {
+        const teamsWithLoad = await Promise.all(teams.map(async (team) => {
+          const active = await Ticket.countDocuments({
+            teamId: team._id,
+            status: { $nin: ['resolved', 'closed'] }
+          });
+          return `${team.name}: ${active} tickets actifs`;
+        }));
+        lines.push(`Charge des équipes : ${teamsWithLoad.join(' | ')}`);
+      }
     } else if (role === 'leader') {
       const Team = require('../schemas/team');
       const team = await Team.findOne({ $or: [{ leaderId: userId }, { members: userId }] }).select('name _id');
@@ -92,6 +108,17 @@ async function buildLiveContext(userId, role) {
           Ticket.countDocuments({ teamId: team._id, slaBreached: true }),
         ]);
         lines.push(`[Équipe: ${team.name}] Actifs:${open} | SLA:${breached}`);
+        const teamFull = await Team.findById(team._id).populate('members', 'name _id').lean();
+        if (teamFull?.members?.length) {
+          const memberLoads = await Promise.all(teamFull.members.map(async (m) => {
+            const count = await Ticket.countDocuments({
+              assignedTo: m._id,
+              status: { $nin: ['resolved', 'closed'] }
+            });
+            return `${m.name}: ${count} ticket(s)`;
+          }));
+          lines.push(`Charge membres : ${memberLoads.join(' | ')}`);
+        }
       }
     } else if (role === 'tech') {
       const tickets = await Ticket.find({ assignedTo: userId, status: { $nin: ['resolved','closed'] } }, 'title priority slaBreached').limit(3).lean();
