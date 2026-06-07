@@ -195,6 +195,7 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
     if (!token) return;
     try {
       await fetch("/api/notifications/read-all", {
+        method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));

@@ -185,7 +185,7 @@ export default function TicketDetails() {
 
   const fetchHistory = async () => {
     try {
-      const res  = await fetch(`${apiUrl}/api/tickets/${id}/history`, { headers: { Authorization: `Bearer ${token}` } });
+      const res  = await fetch(`${apiUrl}/api/history/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (res.ok) setHistory(data);
     } catch (err) { console.log(err); }

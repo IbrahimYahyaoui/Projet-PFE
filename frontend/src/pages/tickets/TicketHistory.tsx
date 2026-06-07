@@ -39,7 +39,7 @@ export default function TicketHistory() {
         const recent  = tickets.slice(0, 20);
         const entries = await Promise.all(
           recent.map((t: any) =>
-            api.get<HistoryEntry[]>(`/api/tickets/${t._id}/history`).catch(() => [])
+            api.get<HistoryEntry[]>(`/api/history/${t._id}`).catch(() => [])
           )
         );
         setHistory(entries.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));

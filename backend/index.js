@@ -61,7 +61,7 @@ app.use('/api/users',          userRoutes);
 app.use('/api/profile',        profileRoutes);
 app.use('/api/tickets',        ticketRoutes);
 app.use('/api/notifications',  notificationRoutes);
-app.use('/api/tickets',        historyRoutes);
+app.use('/api/history',        historyRoutes);
 app.use('/api/team',           teamRoutes);
 app.use('/api/analytics',      analyticsRoutes);
 app.use('/api/projects',       projectRoutes);
