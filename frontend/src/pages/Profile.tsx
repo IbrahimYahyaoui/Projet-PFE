@@ -83,6 +83,7 @@ const apiUrl = (
 export default function Profile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileStats, setProfileStats] = useState<any>(null);
 
   const [editInfo, setEditInfo] = useState(false);
   const [infoForm, setInfoForm] = useState({ name: "", email: "" });
@@ -98,6 +99,7 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      let resolvedId: string | null = null;
       try {
         const token = localStorage.getItem("token");
         // ✅ Correct endpoint avec apiUrl
@@ -108,6 +110,7 @@ export default function Profile() {
           const data = await res.json();
           setProfile(data);
           setInfoForm({ name: data.name, email: data.email });
+          resolvedId = data._id ?? data.id;
         } else {
           throw new Error("Failed to fetch");
         }
@@ -120,8 +123,9 @@ export default function Profile() {
             // ✅ Récupérer aussi depuis localStorage user
             const storedUser = localStorage.getItem("user");
             const storedUserData = storedUser ? JSON.parse(storedUser) : null;
+            resolvedId = payload.id ?? payload._id ?? storedUserData?.id ?? storedUserData?._id ?? null;
             setProfile({
-              _id: payload.id ?? payload._id ?? "",
+              _id: resolvedId ?? "",
               name: payload.name ?? "Utilisateur",
               email: storedUserData?.email ?? payload.email ?? "",
               role: payload.role ?? "user",
@@ -133,9 +137,20 @@ export default function Profile() {
             });
           } catch {}
         }
-      } finally {
-        setLoading(false);
       }
+      if (resolvedId) {
+        try {
+          const token = localStorage.getItem("token");
+          const statsRes = await fetch(`${apiUrl}/api/profile/${resolvedId}/stats`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            setProfileStats(statsData.stats);
+          }
+        } catch {}
+      }
+      setLoading(false);
     };
     fetchProfile();
   }, []);
@@ -275,6 +290,11 @@ export default function Profile() {
               size="small"
               sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", backgroundColor: role.bg, color: role.text, border: `1px solid ${role.border}`, "& .MuiChip-icon": { color: role.text } }}
             />
+            {profile.createdAt && (
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mt: 0.5 }}>
+                Membre depuis {new Date(profile.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </Typography>
+            )}
           </Box>
           {!editInfo && (
             <Tooltip title="Modifier">
@@ -332,6 +352,38 @@ export default function Profile() {
             ))}
           </Box>
         )}
+      </Paper>
+
+      {/* Card Stats */}
+      <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3, mb: 3 }}>
+        <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px", color: C.textPrimary, mb: 2.5 }}>
+          Statistiques — {profileStats?.label ?? "..."}
+        </Typography>
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 2 }}>
+          {profileStats && Object.entries(profileStats)
+            .filter(([k]) => k !== 'label')
+            .map(([key, val]) => {
+              const labels: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+                total:       { label: "Total tickets",  color: C.accent,  bg: C.accentLight, icon: "ticket" },
+                resolved:    { label: "Résolus",        color: "#16A34A", bg: "#f0fdf4",     icon: "check" },
+                open:        { label: "Ouverts",        color: "#F97316", bg: "#fff7ed",     icon: "inbox" },
+                inProgress:  { label: "En cours",       color: "#F59E0B", bg: "#fffbeb",     icon: "rotate-clockwise" },
+                slaBreached: { label: "SLA dépassés",   color: "#DC2626", bg: "#fef2f2",     icon: "alert" },
+              };
+              const cfg = labels[key] ?? { label: key, color: C.accent, bg: C.accentLight, icon: "chart-bar" };
+              return (
+                <Box key={key} sx={{ bgcolor: cfg.bg, borderRadius: "12px", p: 2, textAlign: "center" }}>
+                  <Box component="i" className={`ti ti-${cfg.icon}`} sx={{ fontSize: 22, color: cfg.color, mb: 0.5 }} />
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "24px", color: cfg.color, lineHeight: 1.2 }}>
+                    {String(val)}
+                  </Typography>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mt: 0.3 }}>
+                    {cfg.label}
+                  </Typography>
+                </Box>
+              );
+            })}
+        </Box>
       </Paper>
 
       {/* Card 2 — Mot de passe */}

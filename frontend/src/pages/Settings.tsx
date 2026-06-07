@@ -1,5 +1,5 @@
 // frontend/src/pages/Settings.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -104,7 +104,13 @@ function ToggleRow({ label, description, checked, onChange }: {
   );
 }
 
+const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
 export default function Settings() {
+  const storedUser = localStorage.getItem("user");
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const userId = currentUser?.id ?? currentUser?._id;
+
   const [notifs, setNotifs] = useState<SettingRow[]>([
     { id: "email_new",      label: "Nouveau ticket",      description: "Recevoir un email à chaque nouveau ticket créé",    value: true  },
     { id: "email_assign",   label: "Ticket assigné",      description: "Recevoir un email quand un ticket vous est assigné", value: true  },
@@ -134,12 +140,55 @@ export default function Settings() {
   const toggleAppearance = (id: string) => setAppearance((p)  => p.map((a) => a.id === id ? { ...a, value: !a.value } : a));
   const toggleSecurity   = (id: string) => setSecurity((p)    => p.map((s) => s.id === id ? { ...s, value: !s.value } : s));
 
+  useEffect(() => {
+    if (!userId) return;
+    const token = localStorage.getItem("token");
+    fetch(`${apiUrl}/api/profile/${userId}/settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.settings?.notifications) {
+          setNotifs(prev => prev.map(n => ({
+            ...n,
+            value: data.settings.notifications[n.id] ?? n.value,
+          })));
+        }
+        if (data.settings?.appearance) {
+          setAppearance(prev => prev.map(a => ({
+            ...a,
+            value: data.settings.appearance[a.id] ?? a.value,
+          })));
+        }
+        if (data.settings?.preferences) {
+          const p = data.settings.preferences;
+          if (p.language)   setLanguage(p.language);
+          if (p.timezone)   setTimezone(p.timezone);
+          if (p.dateFormat) setDateFormat(p.dateFormat);
+        }
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  const saveSection = async (section: string, payload: Record<string, any>) => {
+    if (!userId) return;
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiUrl}/api/profile/${userId}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ [section]: payload }),
+    });
+    if (!res.ok) throw new Error("Erreur serveur");
+  };
+
   const handleSavePref = async () => {
     setPrefLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setPrefLoading(false);
-    setPrefSaved(true);
-    setTimeout(() => setPrefSaved(false), 3000);
+    try {
+      await saveSection("preferences", { language, timezone, dateFormat });
+      setPrefSaved(true);
+      setTimeout(() => setPrefSaved(false), 3000);
+    } catch { /* ignore */ }
+    finally { setPrefLoading(false); }
   };
 
   return (
@@ -168,6 +217,19 @@ export default function Settings() {
             {i < notifs.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
           </Box>
         ))}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+          <Button variant="contained" size="small"
+            onClick={async () => {
+              const payload: Record<string, boolean> = {};
+              notifs.forEach(n => { payload[n.id] = n.value; });
+              await saveSection("notifications", payload);
+            }}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff",
+              borderRadius: "10px", textTransform: "none", px: 2.5,
+              "&:hover": { bgcolor: C.navyMid } }}>
+            Enregistrer
+          </Button>
+        </Box>
       </Section>
 
       {/* 2. Apparence */}
@@ -178,6 +240,19 @@ export default function Settings() {
             {i < appearance.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
           </Box>
         ))}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+          <Button variant="contained" size="small"
+            onClick={async () => {
+              const payload: Record<string, boolean> = {};
+              appearance.forEach(a => { payload[a.id] = a.value; });
+              await saveSection("appearance", payload);
+            }}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff",
+              borderRadius: "10px", textTransform: "none", px: 2.5,
+              "&:hover": { bgcolor: C.navyMid } }}>
+            Enregistrer
+          </Button>
+        </Box>
       </Section>
 
       {/* 3. Préférences */}

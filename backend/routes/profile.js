@@ -1,6 +1,6 @@
 // backend/routes/profile.js
 const express = require('express');
-const { getProfile, updateProfile, changePassword } = require('../controllers/profileController');
+const { getProfile, updateProfile, changePassword, getSettings, updateSettings, getProfileStats } = require('../controllers/profileController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
 // FIX 4 — IDOR : vérifie que l'utilisateur accède uniquement à son propre profil
@@ -18,5 +18,8 @@ const router = express.Router();
 router.get('/:id',          verifyToken, verifySelfOrAdmin, getProfile);
 router.put('/:id',          verifyToken, verifySelfOrAdmin, updateProfile);
 router.put('/:id/password', verifyToken, verifySelfOrAdmin, changePassword);
+router.get('/:id/settings', verifyToken, verifySelfOrAdmin, getSettings);
+router.put('/:id/settings', verifyToken, verifySelfOrAdmin, updateSettings);
+router.get('/:id/stats',    verifyToken, verifySelfOrAdmin, getProfileStats);
 
 module.exports = router;

@@ -53,6 +53,24 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    settings: {
+      notifications: {
+        email_new:      { type: Boolean, default: true  },
+        email_assign:   { type: Boolean, default: true  },
+        email_resolved: { type: Boolean, default: false },
+        email_comment:  { type: Boolean, default: true  },
+      },
+      appearance: {
+        compact:    { type: Boolean, default: false },
+        animations: { type: Boolean, default: true  },
+        sidebar:    { type: Boolean, default: false },
+      },
+      preferences: {
+        language:   { type: String, default: "fr"           },
+        timezone:   { type: String, default: "Africa/Tunis" },
+        dateFormat: { type: String, default: "DD/MM/YYYY"   },
+      },
+    },
   },
   { timestamps: true }
 );
