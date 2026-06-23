@@ -109,7 +109,7 @@ export default function App() {
         {/* ── Tickets ── */}
         <Route path="/tickets/admin-queue" element={<P permission="canSeeAdminQueue"><AdminQueue /></P>} />
         <Route path="/tickets/all"         element={<P permission="canSeeAllTickets"><AllTickets /></P>} />
-        <Route path="/tickets/create"      element={<P><CreateTicket /></P>} />
+        <Route path="/tickets/create"      element={<P permission="canCreateTicket"><CreateTicket /></P>} />
         <Route path="/tickets/my"          element={<P><MyTickets /></P>} />
         <Route path="/tickets/assigned"    element={<P><AssignedTickets /></P>} />
         <Route path="/tickets/history"     element={<P permission="canSeeAllTickets"><TicketHistory /></P>} />

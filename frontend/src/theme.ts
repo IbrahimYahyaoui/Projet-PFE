@@ -47,11 +47,6 @@ export const statusColors: Record<string, { bg: string; text: string; border: st
     text: "#0E9188",
     border: "rgba(95, 194, 186, 0.30)",
   },
-  pending: {
-    bg: "rgba(124, 58, 237, 0.08)",
-    text: "#7C3AED",
-    border: "rgba(124, 58, 237, 0.20)",
-  },
   assigned: {
     bg: "rgba(59, 130, 246, 0.10)",
     text: "#2563EB",

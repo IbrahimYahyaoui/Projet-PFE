@@ -25,7 +25,7 @@ export default function MyTickets() {
   }, []);
 
   const open     = tickets.filter(t => t.status === "open").length;
-  const pending  = tickets.filter(t => ["pending", "assigned", "in_progress"].includes(t.status)).length;
+  const pending  = tickets.filter(t => ["assigned", "in_progress"].includes(t.status)).length;
   const resolved = tickets.filter(t => t.status === "resolved").length;
 
   return (

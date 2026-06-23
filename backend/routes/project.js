@@ -21,13 +21,13 @@ const verifyProjectAccess = async (req, res, next) => {
   } catch (err) { res.status(500).json({ message: 'Server error' }); }
 };
 
-// Middleware : leader du projet uniquement (pas admin)
+// Middleware : leader du projet ou admin
 const verifyProjectLeader = async (req, res, next) => {
   try {
+    if (req.user.role === 'admin') return next();
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: 'Projet non trouvé' });
-    const isManager = project.managerId?.toString() === req.user.id ||
-      project.createdBy?.toString() === req.user.id;
+    const isManager = project.managerId?.toString() === req.user.id;
     if (req.user.role !== 'leader' || !isManager) {
       return res.status(403).json({ message: "Seul le leader responsable du projet peut faire cela" });
     }

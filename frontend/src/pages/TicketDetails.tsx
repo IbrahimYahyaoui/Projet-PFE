@@ -76,7 +76,7 @@ const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const getStatusLabel = (s: string) => ({
-  open: "Ouvert", pending: "En attente équipe", assigned: "Assigné", in_progress: "En cours", waiting: "En attente", resolved: "Résolu", closed: "Fermé"
+  open: "Ouvert", assigned: "Assigné", in_progress: "En cours", waiting: "En attente", resolved: "Résolu", closed: "Fermé"
 }[s] ?? s);
 
 const getPriorityLabel = (p: string) => ({
@@ -207,7 +207,7 @@ export default function TicketDetails() {
     } catch (err) { console.log(err); }
   };
 
-  // ── Admin assigns to team (open → pending) ──
+  // ── Admin assigns to team (open → assigned) ──
   const handleAssignTeam = async () => {
     if (!selectedTeam) return;
     setAssigning(true);
@@ -230,7 +230,7 @@ export default function TicketDetails() {
     finally { setAssigning(false); }
   };
 
-  // ── Leader/admin assigns tech (pending/assigned → assigned) ──
+  // ── Leader/admin assigns tech (assigned → assigned with tech) ──
   const handleAssign = async () => {
     if (!selectedTech) return;
     setAssigning(true);
@@ -404,7 +404,7 @@ export default function TicketDetails() {
               Assigner équipe
             </Button>
           )}
-          {(isLeader || isAdmin) && (ticket.status === "pending" || ticket.status === "assigned") && (
+          {(isLeader || isAdmin) && ticket.status === "assigned" && (
             <Button onClick={() => setAssignDialog(true)}
               sx={{ bgcolor: "#3B82F6", color: "#fff", borderRadius: "9px", px: 2, py: 1, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", display: "flex", alignItems: "center", gap: 0.8, "&:hover": { bgcolor: "#2563EB" } }}>
               <Box component="i" className="ti ti-user-check" sx={{ fontSize: 16 }} />
@@ -713,7 +713,7 @@ export default function TicketDetails() {
                   <Box sx={{ flex: 1 }}>
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted, fontStyle: "italic" }}>Non assigné à un technicien</Typography>
                   </Box>
-                  {(isLeader || isAdmin) && ["pending", "assigned"].includes(ticket.status) && (
+                  {(isLeader || isAdmin) && ticket.status === "assigned" && (
                     <Button onClick={() => setAssignDialog(true)} size="small"
                       sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.accent, textTransform: "none", p: 0, minWidth: "auto", "&:hover": { bgcolor: "transparent", opacity: 0.8 } }}>
                       Assigner

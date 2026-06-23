@@ -81,7 +81,7 @@ const CAT_LABELS: Record<string, string> = {
   access: "Accès", other: "Autre", general: "Général",
 };
 
-const STATUSES = ["open", "pending", "assigned", "in_progress", "waiting", "resolved", "closed"];
+const STATUSES = ["open", "assigned", "in_progress", "waiting", "resolved", "closed"];
 const PRIORITIES = ["low", "medium", "high", "critical"];
 
 const fmtDate = (iso: string) =>
@@ -105,7 +105,7 @@ type SortOrder = "asc" | "desc";
 
 function sortTickets(tickets: TicketRow[], by: SortKey, order: SortOrder): TicketRow[] {
   const priority_order = { critical: 0, high: 1, medium: 2, low: 3 };
-  const status_order   = { open: 0, pending: 1, assigned: 2, in_progress: 3, waiting: 4, resolved: 5, closed: 6 };
+  const status_order   = { open: 0, assigned: 1, in_progress: 2, waiting: 3, resolved: 4, closed: 5 };
   return [...tickets].sort((a, b) => {
     let av: string | number = "";
     let bv: string | number = "";

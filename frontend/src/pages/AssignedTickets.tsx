@@ -37,7 +37,7 @@ export default function AssignedTickets() {
     } catch (err) { console.error("Erreur changement statut:", err); }
   };
 
-  const pending    = tickets.filter(t => ["pending", "assigned"].includes(t.status)).length;
+  const pending    = tickets.filter(t => t.status === "assigned").length;
   const inProgress = tickets.filter(t => t.status === "in_progress").length;
   const resolved   = tickets.filter(t => t.status === "resolved").length;
 

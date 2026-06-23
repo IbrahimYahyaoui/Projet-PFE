@@ -88,7 +88,7 @@ export default function TeamTickets() {
   };
 
   const inProgress = tickets.filter(t => t.status === "in_progress").length;
-  const pending    = tickets.filter(t => t.status === "pending").length;
+  const pending    = tickets.filter(t => t.status === "assigned").length;
   const resolved   = tickets.filter(t => t.status === "resolved").length;
 
   const actions = isLeader
@@ -97,7 +97,7 @@ export default function TeamTickets() {
         label:   "Assigner",
         color:   C.accent,
         hoverBg: C.accentLight,
-        show:    (t: TicketRow) => t.status === "pending",
+        show:    (t: TicketRow) => t.status === "assigned",
         onClick: openAssign,
       }]
     : [];

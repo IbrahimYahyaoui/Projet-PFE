@@ -225,6 +225,10 @@ const getTicketById = async (req, res) => {
 
 const createTicket = async (req, res) => {
   try {
+    if (req.user.role === 'tech') {
+      return res.status(403).json({ message: "Les techniciens ne peuvent pas créer de tickets" });
+    }
+
     const { title, description, priority = 'medium', category = 'other' } = req.body;
     if (!title || !description) {
       return res.status(400).json({ message: "Title and description are required" });
@@ -298,14 +302,14 @@ const assignToTeam = async (req, res) => {
 
     const ticket = await Ticket.findByIdAndUpdate(
       req.params.id,
-      { teamId, status: 'pending', escalationLevel: 0, escalatedAt: null },
+      { teamId, status: 'assigned', escalationLevel: 0, escalatedAt: null },
       { new: true }
     )
       .populate("createdBy", "name email role")
       .populate("assignedTo", "name email role")
       .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } });
 
-    await createHistory(ticket._id, req.user.id, 'status_changed', 'open', 'pending');
+    await createHistory(ticket._id, req.user.id, 'status_changed', 'open', 'assigned');
     await createHistory(ticket._id, req.user.id, 'assigned', oldTicket.teamId?.toString() ?? null, teamId);
 
     // Notify team leader
@@ -424,9 +428,6 @@ const updateTicket = async (req, res) => {
     if (status === 'closed') {
       if (role !== 'admin' && role !== 'leader') {
         return res.status(403).json({ message: "Seul l'admin ou le leader peut clôturer un ticket" });
-      }
-      if (oldTicket.status !== 'resolved') {
-        return res.status(400).json({ message: "Seul un ticket résolu peut être clôturé" });
       }
     }
 

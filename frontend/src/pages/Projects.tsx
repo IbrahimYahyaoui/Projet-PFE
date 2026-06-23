@@ -463,20 +463,20 @@ export default function Projects() {
                           </Box>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                             {canManageMembers && (
-                              <>
-                                <Tooltip title="Ajouter membre">
-                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); setAddMemberDialog(project._id); }}
-                                    sx={{ color: C.textMuted, "&:hover": { color: C.accent, bgcolor: C.accentLight } }}>
-                                    <PersonAddIcon sx={{ fontSize: 14 }} />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Supprimer">
-                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDeleteDialog(project._id); }}
-                                    sx={{ color: C.textMuted, "&:hover": { color: "#DC2626", bgcolor: "rgba(239,68,68,0.08)" } }}>
-                                    <DeleteIcon sx={{ fontSize: 14 }} />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
+                              <Tooltip title="Ajouter membre">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setAddMemberDialog(project._id); }}
+                                  sx={{ color: C.textMuted, "&:hover": { color: C.accent, bgcolor: C.accentLight } }}>
+                                  <PersonAddIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {isAdmin && (
+                              <Tooltip title="Supprimer">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDeleteDialog(project._id); }}
+                                  sx={{ color: C.textMuted, "&:hover": { color: "#DC2626", bgcolor: "rgba(239,68,68,0.08)" } }}>
+                                  <DeleteIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
                             )}
                             {project.endDate && (
                               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.68rem", color: C.textMuted, display: "flex", alignItems: "center", gap: 0.3 }}>

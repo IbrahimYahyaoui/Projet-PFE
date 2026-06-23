@@ -818,7 +818,7 @@ export default function ProjectDetail() {
               </Box>
 
               {/* Footer */}
-              {isLeader && (
+              {(canManageTasks || isAdmin) && (
                 <Box sx={{ p: 2.5, borderTop: `1px solid ${C.border}`, bgcolor: "#fff" }}>
                   <Button fullWidth onClick={handleDeleteTask}
                     sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", borderRadius: "9px", bgcolor: "rgba(239,68,68,0.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { bgcolor: "rgba(239,68,68,0.14)" } }}>

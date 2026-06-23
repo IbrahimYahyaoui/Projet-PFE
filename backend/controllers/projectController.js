@@ -115,17 +115,11 @@ const createProject = async (req, res) => {
   }
 };
 
-// ── UPDATE projet (admin ou manager/créateur seulement) ──
+// ── UPDATE projet (admin uniquement) ──
 const updateProject = async (req, res) => {
   try {
-    const { role, id } = req.user;
     const existing = await Project.findById(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Project not found' });
-
-    const isOwner = existing.createdBy?.toString() === id || existing.managerId?.toString() === id;
-    if (role !== 'admin' && !isOwner) {
-      return res.status(403).json({ message: 'Non autorisé' });
-    }
 
     const { name, description, status, priority, startDate, endDate, color, managerId } = req.body;
     const project = await Project.findByIdAndUpdate(
@@ -233,11 +227,6 @@ const updateTask = async (req, res) => {
     const { role, id } = req.user;
     const task = await ProjectTask.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    // ADMIN : lecture seule, ne peut pas modifier les tâches
-    if (role === 'admin') {
-      return res.status(403).json({ message: "L'admin ne modifie pas les tâches" });
-    }
 
     // TECH : uniquement le statut de ses propres tâches
     if (role === 'tech') {
