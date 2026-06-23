@@ -620,6 +620,15 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
                 key={notif._id}
                 onClick={() => {
                   if (notif.ticketId?._id) {
+                    if (!notif.read) {
+                      const token = localStorage.getItem("token");
+                      fetch(`/api/notifications/${notif._id}`, {
+                        method: "PUT",
+                        headers: { Authorization: `Bearer ${token}` },
+                      }).catch(() => {});
+                      setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, read: true } : n));
+                      setUnreadCount(prev => Math.max(0, prev - 1));
+                    }
                     navigate(`/tickets/${notif.ticketId._id}`);
                     setNotifAnchor(null);
                   }

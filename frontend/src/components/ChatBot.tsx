@@ -260,6 +260,7 @@ export const ChatBot = () => {
   };
 
   const sendChat = async (text: string) => {
+    if (text === "__start_ticket__") { startTicket(); return; }
     addMsg({ role: "user", text });
     setLoading(true);
     try {
@@ -371,6 +372,7 @@ export const ChatBot = () => {
 
   const handleChip = (chip: ActionChip) => {
     if (loading) return;
+    if (chip.value === "__start_ticket__") { startTicket(); return; }
     if (chip.value.startsWith("__suggestion__")) { sendChat(chip.label); return; }
     if (chip.value === "confirm") { createTicket(); return; }
     if (chip.value === "cancel") {

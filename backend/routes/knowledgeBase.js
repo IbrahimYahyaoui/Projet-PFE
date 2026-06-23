@@ -16,6 +16,8 @@ const {
   reactToArticle,
   toggleFavorite,
   rateArticle,
+  saveNote,
+  deleteNote,
 } = require('../controllers/knowledgeBaseController');
 const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 
@@ -46,5 +48,7 @@ router.put('/:id/favorite',                 verifyToken, toggleFavorite);
 router.post('/:id/rate',                    verifyToken, rateArticle);
 router.post('/:id/comments',               verifyToken, addComment);
 router.delete('/:id/comments/:commentId',  verifyToken, deleteComment);
+router.put('/:id/note',                    verifyToken, saveNote);
+router.delete('/:id/note',                 verifyToken, deleteNote);
 
 module.exports = router;

@@ -34,6 +34,7 @@ interface Article {
   reactionCounts?: { like: number; helpful: number; outdated: number };
   rating?: { average: number; count: number };
   comments?: Comment[];
+  myNote?: string | null;
 }
 
 const CAT_COLORS: Record<string, string> = { hardware: "#EA580C", software: "#2563EB", network: "#16A34A", access: "#7C3AED", general: C.accent, other: "#64748B" };
@@ -89,6 +90,9 @@ export default function KnowledgeBaseArticle() {
   const [ratingDone,  setRatingDone]  = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commenting,  setCommenting]  = useState(false);
+  const [noteText,    setNoteText]    = useState("");
+  const [noteEditing, setNoteEditing] = useState(false);
+  const [noteSaving,  setNoteSaving]  = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -142,6 +146,25 @@ export default function KnowledgeBaseArticle() {
     try {
       await api.delete(`/api/knowledge-base/${id}/comments/${commentId}`);
       setArticle(prev => prev ? { ...prev, comments: (prev.comments ?? []).filter(c => c._id !== commentId) } : prev);
+    } catch {}
+  };
+
+  const handleSaveNote = async () => {
+    if (!id || !noteText.trim()) return;
+    setNoteSaving(true);
+    try {
+      await api.put(`/api/knowledge-base/${id}/note`, { content: noteText.trim() });
+      setArticle(prev => prev ? { ...prev, myNote: noteText.trim() } : prev);
+      setNoteEditing(false);
+    } catch {} finally { setNoteSaving(false); }
+  };
+
+  const handleDeleteNote = async () => {
+    if (!id) return;
+    try {
+      await api.delete(`/api/knowledge-base/${id}/note`);
+      setArticle(prev => prev ? { ...prev, myNote: null } : prev);
+      setNoteText("");
     } catch {}
   };
 
@@ -282,6 +305,94 @@ export default function KnowledgeBaseArticle() {
               );
             })}
           </Box>
+        </Box>
+
+        {/* ── Note personnelle section ── */}
+        <Box sx={{ px: 4, py: 3, borderTop: `1px solid ${C.border}` }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box component="i" className="ti ti-note" sx={{ fontSize: 16, color: C.accent }} />
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 700, color: C.textPrimary }}>
+                Ma note privée
+              </Typography>
+            </Box>
+            {article.myNote && !noteEditing && (
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  size="small"
+                  onClick={() => { setNoteText(article.myNote ?? ""); setNoteEditing(true); }}
+                  startIcon={<Box component="i" className="ti ti-edit" sx={{ fontSize: 13 }} />}
+                  sx={{ textTransform: "none", fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.accent, borderColor: C.accent, borderRadius: "8px" }}
+                  variant="outlined"
+                >
+                  Modifier
+                </Button>
+                <Tooltip title="Supprimer la note">
+                  <IconButton size="small" onClick={handleDeleteNote} sx={{ color: C.textMuted, "&:hover": { color: C.danger, bgcolor: C.dangerBg } }}>
+                    <Box component="i" className="ti ti-trash" sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
+          </Box>
+
+          {/* Display mode */}
+          {article.myNote && !noteEditing && (
+            <Box sx={{ bgcolor: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", px: 2, py: 1.5 }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", color: C.textSecondary, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                {article.myNote}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Edit mode */}
+          {noteEditing && (
+            <Box>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Écrivez votre note privée..."
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                size="small"
+                autoFocus
+                sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { borderRadius: "10px", fontFamily: "Inter, sans-serif", fontSize: "13px" } }}
+              />
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  onClick={handleSaveNote}
+                  disabled={noteSaving || !noteText.trim()}
+                  variant="contained"
+                  size="small"
+                  sx={{ bgcolor: C.accent, textTransform: "none", fontFamily: "Inter, sans-serif", fontWeight: 600, borderRadius: "8px", "&:hover": { bgcolor: C.accentHover } }}
+                >
+                  {noteSaving ? <CircularProgress size={14} sx={{ color: "#fff" }} /> : "Enregistrer"}
+                </Button>
+                <Button
+                  onClick={() => setNoteEditing(false)}
+                  variant="outlined"
+                  size="small"
+                  sx={{ textTransform: "none", fontFamily: "Inter, sans-serif", fontWeight: 600, borderRadius: "8px", borderColor: C.border, color: C.textMuted }}
+                >
+                  Annuler
+                </Button>
+              </Box>
+            </Box>
+          )}
+
+          {/* Empty state */}
+          {!article.myNote && !noteEditing && (
+            <Button
+              onClick={() => { setNoteText(""); setNoteEditing(true); }}
+              variant="outlined"
+              size="small"
+              startIcon={<Box component="i" className="ti ti-plus" sx={{ fontSize: 13 }} />}
+              sx={{ textTransform: "none", fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textMuted, borderColor: C.border, borderRadius: "8px", "&:hover": { borderColor: C.accent, color: C.accent } }}
+            >
+              Ajouter une note
+            </Button>
+          )}
         </Box>
 
         {/* ── Comments section ── */}

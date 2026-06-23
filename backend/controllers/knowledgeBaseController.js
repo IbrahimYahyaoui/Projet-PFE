@@ -3,6 +3,9 @@ const KnowledgeBase = require('../schemas/knowledgeBase');
 const Team = require('../schemas/team');
 
 // ── Visibility filter builder ──
+// admin       : voit tout (aucun filtre)
+// tech/leader : voit les articles sans restriction d'équipe + ceux de son équipe
+// user        : voit uniquement les articles sans restriction d'équipe (pas d'équipe assignée)
 const buildVisibilityFilter = async (role, userId) => {
   if (role === 'admin') return {};
   const base = { status: 'published', 'visibility.roles': role };
@@ -29,6 +32,7 @@ const enrichArticle = (article, userId) => {
       helpful:  obj.reactions?.filter(r => r.type === 'helpful').length  ?? 0,
       outdated: obj.reactions?.filter(r => r.type === 'outdated').length ?? 0,
     },
+    myNote: obj.notes?.find(n => n.userId?.toString() === userId)?.content ?? null,
   };
 };
 
@@ -344,6 +348,44 @@ const toggleFavorite = async (req, res) => {
   }
 };
 
+// ── Save (create or update) personal note ──
+const saveNote = async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content?.trim()) return res.status(400).json({ message: 'Contenu requis' });
+    const article = await KnowledgeBase.findById(req.params.id);
+    if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const existingIdx = article.notes.findIndex(n => n.userId.toString() === req.user.id);
+    if (existingIdx >= 0) {
+      article.notes[existingIdx].content   = content.trim();
+      article.notes[existingIdx].updatedAt = new Date();
+    } else {
+      article.notes.push({ userId: req.user.id, content: content.trim() });
+    }
+    await article.save();
+    const myNote = article.notes.find(n => n.userId.toString() === req.user.id);
+    res.json({ content: myNote.content, updatedAt: myNote.updatedAt });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ── Delete personal note ──
+const deleteNote = async (req, res) => {
+  try {
+    const article = await KnowledgeBase.findById(req.params.id);
+    if (!article) return res.status(404).json({ message: 'Article not found' });
+    article.notes = article.notes.filter(n => n.userId.toString() !== req.user.id);
+    await article.save();
+    res.json({ message: 'Note supprimée' });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // ── Rate article ──
 const rateArticle = async (req, res) => {
   try {
@@ -392,4 +434,6 @@ module.exports = {
   reactToArticle,
   toggleFavorite,
   rateArticle,
+  saveNote,
+  deleteNote,
 };

@@ -1,6 +1,12 @@
 // backend/schemas/knowledgeBase.js
 const mongoose = require('mongoose');
 
+const noteSubSchema = new mongoose.Schema({
+  userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  content:   { type: String, required: true, trim: true },
+  updatedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
 const commentSubSchema = new mongoose.Schema({
   content:   { type: String, required: true, trim: true },
   userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -52,6 +58,8 @@ const knowledgeBaseSchema = new mongoose.Schema(
     }],
 
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+    notes: [noteSubSchema],
 
     rating: {
       average: { type: Number, default: 0 },

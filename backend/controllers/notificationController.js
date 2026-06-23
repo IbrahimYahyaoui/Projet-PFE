@@ -5,7 +5,7 @@ const getMyNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ userId: req.user.id })
       .populate('triggeredBy', 'name')
-      .populate('ticketId', 'title')
+      .populate('ticketId', '_id title')
       .populate('projectId', 'name')
       .sort({ createdAt: -1 })
       .limit(50);

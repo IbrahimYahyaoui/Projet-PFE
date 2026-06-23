@@ -280,7 +280,7 @@ export default function AIAssistant() {
 
   const startTicket = () => {
     if (role === "tech") {
-      addMsg({ role: "ai", text: "En tant que technicien, vous ne créez pas de tickets. Si vous avez besoin d'aide, contactez votre Team Lead ou cherchez dans la base de connaissances." });
+      addMsg({ role: "ai", text: "En tant que technicien, la création de tickets via l'IA n'est pas disponible pour votre rôle. Si vous avez besoin d'ouvrir un ticket, contactez votre Team Lead." });
       return;
     }
     setMode("ticket");
@@ -470,6 +470,13 @@ export default function AIAssistant() {
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
+            <Box
+              onClick={() => navigate("/ai-assistant/history")}
+              sx={{ display: "flex", alignItems: "center", gap: 0.8, px: 1.5, py: 0.7, borderRadius: "8px", border: `1px solid ${C.border}`, cursor: "pointer", "&:hover": { bgcolor: C.bgPage }, transition: "background 0.12s" }}
+            >
+              <Box component="i" className="ti ti-history" sx={{ fontSize: 14, color: C.textMuted }} />
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textSecondary }}>Historique</Typography>
+            </Box>
             {mode === "chat" && (
               <Box
                 onClick={startTicket}

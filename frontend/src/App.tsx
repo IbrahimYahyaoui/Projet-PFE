@@ -46,6 +46,7 @@ import KnowledgeBaseArticle from "./pages/KnowledgeBaseArticle";
 
 // ── AI Assistant ──
 import AIAssistant from "./pages/AIAssistant";
+import AIHistory   from "./pages/AIHistory";
 
 // ── Admin ──
 import Analytics    from "./pages/Analytics";
@@ -137,7 +138,8 @@ export default function App() {
         <Route path="/knowledge-base/:id"       element={<P permission="canSeeKnowledgeBase"><KnowledgeBaseArticle /></P>} />
 
         {/* ── AI Assistant ── */}
-        <Route path="/ai-assistant" element={<P><AIAssistant /></P>} />
+        <Route path="/ai-assistant"         element={<P><AIAssistant /></P>} />
+        <Route path="/ai-assistant/history" element={<P><AIHistory /></P>} />
 
         {/* ── Analytics (global — admin/leader) ── */}
         <Route path="/analytics" element={<P permission="canSeeAnalytics"><Analytics /></P>} />
