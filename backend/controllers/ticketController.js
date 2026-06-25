@@ -356,6 +356,12 @@ const assignTicket = async (req, res) => {
     const oldTicket = await Ticket.findById(req.params.id).populate("assignedTo", "name");
     if (!oldTicket) return res.status(404).json({ message: "Ticket not found" });
 
+    const team = await Team.findById(oldTicket.teamId);
+    const isMember = team?.members?.some(m => m.toString() === assignedTo) || team?.leaderId?.toString() === assignedTo;
+    if (!isMember) {
+      return res.status(400).json({ message: "Ce technicien n'appartient pas à l'équipe assignée à ce ticket" });
+    }
+
     const ticket = await Ticket.findByIdAndUpdate(
       req.params.id,
       { assignedTo, assignedBy: req.user.id, status: 'assigned' },
@@ -422,6 +428,16 @@ const updateTicket = async (req, res) => {
       }
       if (oldTicket.assignedTo?._id?.toString() !== req.user.id) {
         return res.status(403).json({ message: "Ce ticket n'est pas assigné à vous" });
+      }
+    }
+
+    if (role === 'leader') {
+      if (!oldTicket.teamId) {
+        return res.status(400).json({ message: "Ticket non assigné à une équipe" });
+      }
+      const team = await Team.findById(oldTicket.teamId);
+      if (team?.leaderId?.toString() !== req.user.id) {
+        return res.status(403).json({ message: "Seul le leader de l'équipe assignée à ce ticket peut faire cela" });
       }
     }
 

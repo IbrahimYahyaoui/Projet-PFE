@@ -76,16 +76,16 @@ const inputSx = {
 };
 
 // ─── TaskCard ────────────────────────────────────────────────
-function TaskCard({ task, index, onDragStart, onClick }: {
-  task: Task; index: number; onDragStart: () => void; onClick: () => void;
+function TaskCard({ task, index, onDragStart, onClick, dragDisabled }: {
+  task: Task; index: number; onDragStart: () => void; onClick: () => void; dragDisabled?: boolean;
 }) {
   const tp = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium;
   const av = avatarColors[index % avatarColors.length];
   const isOverdue = task.dueDate && !["done"].includes(task.status) && new Date(task.dueDate) < new Date();
 
   return (
-    <Paper draggable onDragStart={onDragStart} onClick={onClick}
-      sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "12px", p: 1.75, cursor: "pointer", transition: "all 0.15s", "&:hover": { borderColor: C.accent, boxShadow: C.shadowMd, transform: "translateY(-1px)" }, "&:active": { cursor: "grabbing" } }}>
+    <Paper draggable={!dragDisabled} onDragStart={dragDisabled ? undefined : onDragStart} onClick={onClick}
+      sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "12px", p: 1.75, cursor: dragDisabled ? "not-allowed" : "pointer", opacity: dragDisabled ? 0.6 : 1, transition: "all 0.15s", "&:hover": { borderColor: C.accent, boxShadow: C.shadowMd, transform: "translateY(-1px)" }, "&:active": { cursor: dragDisabled ? "not-allowed" : "grabbing" } }}>
       <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", color: C.navy, mb: 1.2, lineHeight: 1.4 }}>
         {task.title}
       </Typography>
@@ -142,6 +142,7 @@ export default function ProjectDetail() {
   const [loading,    setLoading]    = useState(true);
   const [activeTab,  setActiveTab]  = useState("board");
   const [dragTask,   setDragTask]   = useState<Task | null>(null);
+  const [dropError,  setDropError]  = useState<string | null>(null);
 
   // Task detail drawer
   const [selectedTask,  setSelectedTask]  = useState<Task | null>(null);
@@ -178,16 +179,35 @@ export default function ProjectDetail() {
     }).finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!dropError) return;
+    const t = setTimeout(() => setDropError(null), 4000);
+    return () => clearTimeout(t);
+  }, [dropError]);
+
   // ── Kanban drop ────────────────────────────────────────────
   const handleDrop = async (status: string) => {
     if (!isTech) return; // Seul le tech peut changer le statut via drag & drop
     if (!dragTask || dragTask.status === status) return;
+
+    if (dragTask.assignedTo?._id !== currentId) {
+      setDropError("Vous ne pouvez déplacer que vos propres tâches");
+      setDragTask(null);
+      return;
+    }
+
     const token = localStorage.getItem("token");
-    await fetch(`${apiUrl}/api/projects/${id}/tasks/${dragTask._id}`, {
+    const res = await fetch(`${apiUrl}/api/projects/${id}/tasks/${dragTask._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setDropError(data.message ?? "Impossible de déplacer cette tâche");
+      setDragTask(null);
+      return;
+    }
     setTasks(prev => prev.map(t => t._id === dragTask._id ? { ...t, status } : t));
     setDragTask(null);
   };
@@ -427,6 +447,14 @@ export default function ProjectDetail() {
               </Typography>
             </Box>
           )}
+          {dropError && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "10px 14px", bgcolor: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "10px", mb: 2 }}>
+              <Box component="i" className="ti ti-alert-triangle" sx={{ fontSize: 15, color: "#DC2626" }} />
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: "#DC2626", fontWeight: 500 }}>
+                {dropError}
+              </Typography>
+            </Box>
+          )}
           {isTech && myTasks.length === 0 && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "10px 14px", bgcolor: C.warningBg, border: `1px solid ${C.warning}40`, borderRadius: "10px", mb: 2 }}>
               <Box component="i" className="ti ti-info-circle" sx={{ fontSize: 15, color: C.warning }} />
@@ -463,6 +491,7 @@ export default function ProjectDetail() {
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1, minHeight: 80 }}>
                     {colTasks.map((task, i) => (
                       <TaskCard key={task._id} task={task} index={i}
+                        dragDisabled={isTech && task.assignedTo?._id !== currentId}
                         onDragStart={() => setDragTask(task)}
                         onClick={() => setSelectedTask(task)} />
                     ))}

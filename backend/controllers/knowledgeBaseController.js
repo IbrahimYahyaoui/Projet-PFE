@@ -196,6 +196,13 @@ const createArticle = async (req, res) => {
 // ── UPDATE article ──
 const updateArticle = async (req, res) => {
   try {
+    const existing = await KnowledgeBase.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Article not found' });
+
+    if (req.user.role !== 'admin' && existing.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Seul l'auteur de l'article ou un administrateur peut le modifier" });
+    }
+
     const { title, content, category, tags, subcategory, status, visibility } = req.body;
     const update = { title, content, category, tags, updatedBy: req.user.id };
     if (subcategory !== undefined) update.subcategory = subcategory;
@@ -206,7 +213,6 @@ const updateArticle = async (req, res) => {
       .populate('createdBy', 'name role')
       .populate('updatedBy', 'name role');
 
-    if (!article) return res.status(404).json({ message: 'Article not found' });
     res.json(article);
   } catch (err) {
     console.log(err);
