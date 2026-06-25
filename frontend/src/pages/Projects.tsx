@@ -110,6 +110,7 @@ export default function Projects() {
   const [kanbanProject, setKanbanProject] = useState<string>("");
   const [kanbanTasks, setKanbanTasks] = useState<Task[]>([]);
   const [dragTask, setDragTask] = useState<Task | null>(null);
+  const [dropError, setDropError] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [commentInput, setCommentInput] = useState("");
 
@@ -202,6 +203,12 @@ export default function Projects() {
   }, []);
 
   useEffect(() => {
+    if (!dropError) return;
+    const t = setTimeout(() => setDropError(null), 4000);
+    return () => clearTimeout(t);
+  }, [dropError]);
+
+  useEffect(() => {
     if (activeTab === "kanban" && projects.length > 0) {
       const pid = kanbanProject || projects[0]._id;
       setKanbanProject(pid);
@@ -277,13 +284,26 @@ export default function Projects() {
   const handleDrop = async (status: string) => {
     if (!isTech) return; // Seul le tech peut changer le statut via drag & drop
     if (!dragTask || dragTask.status === status) return;
+
+    if (dragTask.assignedTo?._id !== currentUserId) {
+      setDropError("Vous ne pouvez déplacer que vos propres tâches");
+      setDragTask(null);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
-      await fetch(`${apiUrl}/api/projects/${dragTask.projectId}/tasks/${dragTask._id}`, {
+      const res = await fetch(`${apiUrl}/api/projects/${dragTask.projectId}/tasks/${dragTask._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDropError(data.message ?? "Impossible de déplacer cette tâche");
+        setDragTask(null);
+        return;
+      }
       setKanbanTasks(prev => prev.map(t => t._id === dragTask._id ? { ...t, status } : t));
       setDragTask(null);
     } catch (err) { console.log(err); }
@@ -605,6 +625,14 @@ export default function Projects() {
         {/* ════ KANBAN TAB ════ */}
         {activeTab === "kanban" && (
           <>
+            {dropError && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "10px 14px", bgcolor: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "10px", mb: 2 }}>
+                <Box component="i" className="ti ti-alert-triangle" sx={{ fontSize: 15, color: "#DC2626" }} />
+                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: "#DC2626", fontWeight: 500 }}>
+                  {dropError}
+                </Typography>
+              </Box>
+            )}
             {/* Project selector */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.82rem", color: C.textMuted }}>Projet :</Typography>
@@ -654,10 +682,11 @@ export default function Projects() {
                         const tp = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium;
                         const av = avatarColors[i % avatarColors.length];
                         const isOverdue = task.dueDate && !["done"].includes(task.status) && new Date(task.dueDate) < new Date();
+                        const dragDisabled = isTech && task.assignedTo?._id !== currentUserId;
                         return (
-                          <Paper key={task._id} draggable onDragStart={() => setDragTask(task)}
+                          <Paper key={task._id} draggable={!dragDisabled} onDragStart={dragDisabled ? undefined : () => setDragTask(task)}
                             onClick={() => setSelectedTask(task)}
-                            sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "10px", p: 1.5, cursor: "pointer", transition: "all 0.15s", "&:hover": { borderColor: config.color, boxShadow: C.shadowMd, transform: "translateY(-1px)" }, "&:active": { cursor: "grabbing" } }}>
+                            sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "10px", p: 1.5, cursor: dragDisabled ? "not-allowed" : "pointer", opacity: dragDisabled ? 0.6 : 1, transition: "all 0.15s", "&:hover": { borderColor: config.color, boxShadow: C.shadowMd, transform: "translateY(-1px)" }, "&:active": { cursor: dragDisabled ? "not-allowed" : "grabbing" } }}>
                             <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8rem", color: C.navy, mb: 1 }}>{task.title}</Typography>
                             <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1, flexWrap: "wrap" }}>
                               <Chip label={tp.label} size="small" sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.6rem", fontWeight: 600, bgcolor: tp.bg, color: tp.color, height: 18 }} />
