@@ -13,6 +13,15 @@ const CATEGORIES = ["hardware","software","network","access","general","other"];
 const CAT_LABELS: Record<string, string> = { hardware: "Matériel", software: "Logiciel", network: "Réseau", access: "Accès", general: "Général", other: "Autre" };
 const ALL_ROLES = ["admin","leader","tech","user"] as const;
 const ROLE_LABELS: Record<string, string> = { admin: "Administrateur", leader: "Leader", tech: "Technicien", user: "Utilisateur" };
+// Mêmes catégories que team.js (backend/schemas/team.js)
+const EXPERTISE_OPTIONS = [
+  { value: "hardware", label: "Matériel" },
+  { value: "software", label: "Logiciel" },
+  { value: "network",  label: "Réseau" },
+  { value: "security", label: "Sécurité" },
+  { value: "support",  label: "Support" },
+  { value: "other",    label: "Autre" },
+];
 
 interface Team { _id: string; name: string; tag: string }
 
@@ -30,6 +39,7 @@ export default function KnowledgeBaseCreate() {
   const [status,      setStatus]      = useState<"draft"|"published">("published");
   const [visRoles,    setVisRoles]    = useState<string[]>(["admin","leader","tech","user"]);
   const [visTeamIds,  setVisTeamIds]  = useState<string[]>([]);
+  const [visExpertise, setVisExpertise] = useState<string[]>([]);
   const [teams,       setTeams]       = useState<Team[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [loading,     setLoading]     = useState(isEdit);
@@ -52,6 +62,7 @@ export default function KnowledgeBaseCreate() {
         setStatus(a.status ?? "published");
         setVisRoles(a.visibility?.roles ?? ["admin","leader","tech","user"]);
         setVisTeamIds((a.visibility?.teamIds ?? []).map((t: any) => t._id ?? t));
+        setVisExpertise(a.visibility?.expertise ?? []);
       })
       .catch(() => setError("Article introuvable"))
       .finally(() => setLoading(false));
@@ -73,7 +84,7 @@ export default function KnowledgeBaseCreate() {
     setError("");
     const body = {
       title, content, category, subcategory: subcategory.trim(), tags, status,
-      visibility: { roles: visRoles, teamIds: visTeamIds },
+      visibility: { roles: visRoles, teamIds: visTeamIds, expertise: visExpertise },
     };
     try {
       if (isEdit) {
@@ -220,6 +231,36 @@ export default function KnowledgeBaseCreate() {
             </Box>
           </Box>
         )}
+
+        {/* Visibility — Expertise (technicien uniquement) */}
+        <Box>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", mb: 0.5 }}>
+            Visibilité — Domaines d'expertise (technicien)
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, mb: 1 }}>
+            Laisser vide = tous les domaines d'expertise éligibles
+          </Typography>
+          <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap" }}>
+            {EXPERTISE_OPTIONS.map(opt => {
+              const selected = visExpertise.includes(opt.value);
+              return (
+                <Chip
+                  key={opt.value}
+                  label={opt.label}
+                  size="small"
+                  onClick={() => setVisExpertise(prev => selected ? prev.filter(e => e !== opt.value) : [...prev, opt.value])}
+                  sx={{
+                    fontFamily: "Inter, sans-serif", fontSize: "12px", cursor: "pointer",
+                    bgcolor: selected ? C.accent : C.bgPage,
+                    color:   selected ? "#fff"   : C.textMuted,
+                    border: `1px solid ${selected ? C.accent : C.border}`,
+                    "&:hover": { bgcolor: selected ? C.accentHover : C.bgHover },
+                  }}
+                />
+              );
+            })}
+          </Box>
+        </Box>
 
         {/* Content */}
         <Box>

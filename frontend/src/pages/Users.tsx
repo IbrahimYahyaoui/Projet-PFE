@@ -43,11 +43,22 @@ interface User {
   role: Role;
   phone?: string;
   department?: string;
+  expertise?: string | null;
   isActive: boolean;
   lastLoginAt?: string | null;
   createdAt: string;
   teamId?: TeamRef | null;
 }
+
+// Mêmes catégories que team.js (backend/schemas/team.js)
+const EXPERTISE_OPTIONS = [
+  { value: "hardware", label: "Matériel" },
+  { value: "software", label: "Logiciel" },
+  { value: "network",  label: "Réseau" },
+  { value: "security", label: "Sécurité" },
+  { value: "support",  label: "Support" },
+  { value: "other",    label: "Autre" },
+];
 
 const ROLES: { value: Role | "all"; label: string }[] = [
   { value: "all",    label: "Tous les rôles" },
@@ -106,7 +117,7 @@ const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace
 
 const emptyForm = {
   name: "", email: "", role: "user" as Role,
-  password: "", phone: "", department: "",
+  password: "", phone: "", department: "", expertise: "",
   passwordMode: "auto" as "auto" | "manual",
   isActive: true,
 };
@@ -221,7 +232,7 @@ export default function Users() {
 
   const openEdit = (u: User) => {
     setEditUser(u);
-    setForm({ name: u.name, email: u.email, role: u.role, password: "", phone: u.phone ?? "", department: u.department ?? "", passwordMode: "manual", isActive: u.isActive });
+    setForm({ name: u.name, email: u.email, role: u.role, password: "", phone: u.phone ?? "", department: u.department ?? "", expertise: u.expertise ?? "", passwordMode: "manual", isActive: u.isActive });
     setFormError(null); setShowPwd(false);
     setDialogOpen(true);
   };
@@ -240,7 +251,7 @@ export default function Users() {
     setFormLoading(true); setFormError(null);
     try {
       if (editUser) {
-        const body: Record<string, any> = { name: form.name, email: form.email, role: form.role, phone: form.phone, department: form.department, isActive: form.isActive };
+        const body: Record<string, any> = { name: form.name, email: form.email, role: form.role, phone: form.phone, department: form.department, isActive: form.isActive, expertise: form.role === "tech" ? (form.expertise || null) : null };
         if (form.password.trim()) body.password = form.password;
         const res = await fetch(`${apiUrl}/api/users/${editUser._id}`, {
           method: "PUT",
@@ -250,7 +261,7 @@ export default function Users() {
         if (!res.ok) throw new Error((await res.json()).message || "Erreur serveur.");
         closeDialog(); fetchUsers();
       } else {
-        const body: Record<string, any> = { name: form.name, email: form.email, role: form.role, phone: form.phone, department: form.department };
+        const body: Record<string, any> = { name: form.name, email: form.email, role: form.role, phone: form.phone, department: form.department, expertise: form.role === "tech" ? (form.expertise || null) : null };
         if (form.passwordMode === "manual" && form.password.trim()) body.password = form.password;
         const res = await fetch(`${apiUrl}/api/users`, {
           method: "POST",
@@ -665,6 +676,17 @@ export default function Users() {
               </MenuItem>
             ))}
           </TextField>
+
+          {form.role === "tech" && (
+            <TextField select label="Domaine d'expertise" fullWidth value={form.expertise} onChange={(e) => setForm(f => ({ ...f, expertise: e.target.value }))} sx={inputSx}>
+              <MenuItem value="" sx={{ fontFamily: "Inter, sans-serif", color: C.textMuted }}>Aucun</MenuItem>
+              {EXPERTISE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value} sx={{ fontFamily: "Inter, sans-serif", color: C.textPrimary, "&:hover": { backgroundColor: C.accentLight } }}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
 
           {/* Password section */}
           {!editUser ? (

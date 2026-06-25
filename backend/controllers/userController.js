@@ -32,7 +32,7 @@ const getMe = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, role, password, phone, department } = req.body;
+    const { name, email, role, password, phone, department, expertise } = req.body;
     if (!name || !email || !role) {
       return res.status(400).json({ message: "Nom, email et rôle sont obligatoires" });
     }
@@ -46,6 +46,7 @@ const createUser = async (req, res) => {
     const user = new User({
       name, email, password: finalPassword, role,
       phone: phone || '', department: department || '',
+      expertise: role === 'tech' ? (expertise || null) : null,
     });
     await user.save();
 
@@ -85,7 +86,7 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { name, email, role, password, phone, department, isActive } = req.body;
+    const { name, email, role, password, phone, department, isActive, expertise } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -96,6 +97,9 @@ const updateUser = async (req, res) => {
     if (phone      !== undefined)          user.phone      = phone;
     if (department !== undefined)          user.department = department;
     if (isActive   !== undefined)          user.isActive   = isActive;
+    if (expertise  !== undefined)          user.expertise  = expertise || null;
+    // Un utilisateur qui n'est plus technicien ne garde pas de domaine d'expertise
+    if (user.role !== 'tech')              user.expertise  = null;
 
     await user.save();
     res.json({ id: user._id, name: user.name, email: user.email, role: user.role, isActive: user.isActive });
