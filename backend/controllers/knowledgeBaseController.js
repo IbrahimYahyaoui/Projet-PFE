@@ -425,6 +425,7 @@ const rateArticle = async (req, res) => {
 };
 
 module.exports = {
+  buildVisibilityFilter,
   getAllArticles,
   searchArticles,
   getSuggestions,

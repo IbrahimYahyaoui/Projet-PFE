@@ -3,6 +3,7 @@ const CompanyContext = require("../schemas/companyContext");
 const KnowledgeBase  = require("../schemas/knowledgeBase");
 const Project        = require("../schemas/project");
 const ProjectTask    = require("../schemas/projectTask");
+const { buildVisibilityFilter } = require("./knowledgeBaseController");
 
 const getModel = () => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -250,8 +251,10 @@ const searchKnowledge = async (req, res) => {
   const { query } = req.body || {};
   if (!query) return res.status(400).json({ error: "query is required" });
   try {
+    const { role, id: userId } = req.user;
+    const visFilter = await buildVisibilityFilter(role, userId);
     const articles = await KnowledgeBase.find(
-      { $text: { $search: query } },
+      { ...visFilter, $text: { $search: query } },
       { score: { $meta: 'textScore' }, title: 1, category: 1, _id: 1 }
     ).sort({ score: { $meta: 'textScore' } }).limit(3);
     res.json({ articles });

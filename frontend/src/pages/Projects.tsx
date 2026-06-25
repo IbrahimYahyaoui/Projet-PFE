@@ -135,10 +135,10 @@ export default function Projects() {
   const isLeader         = currentUser?.role === "leader";
   const isTech           = currentUser?.role === "tech";
   const canCreateProject = isAdmin;
-  const canManageTasks   = isLeader;
-  const canManageMembers = isLeader;
   const canCreate        = canCreateProject; // legacy alias
   const currentUserId    = currentUser?.id ?? currentUser?._id ?? "";
+  // Un leader ne gère membres/tâches que sur LE projet dont il est le manager (project.managerId)
+  const isProjectManager = (project: Project) => isLeader && project.managerId?._id === currentUserId;
 
   // ── Fetch ──────────────────────────────────────────────────
   const fetchAll = async () => {
@@ -462,7 +462,7 @@ export default function Projects() {
                             )}
                           </Box>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                            {canManageMembers && (
+                            {isProjectManager(project) && (
                               <Tooltip title="Ajouter membre">
                                 <IconButton size="small" onClick={(e) => { e.stopPropagation(); setAddMemberDialog(project._id); }}
                                   sx={{ color: C.textMuted, "&:hover": { color: C.accent, bgcolor: C.accentLight } }}>
@@ -616,7 +616,10 @@ export default function Projects() {
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", fontWeight: 600, color: kanbanProject === p._id ? p.color : C.textMuted }}>{p.name}</Typography>
                   </Box>
                 ))}
-                {kanbanProject && canManageTasks && (
+                {kanbanProject && (() => {
+                  const kp = projects.find(p => p._id === kanbanProject);
+                  return kp && isProjectManager(kp);
+                })() && (
                   <Button size="small" startIcon={<AddIcon />} onClick={() => setCreateTaskDialog(kanbanProject)}
                     sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, bgcolor: C.navy, color: "#fff", borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.5, "&:hover": { bgcolor: C.navyMid } }}>
                     Add Task

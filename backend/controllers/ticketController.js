@@ -447,6 +447,11 @@ const updateTicket = async (req, res) => {
       }
     }
 
+    // Réouverture closed → resolved : admin uniquement (Tableau 2.3 du rapport)
+    if (oldTicket.status === 'closed' && status === 'resolved' && role !== 'admin') {
+      return res.status(403).json({ message: "Seul l'admin peut rouvrir un ticket fermé" });
+    }
+
     const updateData = {};
     if (status)          updateData.status   = status;
     if (priority)        updateData.priority = priority;

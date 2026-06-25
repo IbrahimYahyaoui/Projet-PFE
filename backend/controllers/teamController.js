@@ -48,7 +48,7 @@ const getMyTeam = async (req, res) => {
   }
 };
 
-// ── GET team by ID (admin) ───────────────────────────────────────────────────
+// ── GET team by ID (admin, ou leader/membre DE CETTE équipe) ────────────────
 const getTeamById = async (req, res) => {
   try {
     const team = await Team.findById(req.params.id)
@@ -56,6 +56,12 @@ const getTeamById = async (req, res) => {
       .populate('members', 'name email role');
 
     if (!team) return res.status(404).json({ message: 'Équipe non trouvée' });
+
+    if (req.user.role !== 'admin') {
+      const isMember = team.leaderId?._id?.toString() === req.user.id ||
+        team.members.some(m => m._id.toString() === req.user.id);
+      if (!isMember) return res.status(403).json({ message: 'Accès refusé' });
+    }
 
     const membersWithStats = await Promise.all(team.members.map(getMemberWorkload));
     const stats = await buildTeamStats(team._id, team.members);
@@ -67,7 +73,11 @@ const getTeamById = async (req, res) => {
   }
 };
 
-// ── GET all teams with stats (admin) ────────────────────────────────────────
+// ── GET all teams with stats ─────────────────────────────────────────────────
+// NOTE : ce répertoire (liste basique des équipes) est aussi utilisé par les
+// leaders comme directory (ex: sélecteur d'équipe pour la visibilité d'un
+// article KB) — il n'est donc pas restreint à l'admin, contrairement à
+// getTeamById/getTeamWorkload qui exposent des stats nominatives par équipe.
 const getAllTeams = async (req, res) => {
   try {
     const teams = await Team.find()
@@ -115,11 +125,17 @@ const getTeamTickets = async (req, res) => {
   }
 };
 
-// ── GET workload for a specific team ─────────────────────────────────────────
+// ── GET workload for a specific team (admin, ou leader/membre DE CETTE équipe) ─
 const getTeamWorkload = async (req, res) => {
   try {
     const team = await Team.findById(req.params.id).populate('members', 'name email role');
     if (!team) return res.status(404).json({ message: 'Équipe non trouvée' });
+
+    if (req.user.role !== 'admin') {
+      const isMember = team.leaderId?.toString() === req.user.id ||
+        team.members.some(m => m._id.toString() === req.user.id);
+      if (!isMember) return res.status(403).json({ message: 'Accès refusé' });
+    }
 
     const workload = await Promise.all(team.members.map(getMemberWorkload));
     res.json({ teamId: team._id, teamName: team.name, members: workload });
