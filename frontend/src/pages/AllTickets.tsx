@@ -57,11 +57,13 @@ export default function AllTickets() {
   };
 
   const handleExportCSV = () => {
-    const headers = ["ID", "Titre", "Statut", "Priorité", "Catégorie", "Créé par", "Assigné à", "Date"];
+    const headers = ["ID", "Titre", "Statut", "Priorité", "Catégorie", "Créé par", "Assigné à", "Équipe", "Date de création", "SLA deadline"];
     const rows = tickets.map(t => [
       t._id, t.title, t.status, t.priority, t.category,
       t.createdBy?.name ?? "", t.assignedTo?.name ?? "Non assigné",
+      t.teamId?.name ?? "Non assignée",
       new Date(t.createdAt).toLocaleDateString("fr-FR"),
+      t.slaDeadline ? new Date(t.slaDeadline).toLocaleString("fr-FR") : "—",
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
     const link = document.createElement("a");

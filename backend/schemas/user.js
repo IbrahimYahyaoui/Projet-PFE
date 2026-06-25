@@ -35,6 +35,12 @@ const userSchema = new mongoose.Schema(
       ref: 'Team',
       default: null,
     },
+    // Domaine d'expertise du technicien (filtre KB additionnel — US-5.6)
+    expertise: {
+      type: String,
+      enum: ['hardware', 'software', 'network', 'security', 'support', 'other', null],
+      default: null,
+    },
     phone: {
       type: String,
       trim: true,

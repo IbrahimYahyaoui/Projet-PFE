@@ -48,6 +48,12 @@ const knowledgeBaseSchema = new mongoose.Schema(
       roles:   { type: [String], enum: ['admin', 'leader', 'tech', 'user'], default: ['admin', 'leader', 'tech', 'user'] },
       teamIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Team' }],
       // teamIds empty = visible to all eligible roles; non-empty = restricted to those teams + admins
+      expertise: {
+        type: [String],
+        enum: ['hardware', 'software', 'network', 'security', 'support', 'other'],
+        default: [],
+      },
+      // expertise empty = visible quel que soit le domaine d'expertise du technicien
     },
 
     comments: [commentSubSchema],

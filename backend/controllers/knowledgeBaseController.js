@@ -1,23 +1,34 @@
 // backend/controllers/knowledgeBaseController.js
 const KnowledgeBase = require('../schemas/knowledgeBase');
 const Team = require('../schemas/team');
+const User = require('../schemas/user');
 
 // ── Visibility filter builder ──
 // admin       : voit tout (aucun filtre)
 // tech/leader : voit les articles sans restriction d'équipe + ceux de son équipe
 // user        : voit uniquement les articles sans restriction d'équipe (pas d'équipe assignée)
+// tech        : en plus du filtre équipe, filtré aussi par domaine d'expertise (US-5.6) —
+//               ce critère supplémentaire ne s'applique PAS au leader, conformément au rapport.
 const buildVisibilityFilter = async (role, userId) => {
   if (role === 'admin') return {};
   const base = { status: 'published', 'visibility.roles': role };
   if (role === 'user') return { ...base, 'visibility.teamIds': { $size: 0 } };
+
   const team = await Team.findOne({ $or: [{ leaderId: userId }, { members: userId }] }).select('_id');
-  if (team) {
-    return {
-      ...base,
-      $or: [{ 'visibility.teamIds': { $size: 0 } }, { 'visibility.teamIds': team._id }],
-    };
+  const teamFilter = team
+    ? { $or: [{ 'visibility.teamIds': { $size: 0 } }, { 'visibility.teamIds': team._id }] }
+    : { 'visibility.teamIds': { $size: 0 } };
+
+  if (role !== 'tech') {
+    return { ...base, ...teamFilter };
   }
-  return { ...base, 'visibility.teamIds': { $size: 0 } };
+
+  const techUser = await User.findById(userId).select('expertise');
+  const expertiseFilter = techUser?.expertise
+    ? { $or: [{ 'visibility.expertise': { $size: 0 } }, { 'visibility.expertise': techUser.expertise }] }
+    : { 'visibility.expertise': { $size: 0 } };
+
+  return { ...base, $and: [teamFilter, expertiseFilter] };
 };
 
 // ── Enrich article with per-user virtual fields ──
@@ -157,6 +168,11 @@ const getArticleById = async (req, res) => {
         const team = await Team.findOne({ $or: [{ leaderId: userId }, { members: userId }] }).select('_id');
         const hasAccess = team && article.visibility.teamIds.some(t => t.toString() === team._id.toString());
         if (!hasAccess) return res.status(403).json({ message: 'Accès interdit à votre équipe' });
+      }
+      if (role === 'tech' && article.visibility.expertise?.length > 0) {
+        const techUser = await User.findById(userId).select('expertise');
+        const hasExpertiseAccess = techUser?.expertise && article.visibility.expertise.includes(techUser.expertise);
+        if (!hasExpertiseAccess) return res.status(403).json({ message: "Accès interdit à ce domaine d'expertise" });
       }
     }
 

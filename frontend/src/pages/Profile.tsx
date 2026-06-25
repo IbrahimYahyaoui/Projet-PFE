@@ -83,6 +83,7 @@ const apiUrl = (
 export default function Profile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [profileStats, setProfileStats] = useState<any>(null);
 
   const [editInfo, setEditInfo] = useState(false);
@@ -124,18 +125,26 @@ export default function Profile() {
             const storedUser = localStorage.getItem("user");
             const storedUserData = storedUser ? JSON.parse(storedUser) : null;
             resolvedId = payload.id ?? payload._id ?? storedUserData?.id ?? storedUserData?._id ?? null;
-            setProfile({
-              _id: resolvedId ?? "",
-              name: payload.name ?? "Utilisateur",
-              email: storedUserData?.email ?? payload.email ?? "",
-              role: payload.role ?? "user",
-              createdAt: new Date().toISOString(),
-            });
-            setInfoForm({
-              name: payload.name ?? "",
-              email: storedUserData?.email ?? payload.email ?? "",
-            });
-          } catch {}
+            if (!resolvedId) {
+              setLoadError("Impossible de charger votre profil. Veuillez vous reconnecter.");
+            } else {
+              setProfile({
+                _id: resolvedId,
+                name: payload.name ?? "Utilisateur",
+                email: storedUserData?.email ?? payload.email ?? "",
+                role: payload.role ?? "user",
+                createdAt: new Date().toISOString(),
+              });
+              setInfoForm({
+                name: payload.name ?? "",
+                email: storedUserData?.email ?? payload.email ?? "",
+              });
+            }
+          } catch {
+            setLoadError("Impossible de charger votre profil. Veuillez vous reconnecter.");
+          }
+        } else {
+          setLoadError("Impossible de charger votre profil. Veuillez vous reconnecter.");
         }
       }
       if (resolvedId) {
@@ -239,7 +248,15 @@ export default function Profile() {
     );
   }
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <Box sx={{ minHeight: "100vh", backgroundColor: C.bgPage, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Typography sx={{ fontFamily: "Inter, sans-serif", color: C.danger ?? "#DC2626", fontSize: "0.9rem" }}>
+          {loadError ?? "Impossible de charger votre profil. Veuillez vous reconnecter."}
+        </Typography>
+      </Box>
+    );
+  }
 
   const role = roleColors[profile.role] ?? roleColors["user"];
 

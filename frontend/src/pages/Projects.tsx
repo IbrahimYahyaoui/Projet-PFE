@@ -555,9 +555,9 @@ export default function Projects() {
                 sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.68rem", fontWeight: 600,
                   bgcolor: myTasksOnly ? C.accent : C.accentLight, color: myTasksOnly ? C.navy : C.accent,
                   cursor: "pointer", border: `1px solid ${myTasksOnly ? C.accent : "transparent"}` }} />
-              {canCreate && (
+              {(isAdmin || isLeader) && (
                 <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
-                  {projects.map(p => (
+                  {projects.filter(p => isAdmin || isProjectManager(p)).map(p => (
                     <Chip key={p._id} label={`+ ${p.name}`} size="small" onClick={() => setCreateTaskDialog(p._id)}
                       sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", fontWeight: 600, bgcolor: C.accentLight, color: C.accent, cursor: "pointer", "&:hover": { bgcolor: C.accent, color: C.navy } }} />
                   ))}
@@ -993,7 +993,7 @@ export default function Projects() {
               </Box>
 
               {/* Footer */}
-              {canCreate && (
+              {(isAdmin || (proj && isProjectManager(proj))) && (
                 <Box sx={{ p: 2.5, borderTop: `1px solid ${C.border}`, bgcolor: "#fff" }}>
                   <Button fullWidth onClick={handleDeleteTask}
                     sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px", textTransform: "none", borderRadius: "9px", bgcolor: "rgba(239,68,68,0.08)", color: "#DC2626", border: "1px solid rgba(239,68,68,0.2)", "&:hover": { bgcolor: "rgba(239,68,68,0.14)" } }}>
