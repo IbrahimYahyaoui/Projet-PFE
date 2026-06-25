@@ -15,7 +15,7 @@ interface Task {
   status: string;
   priority: string;
   dueDate: string | null;
-  assignedTo: { name: string } | null;
+  assignedTo: { _id: string; name: string } | null;
 }
 
 const COLUMNS = [
@@ -36,7 +36,14 @@ export default function ProjectKanban() {
   const [projectId, setProjectId]  = useState<string>("");
   const [loading,   setLoading]    = useState(false);
   const [dragging,  setDragging]   = useState<string | null>(null);
+  const [dropError, setDropError]  = useState<string | null>(null);
   const dragOver                   = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!dropError) return;
+    const t = setTimeout(() => setDropError(null), 4000);
+    return () => clearTimeout(t);
+  }, [dropError]);
 
   useEffect(() => {
     api.get<any>("/api/projects")
@@ -63,13 +70,20 @@ export default function ProjectKanban() {
     const task = tasks.find(t => t._id === dragging);
     if (!task || task.status === targetStatus) return;
 
+    if (task.assignedTo?._id !== techId) {
+      setDropError("Vous ne pouvez déplacer que vos propres tâches");
+      setDragging(null);
+      return;
+    }
+
     // Optimistic update
     setTasks(prev => prev.map(t => t._id === dragging ? { ...t, status: targetStatus } : t));
     try {
       await api.put(`/api/projects/${projectId}/tasks/${dragging}`, { status: targetStatus });
-    } catch {
+    } catch (err: any) {
       // Revert on failure
       setTasks(prev => prev.map(t => t._id === dragging ? { ...t, status: task.status } : t));
+      setDropError(err?.message ?? "Impossible de déplacer cette tâche");
     }
     setDragging(null);
   };
@@ -82,6 +96,15 @@ export default function ProjectKanban() {
           {projects.map(p => <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>)}
         </Select>
       </Box>
+
+      {dropError && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "10px 14px", bgcolor: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "10px", mb: 2 }}>
+          <Box component="i" className="ti ti-alert-triangle" sx={{ fontSize: 15, color: "#DC2626" }} />
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: "#DC2626", fontWeight: 500 }}>
+            {dropError}
+          </Typography>
+        </Box>
+      )}
 
       {loading
         ? <Box sx={{ display: "flex", justifyContent: "center", pt: 6 }}><CircularProgress sx={{ color: C.accent }} /></Box>
@@ -108,20 +131,22 @@ export default function ProjectKanban() {
 
                   {colTasks.map(task => {
                     const isOverdue = task.dueDate && task.status !== "done" && new Date(task.dueDate) < new Date();
+                    const canDrag = isTech && task.assignedTo?._id === techId;
+                    const dragDisabled = isTech && !canDrag;
                     return (
                     <Box
                       key={task._id}
-                      draggable={isTech && task.assignedTo?._id === techId}
-                      onDragStart={() => setDragging(task._id)}
+                      draggable={canDrag}
+                      onDragStart={canDrag ? () => setDragging(task._id) : undefined}
                       onDragEnd={() => setDragging(null)}
                       sx={{
                         bgcolor: "#fff", borderRadius: "10px",
                         border: `1px solid ${isOverdue ? "#DC2626" : C.border}`,
-                        p: 1.8, mb: 1.2, cursor: "grab",
-                        opacity: dragging === task._id ? 0.5 : 1,
+                        p: 1.8, mb: 1.2, cursor: dragDisabled ? "not-allowed" : "grab",
+                        opacity: dragDisabled ? 0.6 : dragging === task._id ? 0.5 : 1,
                         transition: "box-shadow 0.15s, opacity 0.15s",
                         "&:hover": { boxShadow: C.shadowMd },
-                        "&:active": { cursor: "grabbing" },
+                        "&:active": { cursor: dragDisabled ? "not-allowed" : "grabbing" },
                       }}
                     >
                       {isOverdue && (
