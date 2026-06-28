@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import {
   Box, Typography, Dialog, DialogTitle, DialogContent,
-  IconButton, Tabs, Tab, Avatar, LinearProgress,
+  IconButton, Tabs, Tab, LinearProgress,
   CircularProgress, Button,
 } from "@mui/material";
 import { C } from "../../theme";
@@ -10,6 +10,7 @@ import { api } from "../../api";
 import { PageHeader } from "../../components/PageHeader";
 import { RoleBadge } from "../../components/chips/RoleBadge";
 import { EmptyState } from "../../components/EmptyState";
+import { UserAvatar } from "../../components/UserAvatar";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface TeamSummary {
@@ -29,6 +30,7 @@ interface MemberDetail {
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
   assigned: number;
   active: number;
   resolved: number;
@@ -41,9 +43,6 @@ interface TeamDetail {
   members: MemberDetail[];
   stats: { totalTickets: number; openTickets: number; inProgress: number; resolved: number; slaBreached: number };
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const getInitials = (n: string) => n.split(" ").map(p => p[0]).join("").toUpperCase().slice(0, 2);
 
 const AVAIL = {
   available: { color: C.success, bg: C.successBg,  label: "Disponible" },
@@ -170,9 +169,7 @@ export default function AdminTeamsOverview() {
                 {/* Leader */}
                 {team.leaderId && (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Avatar sx={{ width: 26, height: 26, fontSize: "11px", fontWeight: 700, bgcolor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif" }}>
-                      {getInitials(team.leaderId.name)}
-                    </Avatar>
+                    <UserAvatar name={team.leaderId.name} avatar={(team.leaderId as any)?.avatar} sx={{ width: 26, height: 26, fontSize: "11px", fontWeight: 700, bgcolor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif" }} />
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>
                       {team.leaderId.name}
                     </Typography>
@@ -256,9 +253,7 @@ export default function AdminTeamsOverview() {
                     const av = AVAIL[m.availability] ?? AVAIL.available;
                     return (
                       <Box key={m._id} sx={{ display: "flex", alignItems: "center", gap: 2, p: "14px 16px", borderRadius: "12px", border: `1px solid ${C.border}`, bgcolor: "#fff" }}>
-                        <Avatar sx={{ width: 40, height: 40, fontSize: "13px", fontWeight: 700, bgcolor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif" }}>
-                          {getInitials(m.name)}
-                        </Avatar>
+                        <UserAvatar name={m.name} avatar={m.avatar} sx={{ width: 40, height: 40, fontSize: "13px", fontWeight: 700, bgcolor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif" }} />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</Typography>
                           <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</Typography>
@@ -318,9 +313,7 @@ export default function AdminTeamsOverview() {
                       <Box key={m._id} sx={{ p: "14px 16px", borderRadius: "12px", border: `1px solid ${C.border}`, bgcolor: "#fff" }}>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                            <Avatar sx={{ width: 32, height: 32, fontSize: "12px", fontWeight: 700, bgcolor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif" }}>
-                              {getInitials(m.name)}
-                            </Avatar>
+                            <UserAvatar name={m.name} avatar={m.avatar} sx={{ width: 32, height: 32, fontSize: "12px", fontWeight: 700, bgcolor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif" }} />
                             <Box>
                               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: C.textPrimary }}>{m.name}</Typography>
                               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "11px", color: C.textMuted }}>{m.email}</Typography>
