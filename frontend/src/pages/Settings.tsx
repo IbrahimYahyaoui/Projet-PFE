@@ -1,5 +1,6 @@
 // frontend/src/pages/Settings.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -12,6 +13,10 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Settings as SettingsIcon,
@@ -21,6 +26,8 @@ import {
   Security as SecurityIcon,
   Storage as StorageIcon,
   CheckCircle as CheckIcon,
+  Download as DownloadIcon,
+  DeleteForever as DeleteForeverIcon,
 } from "@mui/icons-material";
 import { C } from "../theme";
 
@@ -106,7 +113,15 @@ function ToggleRow({ label, description, checked, onChange }: {
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
+const formatLastLogin = (iso?: string | null) => {
+  if (!iso) return "Première connexion";
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+};
+
 export default function Settings() {
+  const navigate = useNavigate();
   const storedUser = localStorage.getItem("user");
   const currentUser = storedUser ? JSON.parse(storedUser) : null;
   const userId = currentUser?.id ?? currentUser?._id;
@@ -130,15 +145,19 @@ export default function Settings() {
   const [prefSaved, setPrefSaved]   = useState(false);
   const [prefLoading, setPrefLoading] = useState(false);
 
-  const [security, setSecurity] = useState<SettingRow[]>([
-    { id: "2fa",         label: "Double authentification", description: "Ajouter une couche de sécurité supplémentaire", value: false },
-    { id: "session_log", label: "Journal des sessions",    description: "Enregistrer les connexions et déconnexions",    value: true  },
-    { id: "auto_logout", label: "Déconnexion automatique", description: "Se déconnecter après 30 min d'inactivité",     value: false },
-  ]);
+  const [lastLoginAt, setLastLoginAt] = useState<string | null>(currentUser?.lastLoginAt ?? null);
+  const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(0);
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [securitySaved, setSecuritySaved]     = useState(false);
+
+  const [exportLoading, setExportLoading] = useState(false);
+  const [deleteAccountDialog, setDeleteAccountDialog]   = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState("");
+  const [deleteAccountError, setDeleteAccountError]     = useState<string | null>(null);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
 
   const toggleNotif      = (id: string) => setNotifs((p)      => p.map((n) => n.id === id ? { ...n, value: !n.value } : n));
   const toggleAppearance = (id: string) => setAppearance((p)  => p.map((a) => a.id === id ? { ...a, value: !a.value } : a));
-  const toggleSecurity   = (id: string) => setSecurity((p)    => p.map((s) => s.id === id ? { ...s, value: !s.value } : s));
 
   useEffect(() => {
     if (!userId) return;
@@ -166,9 +185,23 @@ export default function Settings() {
           if (p.timezone)   setTimezone(p.timezone);
           if (p.dateFormat) setDateFormat(p.dateFormat);
         }
+        if (data.settings?.security?.autoLogoutMinutes !== undefined) {
+          setAutoLogoutMinutes(data.settings.security.autoLogoutMinutes);
+        }
       })
       .catch(() => {});
   }, [userId]);
+
+  // Charge la dernière connexion si elle n'est pas déjà en mémoire (localStorage "user")
+  useEffect(() => {
+    if (lastLoginAt) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${apiUrl}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (data.lastLoginAt) setLastLoginAt(data.lastLoginAt); })
+      .catch(() => {});
+  }, [lastLoginAt]);
 
   const saveSection = async (section: string, payload: Record<string, any>) => {
     if (!userId) return;
@@ -189,6 +222,89 @@ export default function Settings() {
       setTimeout(() => setPrefSaved(false), 3000);
     } catch { /* ignore */ }
     finally { setPrefLoading(false); }
+  };
+
+  const handleSaveSecurity = async () => {
+    setSecurityLoading(true);
+    try {
+      await saveSection("security", { autoLogoutMinutes });
+      setSecuritySaved(true);
+      setTimeout(() => setSecuritySaved(false), 3000);
+    } catch { /* ignore */ }
+    finally { setSecurityLoading(false); }
+  };
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  }, [navigate]);
+
+  // Déconnexion automatique après inactivité. Implémenté ici pour rester simple,
+  // mais pour couvrir toute l'app (pas seulement cette page), il faudrait idéalement
+  // déplacer ce timer dans un composant racine (ex: App.tsx) ou un contexte global.
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!autoLogoutMinutes || autoLogoutMinutes <= 0) return;
+
+    const resetTimer = () => {
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = setTimeout(handleLogout, autoLogoutMinutes * 60 * 1000);
+    };
+
+    resetTimer();
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+
+    return () => {
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+    };
+  }, [autoLogoutMinutes, handleLogout]);
+
+  const handleExportData = async () => {
+    setExportLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/users/me/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Erreur serveur");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = "mes-donnees-tuskflow.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    finally { setExportLoading(false); }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteAccountPassword) return;
+    setDeleteAccountLoading(true);
+    setDeleteAccountError(null);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/users/me/account`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: deleteAccountPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Erreur serveur.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    } catch (err: any) {
+      setDeleteAccountError(err.message);
+    } finally {
+      setDeleteAccountLoading(false);
+    }
   };
 
   return (
@@ -290,34 +406,112 @@ export default function Settings() {
 
       {/* 4. Sécurité */}
       <Section icon={<SecurityIcon />} title="Sécurité">
-        {security.map((s, i) => (
-          <Box key={s.id}>
-            <ToggleRow label={s.label} description={s.description} checked={s.value} onChange={() => toggleSecurity(s.id)} />
-            {i < security.length - 1 && <Divider sx={{ borderColor: C.divider }} />}
+        {securitySaved && (
+          <Alert severity="success" icon={<CheckIcon />} sx={{ mb: 3, backgroundColor: C.successBg, color: C.success, border: `1px solid ${C.success}40`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.success } }}>
+            Préférences de sécurité enregistrées !
+          </Alert>
+        )}
+
+        {/* Dernière connexion — lecture seule */}
+        <Box sx={{ py: 1.5 }}>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>
+            Dernière connexion
+          </Typography>
+          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>
+            {formatLastLogin(lastLoginAt)}
+          </Typography>
+        </Box>
+        <Divider sx={{ borderColor: C.divider }} />
+
+        {/* Déconnexion automatique */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, py: 1.5, flexWrap: "wrap" }}>
+          <Box>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>
+              Déconnexion automatique
+            </Typography>
+            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>
+              Se déconnecter automatiquement après une période d'inactivité
+            </Typography>
           </Box>
-        ))}
+          <TextField select value={autoLogoutMinutes} onChange={(e) => setAutoLogoutMinutes(Number(e.target.value))}
+            sx={{ ...inputSx, minWidth: 160 }}>
+            {[{ value: 0, label: "Désactivé" }, { value: 15, label: "15 min" }, { value: 30, label: "30 min" }, { value: 60, label: "60 min" }].map((o) => (
+              <MenuItem key={o.value} value={o.value} sx={{ fontFamily: "Inter, sans-serif", color: C.textPrimary, "&:hover": { backgroundColor: C.accentLight } }}>{o.label}</MenuItem>
+            ))}
+          </TextField>
+        </Box>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+          <Button variant="contained" onClick={handleSaveSecurity} disabled={securityLoading}
+            startIcon={securityLoading ? <CircularProgress size={16} sx={{ color: C.navy }} /> : <CheckIcon />}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.accentHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+            {securityLoading ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </Box>
       </Section>
 
       {/* 5. Données */}
       <Section icon={<StorageIcon />} title="Données & Confidentialité">
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {[
-            { label: "Exporter mes données",   description: "Télécharger toutes vos données en format JSON",                          btnLabel: "Exporter",  btnColor: C.accent,  btnHover: C.accentHover, textColor: C.navy  },
-            { label: "Supprimer mon compte",   description: "Supprimer définitivement votre compte et toutes vos données",            btnLabel: "Supprimer", btnColor: C.danger,  btnHover: C.dangerHover, textColor: "#fff"  },
-          ].map((row) => (
-            <Box key={row.label} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, p: 2, borderRadius: "12px", border: `1px solid ${C.border}`, backgroundColor: C.bgPage, flexWrap: "wrap" }}>
-              <Box>
-                <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>{row.label}</Typography>
-                <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>{row.description}</Typography>
-              </Box>
-              <Button variant="contained" size="small"
-                sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8rem", backgroundColor: row.btnColor, color: row.textColor, borderRadius: "8px", textTransform: "none", px: 2, "&:hover": { backgroundColor: row.btnHover } }}>
-                {row.btnLabel}
-              </Button>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, p: 2, borderRadius: "12px", border: `1px solid ${C.border}`, backgroundColor: C.bgPage, flexWrap: "wrap" }}>
+            <Box>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>Exporter mes données</Typography>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>Télécharger toutes vos données en format JSON</Typography>
             </Box>
-          ))}
+            <Button variant="contained" size="small" onClick={handleExportData} disabled={exportLoading}
+              startIcon={exportLoading ? <CircularProgress size={14} sx={{ color: C.navy }} /> : <DownloadIcon sx={{ fontSize: 16 }} />}
+              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8rem", backgroundColor: C.accent, color: C.navy, borderRadius: "8px", textTransform: "none", px: 2, "&:hover": { backgroundColor: C.accentHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+              {exportLoading ? "Export…" : "Exporter"}
+            </Button>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, p: 2, borderRadius: "12px", border: `1px solid ${C.border}`, backgroundColor: C.bgPage, flexWrap: "wrap" }}>
+            <Box>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary }}>Supprimer mon compte</Typography>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: C.textMuted, mt: 0.2 }}>Supprimer définitivement votre compte et toutes vos données</Typography>
+            </Box>
+            <Button variant="contained" size="small"
+              onClick={() => { setDeleteAccountDialog(true); setDeleteAccountError(null); setDeleteAccountPassword(""); }}
+              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8rem", backgroundColor: C.danger, color: "#fff", borderRadius: "8px", textTransform: "none", px: 2, "&:hover": { backgroundColor: C.dangerHover } }}>
+              Supprimer
+            </Button>
+          </Box>
         </Box>
       </Section>
+
+      {/* ═══ Dialog Suppression de compte ═══ */}
+      <Dialog open={deleteAccountDialog} onClose={() => { if (!deleteAccountLoading) setDeleteAccountDialog(false); }} maxWidth="xs" fullWidth
+        PaperProps={{ sx: { backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px" } }}>
+        <DialogTitle sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, color: C.textPrimary }}>
+          Supprimer mon compte
+        </DialogTitle>
+        <DialogContent>
+          {deleteAccountError ? (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-message": { fontFamily: "Inter, sans-serif" } }}>
+              {deleteAccountError}
+            </Alert>
+          ) : (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-message": { fontFamily: "Inter, sans-serif" } }}>
+              Cette action est irréversible. Votre compte et toutes vos données seront définitivement supprimés.
+            </Alert>
+          )}
+          <Typography sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, fontSize: "0.9rem", mb: 1.5 }}>
+            Saisissez votre mot de passe actuel pour confirmer.
+          </Typography>
+          <TextField label="Mot de passe" type="password" fullWidth value={deleteAccountPassword}
+            onChange={(e) => setDeleteAccountPassword(e.target.value)} sx={inputSx} />
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+          <Button onClick={() => setDeleteAccountDialog(false)} disabled={deleteAccountLoading}
+            sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none" }}>
+            Annuler
+          </Button>
+          <Button variant="contained" onClick={handleDeleteAccount} disabled={deleteAccountLoading || !deleteAccountPassword}
+            startIcon={deleteAccountLoading ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : <DeleteForeverIcon />}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.danger, color: "#fff", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.dangerHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+            {deleteAccountLoading ? "Suppression…" : "Supprimer définitivement"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

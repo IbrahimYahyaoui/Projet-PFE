@@ -12,9 +12,10 @@ import {
   Close as CloseIcon, PersonAdd as PersonAddIcon,
 } from "@mui/icons-material";
 import { C, priorityColors, statusColors } from "../theme";
+import { UserAvatar } from "../components/UserAvatar";
 
 // ─── Types ───────────────────────────────────────────────────
-interface Member { _id: string; name: string; email: string; role: string }
+interface Member { _id: string; name: string; email: string; role: string; avatar?: string | null }
 interface TeamRef { _id: string; name: string; color: string; tag: string }
 interface Project {
   _id: string; name: string; description: string; status: string;
@@ -743,9 +744,7 @@ export default function Projects() {
                     const av = avatarColors[i % avatarColors.length];
                     return (
                       <Box key={member._id} sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "8px 10px", borderRadius: "8px", "&:hover": { bgcolor: C.bgPage } }}>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.72rem" }}>
-                          {getInitials(member?.name)}
-                        </Avatar>
+                        <UserAvatar name={member?.name} avatar={member?.avatar} sx={{ width: 32, height: 32, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.72rem" }} />
                         <Box sx={{ flex: 1 }}>
                           <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.82rem", color: C.navy }}>{member.name}</Typography>
                           <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.7rem", color: C.textMuted, textTransform: "capitalize" }}>{member.role}</Typography>

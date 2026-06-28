@@ -76,6 +76,9 @@ const userSchema = new mongoose.Schema(
         timezone:   { type: String, default: "Africa/Tunis" },
         dateFormat: { type: String, default: "DD/MM/YYYY"   },
       },
+      security: {
+        autoLogoutMinutes: { type: Number, default: 0 }, // 0 = désactivé
+      },
     },
   },
   { timestamps: true }

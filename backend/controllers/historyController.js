@@ -34,7 +34,7 @@ const getTicketHistory = async (req, res) => {
     }
 
     const history = await History.find({ ticketId: req.params.id })
-      .populate('userId', 'name role')
+      .populate('userId', 'name role avatar')
       .sort({ createdAt: 1 }); // chronologique
     res.json(history);
   } catch (error) {

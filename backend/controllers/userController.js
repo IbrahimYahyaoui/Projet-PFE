@@ -21,7 +21,7 @@ const getAllUsers = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id).select("-password").populate("teamId", "name");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (error) {
@@ -201,7 +201,7 @@ const getTechnicians = async (req, res) => {
     if (req.user.role === 'leader') {
       const Team = require('../schemas/team');
       const team = await Team.findOne({ leaderId: req.user.id })
-        .populate('members', 'name email role isActive');
+        .populate('members', 'name email role isActive avatar');
       if (!team) return res.json([]);
       const techs = team.members.filter(m =>
         m.role === 'tech' && m.isActive && m._id.toString() !== req.user.id
@@ -232,6 +232,59 @@ const getAvailableTechs = async (req, res) => {
   }
 };
 
+const deleteOwnAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ message: "Mot de passe requis pour confirmer" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) return res.status(401).json({ message: "Mot de passe incorrect" });
+
+    if (user.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: "Impossible de supprimer le dernier administrateur" });
+      }
+    }
+
+    const Team = require('../schemas/team');
+    const leadTeam = await Team.findOne({ leaderId: user._id });
+    if (leadTeam) {
+      return res.status(400).json({ message: `Vous êtes leader de l'équipe "${leadTeam.name}". Contactez un administrateur pour réassigner le leadership avant de supprimer votre compte.` });
+    }
+
+    await User.findByIdAndDelete(req.user.id);
+    res.json({ message: "Compte supprimé avec succès" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const exportOwnData = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password").populate("teamId", "name");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const Ticket = require('../schemas/ticket');
+    const tickets = await Ticket.find({ createdBy: req.user.id }).select("title status priority category createdAt");
+
+    const exportData = {
+      profile: user,
+      tickets,
+      exportedAt: new Date().toISOString(),
+    };
+
+    res.json(exportData);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getMe,
@@ -242,4 +295,6 @@ module.exports = {
   resetPassword,
   getTechnicians,
   getAvailableTechs,
+  deleteOwnAccount,
+  exportOwnData,
 };

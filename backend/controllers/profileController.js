@@ -3,7 +3,7 @@ const User = require("../schemas/user");
 // ── Récupérer le profil ──
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select("-password").populate("teamId", "name");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -20,13 +20,15 @@ const getProfile = async (req, res) => {
 // CORRECTION 5 — Accepte aussi la mise à jour de l'email (avec vérification d'unicité)
 const updateProfile = async (req, res) => {
   try {
-    const { name, email, avatar } = req.body;
+    const { name, email, avatar, phone, department } = req.body;
 
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (name)   user.name   = name;
     if (avatar) user.avatar = avatar;
+    if (phone !== undefined)      user.phone      = phone;
+    if (department !== undefined) user.department = department;
 
     if (email && email.trim().toLowerCase() !== user.email) {
       const taken = await User.findOne({ email: email.trim().toLowerCase(), _id: { $ne: req.params.id } });
@@ -44,6 +46,8 @@ const updateProfile = async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
+        phone: user.phone,
+        department: user.department,
       },
     });
   } catch (error) {
@@ -103,7 +107,7 @@ const updateSettings = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    const { notifications, appearance, preferences } = req.body;
+    const { notifications, appearance, preferences, security } = req.body;
     if (!user.settings) user.settings = {};
     if (notifications) {
       user.settings.notifications = { ...user.settings.notifications, ...notifications };
@@ -113,6 +117,9 @@ const updateSettings = async (req, res) => {
     }
     if (preferences) {
       user.settings.preferences = { ...user.settings.preferences, ...preferences };
+    }
+    if (security) {
+      user.settings.security = { ...user.settings.security, ...security };
     }
     user.markModified('settings');
     await user.save();

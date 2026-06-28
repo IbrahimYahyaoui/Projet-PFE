@@ -4,7 +4,6 @@ import {
   Box,
   Typography,
   Paper,
-  Avatar,
   Button,
   TextField,
   Chip,
@@ -25,8 +24,14 @@ import {
   ConfirmationNumber as TicketIcon,
   AdminPanelSettings as AdminIcon,
   Engineering as TechIcon,
+  PhotoCamera as PhotoCameraIcon,
+  Phone as PhoneIcon,
+  Business as BusinessIcon,
+  Groups as TeamIcon,
+  AccessTime as LastLoginIcon,
 } from "@mui/icons-material";
 import { C, roleColors } from "../theme";
+import { UserAvatar } from "../components/UserAvatar";
 
 type Role = "admin" | "tech" | "user";
 
@@ -37,6 +42,11 @@ interface UserProfile {
   role: Role;
   createdAt: string;
   ticketsCount?: number;
+  avatar?: string | null;
+  phone?: string | null;
+  department?: string | null;
+  teamId?: { _id: string; name: string } | null;
+  lastLoginAt?: string | null;
 }
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -51,13 +61,17 @@ const ROLE_ICONS: Record<Role, React.ReactNode> = {
   user: <PersonIcon sx={{ fontSize: 14 }} />,
 };
 
-const getInitials = (name?: string | null) =>
-  (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", {
     day: "2-digit", month: "long", year: "numeric",
   });
+
+const formatLastLogin = (iso?: string | null) => {
+  if (!iso) return "Jamais";
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+};
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -87,7 +101,7 @@ export default function Profile() {
   const [profileStats, setProfileStats] = useState<any>(null);
 
   const [editInfo, setEditInfo] = useState(false);
-  const [infoForm, setInfoForm] = useState({ name: "", email: "" });
+  const [infoForm, setInfoForm] = useState({ name: "", email: "", phone: "", department: "" });
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoError, setInfoError] = useState<string | null>(null);
   const [infoSuccess, setInfoSuccess] = useState(false);
@@ -97,6 +111,9 @@ export default function Profile() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [pwdSuccess, setPwdSuccess] = useState(false);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -110,7 +127,7 @@ export default function Profile() {
         if (res.ok) {
           const data = await res.json();
           setProfile(data);
-          setInfoForm({ name: data.name, email: data.email });
+          setInfoForm({ name: data.name, email: data.email, phone: data.phone ?? "", department: data.department ?? "" });
           resolvedId = data._id ?? data.id;
         } else {
           throw new Error("Failed to fetch");
@@ -138,6 +155,8 @@ export default function Profile() {
               setInfoForm({
                 name: payload.name ?? "",
                 email: storedUserData?.email ?? payload.email ?? "",
+                phone: "",
+                department: "",
               });
             }
           } catch {
@@ -178,17 +197,19 @@ export default function Profile() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: infoForm.name, email: infoForm.email }),
+        body: JSON.stringify({ name: infoForm.name, email: infoForm.email, phone: infoForm.phone, department: infoForm.department }),
       });
       if (!res.ok) {
         const d = await res.json();
         throw new Error(d.message || "Erreur serveur.");
       }
       const updated = await res.json();
-      // La réponse est { message, user: { id, name, email, role, avatar } }
-      const newName  = updated.user?.name  ?? updated.name;
-      const newEmail = updated.user?.email ?? updated.email;
-      setProfile((p) => p ? { ...p, name: newName, email: newEmail } : p);
+      // La réponse est { message, user: { id, name, email, role, avatar, phone, department } }
+      const newName       = updated.user?.name       ?? updated.name;
+      const newEmail      = updated.user?.email      ?? updated.email;
+      const newPhone      = updated.user?.phone      ?? infoForm.phone;
+      const newDepartment = updated.user?.department ?? infoForm.department;
+      setProfile((p) => p ? { ...p, name: newName, email: newEmail, phone: newPhone, department: newDepartment } : p);
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const userData = JSON.parse(storedUser);
@@ -201,6 +222,48 @@ export default function Profile() {
       setInfoError(err.message);
     } finally {
       setInfoLoading(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setAvatarError("Le fichier doit être une image."); return; }
+    if (file.size > 2 * 1024 * 1024) { setAvatarError("L'image ne doit pas dépasser 2 Mo."); return; }
+    setAvatarError(null);
+    setAvatarUploading(true);
+    try {
+      const base64String: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiUrl}/api/profile/${profile?._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ avatar: base64String }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.message || "Erreur serveur.");
+      }
+      const updated = await res.json();
+      const newAvatar = updated.user?.avatar ?? updated.avatar ?? base64String;
+      setProfile((p) => p ? { ...p, avatar: newAvatar } : p);
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        localStorage.setItem("user", JSON.stringify({ ...userData, avatar: newAvatar }));
+      }
+    } catch (err: any) {
+      setAvatarError(err.message);
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -291,9 +354,24 @@ export default function Profile() {
       {/* Card 1 */}
       <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3, mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 3, flexWrap: "wrap" }}>
-          <Avatar sx={{ width: 72, height: 72, backgroundColor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.5rem", border: `2px solid ${C.accent}40` }}>
-            {getInitials(profile.name)}
-          </Avatar>
+          <Box sx={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
+            <UserAvatar name={profile.name} avatar={profile.avatar} sx={{ width: 72, height: 72, backgroundColor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.5rem", border: `2px solid ${C.accent}40` }} />
+            <IconButton component="label" size="small"
+              sx={{
+                position: "absolute", bottom: -4, right: -4,
+                width: 26, height: 26,
+                backgroundColor: C.accent, color: "#fff",
+                border: `2px solid ${C.card}`,
+                "&:hover": { backgroundColor: C.accentHover },
+              }}>
+              {avatarUploading ? (
+                <CircularProgress size={16} sx={{ color: "#fff" }} />
+              ) : (
+                <PhotoCameraIcon sx={{ fontSize: 14 }} />
+              )}
+              <input type="file" hidden accept="image/*" onChange={handleAvatarChange} disabled={avatarUploading} />
+            </IconButton>
+          </Box>
           <Box sx={{ flex: 1 }}>
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.2rem", color: C.textPrimary }}>
               {profile.name}
@@ -325,6 +403,12 @@ export default function Profile() {
           )}
         </Box>
 
+        {avatarError && (
+          <Alert severity="error" sx={{ mb: 3, backgroundColor: C.dangerBg, color: C.danger, border: `1px solid ${C.danger}30`, borderRadius: "10px", fontFamily: "Inter, sans-serif", "& .MuiAlert-icon": { color: C.danger } }}>
+            {avatarError}
+          </Alert>
+        )}
+
         <Divider sx={{ borderColor: C.border, mb: 3 }} />
 
         {editInfo ? (
@@ -336,6 +420,8 @@ export default function Profile() {
             )}
             <TextField label="Nom complet" fullWidth value={infoForm.name} onChange={(e) => setInfoForm((f) => ({ ...f, name: e.target.value }))} sx={inputSx} />
             <TextField label="Email" type="email" fullWidth value={infoForm.email} onChange={(e) => setInfoForm((f) => ({ ...f, email: e.target.value }))} sx={inputSx} />
+            <TextField label="Téléphone" fullWidth value={infoForm.phone} onChange={(e) => setInfoForm((f) => ({ ...f, phone: e.target.value }))} sx={inputSx} />
+            <TextField label="Département" fullWidth value={infoForm.department} onChange={(e) => setInfoForm((f) => ({ ...f, department: e.target.value }))} sx={inputSx} />
             <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end" }}>
               <Button onClick={() => { setEditInfo(false); setInfoError(null); }} startIcon={<CloseIcon />} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none", "&:hover": { backgroundColor: C.bgPage } }}>
                 Annuler
@@ -350,10 +436,16 @@ export default function Profile() {
         ) : (
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2.5 }}>
             {[
-              { icon: <PersonIcon sx={{ fontSize: 18 }} />,   label: "Nom complet",   value: profile.name },
-              { icon: <EmailIcon sx={{ fontSize: 18 }} />,    label: "Email",          value: profile.email },
-              { icon: <CalendarIcon sx={{ fontSize: 18 }} />, label: "Membre depuis",  value: formatDate(profile.createdAt) },
-              { icon: <TicketIcon sx={{ fontSize: 18 }} />,   label: "Tickets créés",  value: String(profile.ticketsCount ?? "—") },
+              { icon: <PersonIcon sx={{ fontSize: 18 }} />,    label: "Nom complet",       value: profile.name },
+              { icon: <EmailIcon sx={{ fontSize: 18 }} />,     label: "Email",             value: profile.email },
+              { icon: <PhoneIcon sx={{ fontSize: 18 }} />,     label: "Téléphone",         value: profile.phone || "—" },
+              { icon: <BusinessIcon sx={{ fontSize: 18 }} />,  label: "Département",       value: profile.department || "—" },
+              { icon: <TeamIcon sx={{ fontSize: 18 }} />,      label: "Équipe",            value: profile.teamId?.name ?? "Aucune équipe" },
+              { icon: <CalendarIcon sx={{ fontSize: 18 }} />,  label: "Membre depuis",     value: formatDate(profile.createdAt) },
+              { icon: <LastLoginIcon sx={{ fontSize: 18 }} />, label: "Dernière connexion", value: formatLastLogin(profile.lastLoginAt) },
+              ...(profile.role === "user"
+                ? [{ icon: <TicketIcon sx={{ fontSize: 18 }} />, label: "Tickets créés", value: String(profileStats?.total ?? "—") }]
+                : []),
             ].map((row) => (
               <Box key={row.label} sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, p: 2, borderRadius: "12px", backgroundColor: C.bgPage, border: `1px solid ${C.border}` }}>
                 <Box sx={{ color: C.accent, mt: 0.2, flexShrink: 0 }}>{row.icon}</Box>
@@ -374,7 +466,7 @@ export default function Profile() {
       {/* Card Stats */}
       <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3, mb: 3 }}>
         <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px", color: C.textPrimary, mb: 2.5 }}>
-          Statistiques — {profileStats?.label ?? "..."}
+          {profileStats?.label === "Plateforme" ? "Statistiques — Plateforme" : "Mon activité"}
         </Typography>
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 2 }}>
           {profileStats && Object.entries(profileStats)

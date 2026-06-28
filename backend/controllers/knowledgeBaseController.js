@@ -31,6 +31,15 @@ const buildVisibilityFilter = async (role, userId) => {
   return { ...base, $and: [teamFilter, expertiseFilter] };
 };
 
+// Vérifie qu'un article respecte le filtre de visibilité du rôle/utilisateur donné
+const isArticleVisible = async (article, role, userId) => {
+  if (role === 'admin') return true;
+  const filter = await buildVisibilityFilter(role, userId);
+  // Reconstruit la requête en filtrant juste cet article par son _id + le filtre de visibilité
+  const match = await KnowledgeBase.exists({ _id: article._id, ...filter });
+  return !!match;
+};
+
 // ── Enrich article with per-user virtual fields ──
 const enrichArticle = (article, userId) => {
   const obj = typeof article.toObject === 'function' ? article.toObject() : article;
@@ -64,7 +73,7 @@ const getAllArticles = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [articles, total] = await Promise.all([
       KnowledgeBase.find(filter)
-        .populate('createdBy', 'name role')
+        .populate('createdBy', 'name role avatar')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -95,7 +104,7 @@ const searchArticles = async (req, res) => {
     if (category && category !== 'all') filter.category = category;
 
     const articles = await KnowledgeBase.find(filter, { score: { $meta: 'textScore' } })
-      .populate('createdBy', 'name role')
+      .populate('createdBy', 'name role avatar')
       .sort({ score: { $meta: 'textScore' } })
       .limit(10);
 
@@ -136,7 +145,7 @@ const getMyFavorites = async (req, res) => {
     const filter = { ...visFilter, favorites: userId };
 
     const articles = await KnowledgeBase.find(filter)
-      .populate('createdBy', 'name role')
+      .populate('createdBy', 'name role avatar')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -154,12 +163,15 @@ const getArticleById = async (req, res) => {
   try {
     const { role, id: userId } = req.user;
     const article = await KnowledgeBase.findById(req.params.id)
-      .populate('createdBy', 'name role')
-      .populate('updatedBy', 'name role')
+      .populate('createdBy', 'name role avatar')
+      .populate('updatedBy', 'name role avatar')
       .populate('sourceTicket', 'title category')
-      .populate('comments.userId', 'name role');
+      .populate('comments.userId', 'name role avatar');
 
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
 
     if (role !== 'admin') {
       if (article.status !== 'published') return res.status(403).json({ message: 'Article non publié' });
@@ -201,7 +213,7 @@ const createArticle = async (req, res) => {
       status: status || 'published',
       ...(visibility ? { visibility } : {}),
     });
-    await article.populate('createdBy', 'name role');
+    await article.populate('createdBy', 'name role avatar');
     res.status(201).json(article);
   } catch (err) {
     console.log(err);
@@ -226,8 +238,8 @@ const updateArticle = async (req, res) => {
     if (visibility  !== undefined) update.visibility  = visibility;
 
     const article = await KnowledgeBase.findByIdAndUpdate(req.params.id, update, { new: true })
-      .populate('createdBy', 'name role')
-      .populate('updatedBy', 'name role');
+      .populate('createdBy', 'name role avatar')
+      .populate('updatedBy', 'name role avatar');
 
     res.json(article);
   } catch (err) {
@@ -251,7 +263,15 @@ const deleteArticle = async (req, res) => {
 // ── Increment views ──
 const incrementViews = async (req, res) => {
   try {
-    await KnowledgeBase.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+    const { role, id: userId } = req.user;
+    const article = await KnowledgeBase.findById(req.params.id);
+    if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
+
+    article.views += 1;
+    await article.save();
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -261,12 +281,18 @@ const incrementViews = async (req, res) => {
 // ── Mark helpful (legacy backward compat) ──
 const markHelpful = async (req, res) => {
   try {
+    const { role, id: userId } = req.user;
+    const existing = await KnowledgeBase.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(existing, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
+
     const article = await KnowledgeBase.findByIdAndUpdate(
       req.params.id,
       { $inc: { helpful: 1 } },
       { new: true }
     );
-    if (!article) return res.status(404).json({ message: 'Article not found' });
     res.json({ helpful: article.helpful });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -276,15 +302,19 @@ const markHelpful = async (req, res) => {
 // ── ADD comment ──
 const addComment = async (req, res) => {
   try {
+    const { role, id: userId } = req.user;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ message: 'Content required' });
 
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
 
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
+
     article.comments.push({ content: content.trim(), userId: req.user.id });
     await article.save();
-    await article.populate('comments.userId', 'name role');
+    await article.populate('comments.userId', 'name role avatar');
 
     const newComment = article.comments[article.comments.length - 1];
     res.status(201).json(newComment);
@@ -300,6 +330,9 @@ const deleteComment = async (req, res) => {
     const { role, id: userId } = req.user;
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
 
     const comment = article.comments.id(req.params.commentId);
     if (!comment) return res.status(404).json({ message: 'Comment not found' });
@@ -320,7 +353,7 @@ const deleteComment = async (req, res) => {
 // ── React to article (toggle) ──
 const reactToArticle = async (req, res) => {
   try {
-    const { id: userId } = req.user;
+    const { role, id: userId } = req.user;
     const { type } = req.body;
     if (!['like', 'helpful', 'outdated'].includes(type)) {
       return res.status(400).json({ message: 'Invalid reaction type' });
@@ -328,6 +361,9 @@ const reactToArticle = async (req, res) => {
 
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
 
     const existing = article.reactions.find(r => r.userId.toString() === userId);
     if (existing) {
@@ -351,9 +387,12 @@ const reactToArticle = async (req, res) => {
 // ── Toggle favorite ──
 const toggleFavorite = async (req, res) => {
   try {
-    const { id: userId } = req.user;
+    const { role, id: userId } = req.user;
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
 
     const idx = article.favorites.findIndex(id => id.toString() === userId);
     if (idx !== -1) {
@@ -373,10 +412,14 @@ const toggleFavorite = async (req, res) => {
 // ── Save (create or update) personal note ──
 const saveNote = async (req, res) => {
   try {
+    const { role, id: userId } = req.user;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ message: 'Contenu requis' });
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
 
     const existingIdx = article.notes.findIndex(n => n.userId.toString() === req.user.id);
     if (existingIdx >= 0) {
@@ -397,8 +440,13 @@ const saveNote = async (req, res) => {
 // ── Delete personal note ──
 const deleteNote = async (req, res) => {
   try {
+    const { role, id: userId } = req.user;
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
+
     article.notes = article.notes.filter(n => n.userId.toString() !== req.user.id);
     await article.save();
     res.json({ message: 'Note supprimée' });
@@ -411,7 +459,7 @@ const deleteNote = async (req, res) => {
 // ── Rate article ──
 const rateArticle = async (req, res) => {
   try {
-    const { id: userId } = req.user;
+    const { role, id: userId } = req.user;
     const score = parseInt(req.body.score);
     if (!score || score < 1 || score > 5) {
       return res.status(400).json({ message: 'Score must be 1–5' });
@@ -419,6 +467,9 @@ const rateArticle = async (req, res) => {
 
     const article = await KnowledgeBase.findById(req.params.id);
     if (!article) return res.status(404).json({ message: 'Article not found' });
+
+    const canView = await isArticleVisible(article, role, userId);
+    if (!canView) return res.status(403).json({ message: "Vous n'avez pas accès à cet article" });
 
     const existing = article.rating.entries.find(e => e.userId?.toString() === userId);
     if (existing) {

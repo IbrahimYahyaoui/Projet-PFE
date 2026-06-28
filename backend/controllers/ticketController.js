@@ -55,9 +55,9 @@ const getAllTickets = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [tickets, total] = await Promise.all([
       Ticket.find(filter)
-        .populate("createdBy", "name email role")
-        .populate("assignedTo", "name email role")
-        .populate("assignedBy", "name email role")
+        .populate("createdBy", "name email role avatar")
+        .populate("assignedTo", "name email role avatar")
+        .populate("assignedBy", "name email role avatar")
         .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -79,7 +79,7 @@ const getAdminQueue = async (req, res) => {
     }
 
     const tickets = await Ticket.find({ status: 'open', teamId: null })
-      .populate("createdBy", "name email role")
+      .populate("createdBy", "name email role avatar")
       .sort({ priority: 1, createdAt: 1 });
 
     const teams = await Team.find()
@@ -122,8 +122,8 @@ const getSlaAlerts = async (req, res) => {
       slaDeadline: { $ne: null, $lt: twoHoursLater },
       status: { $nin: ['resolved', 'closed'] },
     })
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
       .populate("teamId", "name tag")
       .sort({ slaDeadline: 1 });
     res.json(tickets);
@@ -135,8 +135,8 @@ const getSlaAlerts = async (req, res) => {
 const getMyTickets = async (req, res) => {
   try {
     const tickets = await Ticket.find({ createdBy: req.user.id })
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
       .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
       .sort({ createdAt: -1 });
     res.json(tickets);
@@ -148,9 +148,9 @@ const getMyTickets = async (req, res) => {
 const getAssignedTickets = async (req, res) => {
   try {
     const tickets = await Ticket.find({ assignedTo: req.user.id })
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
+      .populate("assignedBy", "name email role avatar")
       .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
       .sort({ createdAt: -1 });
     res.json(tickets);
@@ -168,9 +168,9 @@ const getTeamTickets = async (req, res) => {
     if (!team) return res.status(404).json({ message: "Équipe non trouvée" });
 
     const tickets = await Ticket.find({ teamId: team._id })
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
+      .populate("assignedBy", "name email role avatar")
       .sort({ createdAt: -1 });
     res.json(tickets);
   } catch (err) {
@@ -182,12 +182,12 @@ const getTeamTickets = async (req, res) => {
 const getTicketById = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
+      .populate("assignedBy", "name email role avatar")
       .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } })
       .populate("relatedProject", "name status")
-      .populate("comments.userId", "name email role");
+      .populate("comments.userId", "name email role avatar");
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
 
     const { role, id: userId } = req.user;
@@ -248,7 +248,7 @@ const createTicket = async (req, res) => {
       slaDeadline: calcSlaDeadline(priority),
     });
 
-    await ticket.populate("createdBy", "name email role");
+    await ticket.populate("createdBy", "name email role avatar");
     await createHistory(ticket._id, req.user.id, 'created', null, title);
 
     // Notify all admins
@@ -305,8 +305,8 @@ const assignToTeam = async (req, res) => {
       { teamId, status: 'assigned', escalationLevel: 0, escalatedAt: null },
       { new: true }
     )
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
       .populate({ path: 'teamId', select: 'name category tag color leaderId', populate: { path: 'leaderId', select: 'name email' } });
 
     await createHistory(ticket._id, req.user.id, 'status_changed', 'open', 'assigned');
@@ -367,9 +367,9 @@ const assignTicket = async (req, res) => {
       { assignedTo, assignedBy: req.user.id, status: 'assigned' },
       { new: true }
     )
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
+      .populate("assignedBy", "name email role avatar")
       .populate("teamId", "name tag");
 
     await createHistory(
@@ -496,9 +496,9 @@ const updateTicket = async (req, res) => {
     }
 
     const ticket = await Ticket.findByIdAndUpdate(req.params.id, updateData, { new: true })
-      .populate("createdBy", "name email role")
-      .populate("assignedTo", "name email role")
-      .populate("assignedBy", "name email role")
+      .populate("createdBy", "name email role avatar")
+      .populate("assignedTo", "name email role avatar")
+      .populate("assignedBy", "name email role avatar")
       .populate("teamId", "name tag");
 
     if (status && status !== oldTicket.status) {
@@ -638,7 +638,7 @@ const addComment = async (req, res) => {
 
     ticket.comments.push({ content, userId: req.user.id });
     await ticket.save();
-    await ticket.populate("comments.userId", "name email role");
+    await ticket.populate("comments.userId", "name email role avatar");
 
     await createHistory(ticket._id, req.user.id, 'commented', null, content);
 

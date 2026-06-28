@@ -9,12 +9,14 @@ import { C } from "../../theme";
 import { api } from "../../api";
 import { PageHeader } from "../../components/PageHeader";
 import { EmptyState } from "../../components/EmptyState";
+import { UserAvatar } from "../../components/UserAvatar";
 
 interface Leader {
   _id: string;
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
 }
 
 interface TeamCard {
@@ -50,8 +52,6 @@ const getLoadConf = (count: number) => {
   if (count < 6) return { text: C.warning, bg: C.warningBg, label: "Moyen" };
   return           { text: C.danger,  bg: C.dangerBg,  label: "Élevé" };
 };
-
-const getInitials = (n: string) => n.split(" ").map(p => p[0]).join("").toUpperCase().slice(0, 2);
 
 const EMPTY_FORM = { name: "", description: "", category: "", tag: "", color: "", leaderId: "" };
 
@@ -230,9 +230,7 @@ export default function AdminTeamsView() {
                   {/* Leader */}
                   {team.leaderId && (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-                      <Avatar sx={{ width: 24, height: 24, bgcolor: C.info, fontSize: "10px", fontWeight: 700, fontFamily: "Inter, sans-serif" }}>
-                        {getInitials(team.leaderId.name)}
-                      </Avatar>
+                      <UserAvatar name={team.leaderId.name} avatar={team.leaderId?.avatar} sx={{ width: 24, height: 24, bgcolor: C.info, fontSize: "10px", fontWeight: 700, fontFamily: "Inter, sans-serif" }} />
                       <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>
                         {team.leaderId.name}
                       </Typography>

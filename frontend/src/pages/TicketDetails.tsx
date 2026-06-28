@@ -20,6 +20,7 @@ import {
 } from "@mui/icons-material";
 import { C, statusColors, priorityColors, roleColors } from "../theme";
 import { SLABadge } from "../components/SLABadge";
+import { UserAvatar } from "../components/UserAvatar";
 import { api } from "../api";
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
@@ -45,7 +46,7 @@ interface Ticket {
   slaBreached?: boolean;
   escalationLevel?: number;
   waitingReason?: string;
-  createdBy: { _id: string; name: string; role: string };
+  createdBy: { _id: string; name: string; role: string; avatar?: string | null };
   assignedTo: { _id: string; name: string; role: string } | null;
   assignedBy: { _id: string; name: string } | null;
   teamId?: { _id: string; name: string; category: string; tag?: string; color?: string; leaderId?: { _id: string; name: string; email: string } | null } | null;
@@ -638,9 +639,7 @@ export default function TicketDetails() {
 
               {/* 1. Créateur */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-                <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(124,58,237,0.12)", color: "#7C3AED", fontSize: "11px", fontWeight: 700 }}>
-                  {getInitials(ticket.createdBy?.name)}
-                </Avatar>
+                <UserAvatar name={ticket.createdBy?.name} avatar={ticket.createdBy?.avatar} sx={{ width: 30, height: 30, bgcolor: "rgba(124,58,237,0.12)", color: "#7C3AED", fontSize: "11px", fontWeight: 700 }} />
                 <Box>
                   <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.createdBy?.name ?? "Utilisateur supprimé"}</Typography>
                   <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Créateur</Typography>

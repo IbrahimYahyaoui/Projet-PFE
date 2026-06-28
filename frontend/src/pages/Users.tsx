@@ -29,6 +29,7 @@ import {
   Warning as WarningIcon,
 } from "@mui/icons-material";
 import { C, roleColors } from "../theme";
+import { UserAvatar } from "../components/UserAvatar";
 
 type Role = "admin" | "leader" | "tech" | "user";
 type Order = "asc" | "desc";
@@ -41,6 +42,7 @@ interface User {
   name: string;
   email: string;
   role: Role;
+  avatar?: string | null;
   phone?: string;
   department?: string;
   expertise?: string | null;
@@ -81,9 +83,6 @@ const ROLE_ICONS: Record<Role, React.ReactNode> = {
   tech:   <TechIcon   sx={{ fontSize: 14 }} />,
   user:   <UserIcon   sx={{ fontSize: 14 }} />,
 };
-
-const getInitials = (name?: string | null) =>
-  (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
@@ -538,9 +537,7 @@ export default function Users() {
                         {/* Utilisateur */}
                         <TableCell sx={{ borderBottom: `1px solid ${C.border}`, py: 1.5 }}>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                            <Avatar sx={{ width: 36, height: 36, backgroundColor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.8rem", border: `1px solid ${C.accent}30` }}>
-                              {getInitials(u.name)}
-                            </Avatar>
+                            <UserAvatar name={u.name} avatar={u.avatar} sx={{ width: 36, height: 36, backgroundColor: C.accentLight, color: C.accent, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.8rem", border: `1px solid ${C.accent}30` }} />
                             <Box>
                               <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: C.textPrimary, lineHeight: 1.2 }}>{u.name}</Typography>
                               {u.department && (

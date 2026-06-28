@@ -23,9 +23,9 @@ const getAllProjects = async (req, res) => {
     // admin : filter vide = tous les projets
 
     const projects = await Project.find(filter)
-      .populate('createdBy', 'name email role')
-      .populate('managerId', 'name email role')
-      .populate('members', 'name email role')
+      .populate('createdBy', 'name email role avatar')
+      .populate('managerId', 'name email role avatar')
+      .populate('members', 'name email role avatar')
       .populate('teamId', 'name color tag')
       .sort({ createdAt: -1 });
 
@@ -50,9 +50,9 @@ const getAllProjects = async (req, res) => {
 const getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('createdBy', 'name email role')
-      .populate('managerId', 'name email role')
-      .populate('members', 'name email role');
+      .populate('createdBy', 'name email role avatar')
+      .populate('managerId', 'name email role avatar')
+      .populate('members', 'name email role avatar');
 
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
@@ -104,9 +104,9 @@ const createProject = async (req, res) => {
       teamId:      resolvedTeamId,
     });
 
-    await project.populate('createdBy', 'name email role');
-    await project.populate('managerId', 'name email role');
-    await project.populate('members', 'name email role');
+    await project.populate('createdBy', 'name email role avatar');
+    await project.populate('managerId', 'name email role avatar');
+    await project.populate('members', 'name email role avatar');
     await project.populate('teamId', 'name color tag');
     res.status(201).json(project);
   } catch (error) {
@@ -127,9 +127,9 @@ const updateProject = async (req, res) => {
       { name, description, status, priority, startDate, endDate, color, managerId },
       { new: true }
     )
-      .populate('createdBy', 'name email role')
-      .populate('managerId', 'name email role')
-      .populate('members', 'name email role');
+      .populate('createdBy', 'name email role avatar')
+      .populate('managerId', 'name email role avatar')
+      .populate('members', 'name email role avatar');
 
     res.json(project);
   } catch (error) {
@@ -184,9 +184,9 @@ const removeMember = async (req, res) => {
 const getProjectTasks = async (req, res) => {
   try {
     const tasks = await ProjectTask.find({ projectId: req.params.id })
-      .populate('assignedTo', 'name email role')
-      .populate('createdBy', 'name email role')
-      .populate('comments.userId', 'name')
+      .populate('assignedTo', 'name email role avatar')
+      .populate('createdBy', 'name email role avatar')
+      .populate('comments.userId', 'name avatar')
       .sort({ createdAt: -1 });
     res.json(tasks);
   } catch (error) {
@@ -212,8 +212,8 @@ const createTask = async (req, res) => {
       createdBy: req.user.id,
     });
 
-    await task.populate('assignedTo', 'name email role');
-    await task.populate('createdBy', 'name email role');
+    await task.populate('assignedTo', 'name email role avatar');
+    await task.populate('createdBy', 'name email role avatar');
     res.status(201).json(task);
   } catch (error) {
     console.log(error);
@@ -245,7 +245,7 @@ const updateTask = async (req, res) => {
         req.params.taskId,
         { status: req.body.status },
         { new: true }
-      ).populate('assignedTo', 'name email role').populate('createdBy', 'name email role');
+      ).populate('assignedTo', 'name email role avatar').populate('createdBy', 'name email role avatar');
       return res.json(updated);
     }
 
@@ -263,7 +263,7 @@ const updateTask = async (req, res) => {
           ...(priority && { priority }), ...(assignedTo !== undefined && { assignedTo }),
           ...(dueDate !== undefined && { dueDate }) },
         { new: true }
-      ).populate('assignedTo', 'name email role').populate('createdBy', 'name email role');
+      ).populate('assignedTo', 'name email role avatar').populate('createdBy', 'name email role avatar');
       return res.json(updated);
     }
 
@@ -277,6 +277,11 @@ const updateTask = async (req, res) => {
 // ── DELETE task ──
 const deleteTask = async (req, res) => {
   try {
+    const task = await ProjectTask.findById(req.params.taskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+    if (task.projectId.toString() !== req.params.id) {
+      return res.status(403).json({ message: "Cette tâche n'appartient pas à ce projet" });
+    }
     await ProjectTask.findByIdAndDelete(req.params.taskId);
     res.json({ message: 'Task deleted' });
   } catch (error) {
@@ -292,9 +297,12 @@ const addComment = async (req, res) => {
     if (!content?.trim()) return res.status(400).json({ message: 'Content required' });
     const task = await ProjectTask.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
+    if (task.projectId.toString() !== req.params.id) {
+      return res.status(403).json({ message: "Cette tâche n'appartient pas à ce projet" });
+    }
     task.comments.push({ content: content.trim(), userId: req.user.id });
     await task.save();
-    await task.populate('comments.userId', 'name');
+    await task.populate('comments.userId', 'name avatar');
     res.status(201).json(task);
   } catch (error) {
     console.log(error);

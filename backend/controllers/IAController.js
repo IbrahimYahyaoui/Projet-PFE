@@ -109,7 +109,7 @@ async function buildLiveContext(userId, role) {
           Ticket.countDocuments({ teamId: team._id, slaBreached: true }),
         ]);
         lines.push(`[Équipe: ${team.name}] Actifs:${open} | SLA:${breached}`);
-        const teamFull = await Team.findById(team._id).populate('members', 'name _id').lean();
+        const teamFull = await Team.findById(team._id).populate('members', 'name _id avatar').lean();
         if (teamFull?.members?.length) {
           const memberLoads = await Promise.all(teamFull.members.map(async (m) => {
             const count = await Ticket.countDocuments({
@@ -234,7 +234,7 @@ const generateProjectSummary = async (req, res) => {
   const { projectId } = req.body || {};
   if (!projectId) return res.status(400).json({ error: "projectId is required" });
   try {
-    const project = await Project.findById(projectId).populate('members', 'name').lean();
+    const project = await Project.findById(projectId).populate('members', 'name avatar').lean();
     if (!project) return res.status(404).json({ error: "Project not found" });
     const tasks   = await ProjectTask.find({ projectId }).lean();
     const done    = tasks.filter(t => t.status === 'done').length;

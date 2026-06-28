@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Box, Typography, Avatar, Badge, IconButton,
+  Box, Typography, Badge, IconButton,
   Popover, List, ListItemButton, ListItemText, Divider, InputBase,
 } from "@mui/material";
 import {
@@ -12,11 +12,11 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon,
   KeyboardArrowDown as ArrowIcon,
-  Business as BusinessIcon,
 } from "@mui/icons-material";
 import { C, PERMISSIONS } from "../theme";
 import type { UserRole } from "../theme";
 import { useCurrentUser } from "../App";
+import { UserAvatar } from "./UserAvatar";
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -104,7 +104,7 @@ const MORE_ITEMS: SubItem[] = [
   { label: "Base de connaissances", path: "/knowledge-base",  icon: "books",  permission: "canSeeKnowledgeBase" },
   { label: "Assistant IA",          path: "/ai-assistant",    icon: "robot"   },
   { label: "Utilisateurs",          path: "/users",           icon: "users",  permission: "canSeeUsers" },
-  { label: "Paramètres",            path: "/settings",        icon: "settings" },
+  { label: "Company AI Context",    path: "/company-context", icon: "building", permission: "canManageUsers" },
 ];
 
 const getRoleLabel = (r: string) => {
@@ -209,9 +209,6 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
     if (role === "tech")   return "/tickets/assigned";
     return "/tickets/my";
   };
-
-  const getInitials = (name?: string | null) =>
-    (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   const isModuleActive = (mod: Module) => {
     if (mod.id === "dashboard") return location.pathname === "/dashboard";
@@ -348,15 +345,10 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
             onClick={(e) => setProfileAnchor(e.currentTarget)}
             sx={{ display: "flex", alignItems: "center", gap: 1.2, bgcolor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "10px", px: 1.5, py: 0.75, cursor: "pointer", transition: "all 0.15s", "&:hover": { bgcolor: "rgba(255,255,255,0.11)" } }}
           >
-            <Avatar sx={{ width: 28, height: 28, bgcolor: getRoleBadgeColor(role), color: "#fff", fontSize: "10px", fontWeight: 700, fontFamily: "Inter, sans-serif" }}>
-              {getInitials(user?.name ?? "U")}
-            </Avatar>
+            <UserAvatar name={user?.name ?? "U"} avatar={user?.avatar} sx={{ width: 28, height: 28, bgcolor: getRoleBadgeColor(role), color: "#fff", fontSize: "10px", fontWeight: 700, fontFamily: "Inter, sans-serif" }} />
             <Box>
               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: "#fff", lineHeight: 1.1 }}>
                 {user?.name ?? "Utilisateur"}
-              </Typography>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: getRoleBadgeColor(role), letterSpacing: "0.05em" }}>
-                {getRoleLabel(role)}
               </Typography>
             </Box>
             <ArrowIcon sx={{ fontSize: 14, color: "rgba(255,255,255,0.3)" }} />
@@ -704,15 +696,6 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
             <SettingsIcon sx={{ fontSize: 16, mr: 1.5, color: C.textMuted }} />
             <ListItemText primary="Paramètres" primaryTypographyProps={{ fontFamily: "Inter, sans-serif", fontSize: "0.83rem", color: C.textPrimary }} />
           </ListItemButton>
-          {role === "admin" && (
-            <ListItemButton onClick={() => { navigate("/company-context"); setProfileAnchor(null); }} sx={{ px: 2, py: 1, "&:hover": { bgcolor: C.accentLight } }}>
-              <BusinessIcon sx={{ fontSize: 16, mr: 1.5, color: C.accent }} />
-              <ListItemText
-                primary="Company AI Context"
-                primaryTypographyProps={{ fontFamily: "Inter, sans-serif", fontSize: "0.83rem", color: C.accent, fontWeight: 600 }}
-              />
-            </ListItemButton>
-          )}
         </List>
         <Divider sx={{ borderColor: C.border }} />
         <List dense disablePadding>

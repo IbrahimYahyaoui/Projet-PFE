@@ -9,9 +9,10 @@ import {
 } from "@mui/material";
 import { Add as AddIcon, Close as CloseIcon } from "@mui/icons-material";
 import { C } from "../../theme";
+import { UserAvatar } from "../../components/UserAvatar";
 
 // ─── Types ───────────────────────────────────────────────────
-interface Member { _id: string; name: string; email: string; role: string }
+interface Member { _id: string; name: string; email: string; role: string; avatar?: string | null }
 interface Project {
   _id: string; name: string; description: string; status: string;
   priority: string; startDate: string; endDate: string; color: string;
@@ -111,9 +112,7 @@ function TaskCard({ task, index, onDragStart, onClick, dragDisabled }: {
           </Box>
         ) : <Box />}
         {task.assignedTo ? (
-          <Avatar sx={{ width: 22, height: 22, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "9px", ml: "auto" }}>
-            {getInitials(task.assignedTo?.name)}
-          </Avatar>
+          <UserAvatar name={task.assignedTo?.name} avatar={task.assignedTo?.avatar} sx={{ width: 22, height: 22, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "9px", ml: "auto" }} />
         ) : (
           <Box sx={{ width: 22, height: 22, borderRadius: "50%", border: `1.5px dashed ${C.border}`, ml: "auto" }} />
         )}
@@ -568,9 +567,7 @@ export default function ProjectDetail() {
                   <Chip label={tp.label} size="small" sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.65rem", fontWeight: 600, bgcolor: tp.bg, color: tp.color, height: 20 }} />
                   {task.assignedTo ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                      <Avatar sx={{ width: 22, height: 22, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.6rem" }}>
-                        {getInitials(task.assignedTo?.name)}
-                      </Avatar>
+                      <UserAvatar name={task.assignedTo?.name} avatar={task.assignedTo?.avatar} sx={{ width: 22, height: 22, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.6rem" }} />
                       <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.72rem", color: C.textSecondary }}>{task.assignedTo?.name?.split(" ")[0] ?? "—"}</Typography>
                     </Box>
                   ) : <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.72rem", color: C.textMuted, fontStyle: "italic" }}>—</Typography>}
@@ -602,9 +599,7 @@ export default function ProjectDetail() {
                 return (
                   <Paper key={member._id} sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", p: 2.5 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1.5 }}>
-                      <Avatar sx={{ width: 40, height: 40, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px" }}>
-                        {getInitials(member?.name)}
-                      </Avatar>
+                      <UserAvatar name={member?.name} avatar={member?.avatar} sx={{ width: 40, height: 40, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px" }} />
                       <Box sx={{ flex: 1 }}>
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px", color: C.navy }}>{member.name}</Typography>
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textMuted }}>{member.email}</Typography>

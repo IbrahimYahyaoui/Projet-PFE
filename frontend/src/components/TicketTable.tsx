@@ -11,6 +11,7 @@ import { StatusChip }  from "./chips/StatusChip";
 import { PriorityChip } from "./chips/PriorityChip";
 import { SLABadge }    from "./SLABadge";
 import { EmptyState }  from "./EmptyState";
+import { UserAvatar }  from "./UserAvatar";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 export interface TicketRow {
@@ -23,8 +24,8 @@ export interface TicketRow {
   slaDeadline?: string | null;
   slaBreached?: boolean;
   escalationLevel?: number;
-  createdBy?: { _id: string; name: string } | null;
-  assignedTo?: { _id: string; name: string } | null;
+  createdBy?: { _id: string; name: string; avatar?: string } | null;
+  assignedTo?: { _id: string; name: string; avatar?: string } | null;
   teamId?: { _id: string; name: string; tag: string; color: string } | null;
 }
 
@@ -304,16 +305,26 @@ export function TicketTable({
                         );
                         if (col === "assignedTo") return (
                           <TableCell key={col} sx={{ borderBottom: `1px solid ${C.border}`, py: 1.5 }}>
-                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: t.assignedTo ? C.textSecondary : C.textMuted, fontStyle: t.assignedTo ? "normal" : "italic" }}>
-                              {t.assignedTo?.name ?? "Non assigné"}
-                            </Typography>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              {t.assignedTo && (
+                                <UserAvatar name={t.assignedTo.name} avatar={(t.assignedTo as any).avatar} sx={{ width: 22, height: 22, fontSize: "9px", fontWeight: 700, fontFamily: "Inter, sans-serif", bgcolor: C.accentLight, color: C.accent }} />
+                              )}
+                              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: t.assignedTo ? C.textSecondary : C.textMuted, fontStyle: t.assignedTo ? "normal" : "italic" }}>
+                                {t.assignedTo?.name ?? "Non assigné"}
+                              </Typography>
+                            </Box>
                           </TableCell>
                         );
                         if (col === "createdBy") return (
                           <TableCell key={col} sx={{ borderBottom: `1px solid ${C.border}`, py: 1.5 }}>
-                            <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>
-                              {t.createdBy?.name ?? "—"}
-                            </Typography>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              {t.createdBy && (
+                                <UserAvatar name={t.createdBy.name} avatar={(t.createdBy as any).avatar} sx={{ width: 22, height: 22, fontSize: "9px", fontWeight: 700, fontFamily: "Inter, sans-serif", bgcolor: "#7C3AED15", color: "#7C3AED" }} />
+                              )}
+                              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", color: C.textSecondary }}>
+                                {t.createdBy?.name ?? "—"}
+                              </Typography>
+                            </Box>
                           </TableCell>
                         );
                         if (col === "sla") return (

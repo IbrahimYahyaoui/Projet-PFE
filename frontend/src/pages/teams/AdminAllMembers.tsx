@@ -9,6 +9,7 @@ import { api } from "../../api";
 import { PageHeader } from "../../components/PageHeader";
 import { RoleBadge } from "../../components/chips/RoleBadge";
 import { EmptyState } from "../../components/EmptyState";
+import { UserAvatar } from "../../components/UserAvatar";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface MemberWithTeam {
@@ -16,6 +17,7 @@ interface MemberWithTeam {
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
   teamId: string;
   teamName: string;
   teamColor: string;
@@ -27,7 +29,6 @@ interface MemberWithTeam {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const getInitials = (n?: string | null) => (n ?? "?").split(" ").filter(Boolean).map(p => p[0]).join("").toUpperCase().slice(0, 2);
 
 const AVAIL = {
   available: { color: C.success, bg: C.successBg,  label: "Disponible" },
@@ -200,9 +201,7 @@ export default function AdminAllMembers() {
               <Box key={`${m._id}-${idx}`} sx={{ bgcolor: "#fff", borderRadius: "14px", border: `1px solid ${C.border}`, p: "20px 22px", display: "flex", flexDirection: "column", gap: 1.5, transition: "box-shadow 0.2s", "&:hover": { boxShadow: C.shadowMd } }}>
                 {/* Header */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Avatar sx={{ width: 42, height: 42, fontSize: "14px", fontWeight: 700, bgcolor: avatarBg + "22", color: avatarBg, fontFamily: "Inter, sans-serif" }}>
-                    {getInitials(m.name)}
-                  </Avatar>
+                  <UserAvatar name={m.name} avatar={m?.avatar} sx={{ width: 42, height: 42, fontSize: "14px", fontWeight: 700, bgcolor: avatarBg + "22", color: avatarBg, fontFamily: "Inter, sans-serif" }} />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {m.name}

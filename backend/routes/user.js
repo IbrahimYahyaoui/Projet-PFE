@@ -10,6 +10,8 @@ const {
   resetPassword,
   getTechnicians,
   getAvailableTechs,
+  deleteOwnAccount,
+  exportOwnData,
 } = require('../controllers/userController');
 const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 
@@ -19,6 +21,8 @@ const router = express.Router();
 router.get('/me',              verifyToken,              getMe);
 router.get('/technicians',     verifyToken,              getTechnicians);
 router.get('/available-techs', verifyToken,              getAvailableTechs);
+router.delete('/me/account',   verifyToken,              deleteOwnAccount);
+router.get('/me/export',       verifyToken,              exportOwnData);
 
 // FIX 3 — Administration : admin uniquement
 router.get('/',                verifyToken, verifyAdmin, getAllUsers);

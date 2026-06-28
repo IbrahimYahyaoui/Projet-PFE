@@ -8,6 +8,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   teamId?: string;
+  avatar?: string | null;
 }
 
 const parseUser = (): AuthUser | null => {

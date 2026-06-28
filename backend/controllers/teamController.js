@@ -33,8 +33,8 @@ const buildTeamStats = async (teamId, members) => {
 const getMyTeam = async (req, res) => {
   try {
     const team = await Team.findOne({ $or: [{ leaderId: req.user.id }, { members: req.user.id }] })
-      .populate('leaderId', 'name email role')
-      .populate('members', 'name email role');
+      .populate('leaderId', 'name email role avatar')
+      .populate('members', 'name email role avatar');
 
     if (!team) return res.status(404).json({ message: 'Aucune équipe trouvée' });
 
@@ -52,8 +52,8 @@ const getMyTeam = async (req, res) => {
 const getTeamById = async (req, res) => {
   try {
     const team = await Team.findById(req.params.id)
-      .populate('leaderId', 'name email role')
-      .populate('members', 'name email role');
+      .populate('leaderId', 'name email role avatar')
+      .populate('members', 'name email role avatar');
 
     if (!team) return res.status(404).json({ message: 'Équipe non trouvée' });
 
@@ -81,8 +81,8 @@ const getTeamById = async (req, res) => {
 const getAllTeams = async (req, res) => {
   try {
     const teams = await Team.find()
-      .populate('leaderId', 'name email role')
-      .populate('members', 'name email role');
+      .populate('leaderId', 'name email role avatar')
+      .populate('members', 'name email role avatar');
 
     const teamsWithStats = await Promise.all(teams.map(async (team) => {
       const tickets = await Ticket.find({ teamId: team._id });
@@ -116,8 +116,8 @@ const getTeamTickets = async (req, res) => {
     if (!team) return res.status(404).json({ message: 'Équipe non trouvée' });
 
     const tickets = await Ticket.find({ teamId: team._id })
-      .populate('createdBy', 'name email role')
-      .populate('assignedTo', 'name email role')
+      .populate('createdBy', 'name email role avatar')
+      .populate('assignedTo', 'name email role avatar')
       .sort({ createdAt: -1 });
     res.json(tickets);
   } catch (err) {
@@ -128,7 +128,7 @@ const getTeamTickets = async (req, res) => {
 // ── GET workload for a specific team (admin, ou leader/membre DE CETTE équipe) ─
 const getTeamWorkload = async (req, res) => {
   try {
-    const team = await Team.findById(req.params.id).populate('members', 'name email role');
+    const team = await Team.findById(req.params.id).populate('members', 'name email role avatar');
     if (!team) return res.status(404).json({ message: 'Équipe non trouvée' });
 
     if (req.user.role !== 'admin') {
@@ -175,8 +175,8 @@ const createTeam = async (req, res) => {
       members: [...memberSet],
     });
 
-    await team.populate('leaderId', 'name email role');
-    await team.populate('members', 'name email role');
+    await team.populate('leaderId', 'name email role avatar');
+    await team.populate('members', 'name email role avatar');
     res.status(201).json(team);
   } catch (err) {
     console.error(err);
@@ -209,8 +209,8 @@ const updateTeam = async (req, res) => {
     if (leaderId    !== undefined) update.leaderId    = leaderId;
 
     const team = await Team.findByIdAndUpdate(req.params.id, update, { new: true })
-      .populate('leaderId', 'name email role')
-      .populate('members', 'name email role');
+      .populate('leaderId', 'name email role avatar')
+      .populate('members', 'name email role avatar');
 
     if (!team) return res.status(404).json({ message: 'Équipe non trouvée' });
 
@@ -259,8 +259,8 @@ const addMember = async (req, res) => {
     await team.save();
     await User.findByIdAndUpdate(userId, { teamId: team._id });
 
-    await team.populate('leaderId', 'name email role');
-    await team.populate('members', 'name email role');
+    await team.populate('leaderId', 'name email role avatar');
+    await team.populate('members', 'name email role avatar');
     res.json(team);
   } catch (err) {
     console.error(err);
