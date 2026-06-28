@@ -3,6 +3,7 @@ import {
   Box, Typography, TextField, IconButton, Fab, CircularProgress,
   Chip, Collapse, Divider, Tooltip,
 } from "@mui/material";
+import { C as ThemeC } from "../theme";
 
 const API = "/api";
 
@@ -31,27 +32,27 @@ const C = {
   bg:           "#ffffff",
   bgSide:       "#f4f7fb",
   bgInput:      "#f0f4fa",
-  accent:       "#2563eb",
-  accentHover:  "#1d4ed8",
-  accentLight:  "#eff6ff",
-  accentMid:    "#dbeafe",
-  textPrimary:  "#0f172a",
-  textSecondary:"#475569",
-  textMuted:    "#94a3b8",
-  border:       "#e2e8f0",
+  accent:       ThemeC.accent,
+  accentHover:  ThemeC.accentHover,
+  accentLight:  ThemeC.accentLight,
+  accentMid:    ThemeC.accentMid,
+  textPrimary:  ThemeC.textPrimary,
+  textSecondary:ThemeC.textSecondary,
+  textMuted:    ThemeC.textMuted,
+  border:       ThemeC.border,
   shadow:       "0 1px 3px rgba(0,0,0,0.08)",
   shadowMd:     "0 4px 16px rgba(37,99,235,0.18)",
   shadowLg:     "0 8px 40px rgba(15,23,42,0.13)",
-  success:      "#16a34a",
-  successBg:    "#f0fdf4",
+  success:      ThemeC.success,
+  successBg:    ThemeC.successBg,
   successBorder:"#bbf7d0",
   sidebarHover: "#e8f0fe",
   sidebarActive:"#dbeafe",
-  userBubble:   "#2563eb",
+  userBubble:   ThemeC.accent,
 };
 
-const PRIORITY_LABEL: Record<Priority, string> = { low: "🟢 Low", medium: "🟡 Medium", high: "🟠 High", critical: "🔴 Critical" };
-const CATEGORY_LABEL: Record<Category, string> = { hardware: "🖥️ Hardware", software: "💻 Software", network: "🌐 Network", access: "🔑 Access", other: "📦 Other" };
+const PRIORITY_LABEL: Record<Priority, string> = { low: "Faible", medium: "Moyenne", high: "Haute", critical: "Critique" };
+const CATEGORY_LABEL: Record<Category, string> = { hardware: "Matériel", software: "Logiciel", network: "Réseau", access: "Accès", other: "Autre" };
 
 const priorityColors: Record<Priority, { bg: string; text: string; border: string }> = {
   low:      { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" },
@@ -93,28 +94,28 @@ const nextMissing = (d: TicketDraft): TicketField | null => {
   return null;
 };
 
-const CHATBOT_SUGGESTIONS: Record<string, { icon: string; label: string; msg: string }[]> = {
+const CHATBOT_SUGGESTIONS: Record<string, { label: string; msg: string }[]> = {
   admin: [
-    { icon: "📊", label: "Résumé SLA",     msg: "Donne-moi un résumé des SLA actuels" },
-    { icon: "📥", label: "File d'attente", msg: "Quels tickets n'ont pas encore été assignés ?" },
-    { icon: "👥", label: "Charge équipes", msg: "Quel est l'état de charge de mes équipes ?" },
-    { icon: "🎫", label: "Créer un ticket",msg: "__start_ticket__" },
+    { label: "Résumé SLA",     msg: "Donne-moi un résumé des SLA actuels" },
+    { label: "File d'attente", msg: "Quels tickets n'ont pas encore été assignés ?" },
+    { label: "Charge équipes", msg: "Quel est l'état de charge de mes équipes ?" },
+    { label: "Créer un ticket",msg: "__start_ticket__" },
   ],
   leader: [
-    { icon: "⚖️", label: "Charge équipe", msg: "Quel est l'état de charge de mon équipe ?" },
-    { icon: "🚨", label: "Tickets SLA",   msg: "Quels tickets de mon équipe ont un SLA en danger ?" },
-    { icon: "📋", label: "Résumé équipe", msg: "Donne-moi un résumé de l'activité de mon équipe" },
+    { label: "Charge équipe", msg: "Quel est l'état de charge de mon équipe ?" },
+    { label: "Tickets SLA",   msg: "Quels tickets de mon équipe ont un SLA en danger ?" },
+    { label: "Résumé équipe", msg: "Donne-moi un résumé de l'activité de mon équipe" },
   ],
   tech: [
-    { icon: "📋", label: "Mes tickets",         msg: "Quels tickets me sont assignés en ce moment ?" },
-    { icon: "🔧", label: "Aide dépannage",       msg: "J'ai besoin d'aide pour résoudre un problème technique" },
-    { icon: "📚", label: "Base de connaissances",msg: "Cherche dans la base de connaissances" },
+    { label: "Mes tickets",         msg: "Quels tickets me sont assignés en ce moment ?" },
+    { label: "Aide dépannage",       msg: "J'ai besoin d'aide pour résoudre un problème technique" },
+    { label: "Base de connaissances",msg: "Cherche dans la base de connaissances" },
   ],
   user: [
-    { icon: "⚠️", label: "J'ai un problème",  msg: "J'ai un problème informatique à signaler" },
-    { icon: "📋", label: "Mes tickets",        msg: "Quel est l'état de mes tickets ?" },
-    { icon: "🎫", label: "Créer un ticket",    msg: "__start_ticket__" },
-    { icon: "❓", label: "Aide",               msg: "Que peux-tu faire pour m'aider ?" },
+    { label: "J'ai un problème",  msg: "J'ai un problème informatique à signaler" },
+    { label: "Mes tickets",        msg: "Quel est l'état de mes tickets ?" },
+    { label: "Créer un ticket",    msg: "__start_ticket__" },
+    { label: "Aide",               msg: "Que peux-tu faire pour m'aider ?" },
   ],
 };
 
@@ -505,44 +506,54 @@ export const ChatBot = () => {
             {/* Header */}
             <Box sx={{
               px: 2, py: 1.25,
-              background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
+              bgcolor: ThemeC.bg,
+              borderBottom: `1px solid ${ThemeC.border}`,
               display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0,
             }}>
-              <Box sx={{ width: 32, height: 32, borderRadius: "9px", bgcolor: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                ✦
-              </Box>
+              <svg width="28" height="28" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="gD_nav" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#173A57" />
+                    <stop offset="1" stopColor="#0C2235" />
+                  </linearGradient>
+                </defs>
+                <rect x="4" y="4" width="112" height="112" rx="30" fill="url(#gD_nav)" />
+                <rect x="4" y="4" width="112" height="112" rx="30" fill="none" stroke="#5BB8FF" strokeOpacity="0.25" strokeWidth="1.5" />
+                <rect x="30" y="32" width="60" height="13" rx="6.5" fill="#FFFFFF" />
+                <path d="M54 38 C54 64 52 78 70 92 C58 88 47 78 44 60 C43 50 44 42 47 38 Z" fill="#5BB8FF" />
+              </svg>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>TuskFlow AI</Typography>
-                <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.7)" }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: ThemeC.textPrimary, lineHeight: 1.2 }}>TuskFlow AI</Typography>
+                <Typography sx={{ fontSize: 10, color: ThemeC.textMuted }}>
                   TuskFlow • {mode === "ticket" ? "Création ticket" : "Assistant"}
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", gap: 0.5 }}>
                 <Tooltip title="Historique">
                   <IconButton size="small" onClick={() => { if (!showHistory) loadHistories(); setShowHistory(v => !v); }}
-                    sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
-                    <span style={{ fontSize: 14 }}>🕐</span>
+                    sx={{ color: ThemeC.textSecondary, "&:hover": { bgcolor: ThemeC.accentLight }, borderRadius: "8px" }}>
+                    <Box component="i" className="ti ti-clock" sx={{ fontSize: 16 }} />
                   </IconButton>
                 </Tooltip>
                 {mode === "chat" && (
                   <Tooltip title="Créer un ticket">
                     <IconButton size="small" onClick={startTicket}
-                      sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
-                      <span style={{ fontSize: 14 }}>🎫</span>
+                      sx={{ color: ThemeC.textSecondary, "&:hover": { bgcolor: ThemeC.accentLight }, borderRadius: "8px" }}>
+                      <Box component="i" className="ti ti-ticket" sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
                 )}
                 {mode === "ticket" && (
                   <Tooltip title="Retour au chat">
                     <IconButton size="small" onClick={() => { setMode("chat"); setMsgs([]); setDraft({}); setAwaitField(null); }}
-                      sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
-                      <span style={{ fontSize: 14 }}>💬</span>
+                      sx={{ color: ThemeC.textSecondary, "&:hover": { bgcolor: ThemeC.accentLight }, borderRadius: "8px" }}>
+                      <Box component="i" className="ti ti-message-2" sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
                 )}
                 <IconButton size="small" onClick={() => setOpen(false)}
-                  sx={{ color: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "rgba(255,255,255,0.15)" }, borderRadius: "8px" }}>
-                  <span style={{ fontSize: 14 }}>✕</span>
+                  sx={{ color: ThemeC.textSecondary, "&:hover": { bgcolor: ThemeC.accentLight }, borderRadius: "8px" }}>
+                  <Box component="i" className="ti ti-x" sx={{ fontSize: 16 }} />
                 </IconButton>
               </Box>
             </Box>
@@ -558,14 +569,7 @@ export const ChatBot = () => {
               {/* Écran d'accueil */}
               {msgs.length === 0 && !loading && (
                 <Box>
-                  <Box sx={{ textAlign: "center", py: 1.5, pb: 2 }}>
-                    <Box sx={{
-                      width: 48, height: 48, borderRadius: "14px",
-                      background: "linear-gradient(135deg, #2563eb, #1e40af)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 22, mx: "auto", mb: 1.5,
-                      boxShadow: "0 4px 16px rgba(37,99,235,0.3)",
-                    }}>✦</Box>
+                  <Box sx={{ textAlign: "center", py: 2, pb: 2.5 }}>
                     <Typography sx={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, mb: 0.5 }}>
                       Bonjour {userName} !
                     </Typography>
@@ -577,21 +581,17 @@ export const ChatBot = () => {
                   <Typography sx={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1 }}>
                     Suggestions
                   </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
                     {(CHATBOT_SUGGESTIONS[currentRole] ?? CHATBOT_SUGGESTIONS.user).map(s => (
                       <Box key={s.msg} onClick={() => s.msg === "__start_ticket__" ? startTicket() : sendChat(s.msg)} sx={{
-                        px: 1.5, py: 1, borderRadius: "12px",
-                        border: `1px solid ${C.border}`,
-                        display: "flex", alignItems: "center", gap: 1.5,
-                        cursor: "pointer", bgcolor: C.bg,
-                        "&:hover": { bgcolor: C.accentLight, borderColor: C.accent },
+                        px: 2, py: 1, borderRadius: "20px",
+                        border: `1px solid ${ThemeC.border}`,
+                        display: "inline-flex", alignItems: "center",
+                        cursor: "pointer", bgcolor: ThemeC.bg,
+                        "&:hover": { bgcolor: ThemeC.accentLight, borderColor: ThemeC.accent },
                         transition: "all 0.15s ease",
                       }}>
-                        <Box sx={{ width: 30, height: 30, borderRadius: "8px", bgcolor: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>
-                          {s.icon}
-                        </Box>
-                        <Typography sx={{ fontSize: 13, color: C.textPrimary, fontWeight: 500 }}>{s.label}</Typography>
-                        <Box sx={{ ml: "auto", color: C.textMuted, fontSize: 14 }}>›</Box>
+                        <Typography sx={{ fontSize: 13, color: ThemeC.textPrimary, fontWeight: 500 }}>{s.label}</Typography>
                       </Box>
                     ))}
                   </Box>
@@ -729,7 +729,7 @@ export const ChatBot = () => {
                   "&.Mui-disabled": { bgcolor: C.border, color: C.textMuted },
                   transition: "all 0.15s",
                 }}>
-                <span style={{ fontSize: 16 }}>➤</span>
+                <Box component="i" className="ti ti-send" sx={{ fontSize: 16 }} />
               </IconButton>
             </Box>
 
@@ -738,14 +738,16 @@ export const ChatBot = () => {
       </Collapse>
 
       {/* FAB */}
-      <Fab onClick={() => setOpen(v => !v)} sx={{
-        background: open ? "linear-gradient(135deg, #475569, #334155)" : "linear-gradient(135deg, #2563eb, #1e40af)",
-        color: "#fff", width: 54, height: 54, boxShadow: C.shadowMd,
-        "&:hover": { filter: "brightness(1.1)", transform: "scale(1.05)" },
-        transition: "all 0.2s ease", fontSize: open ? 18 : 22,
-      }}>
-        {open ? "✕" : "✦"}
-      </Fab>
+      {!open && (
+        <Fab onClick={() => setOpen(v => !v)} sx={{
+          background: open ? ThemeC.slate : ThemeC.accent,
+          color: "#fff", width: 54, height: 54, boxShadow: C.shadowMd,
+          "&:hover": { filter: "brightness(1.1)", transform: "scale(1.05)" },
+          transition: "all 0.2s ease", fontSize: open ? 18 : 22,
+        }}>
+          <Box component="i" className={open ? "ti ti-x" : "ti ti-message-circle"} sx={{ fontSize: open ? 20 : 22 }} />
+        </Fab>
+      )}
 
     </Box>
   );

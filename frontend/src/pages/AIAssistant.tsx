@@ -386,8 +386,19 @@ export default function AIAssistant() {
         {/* Header */}
         <Box sx={{ px: 2.5, pt: 2.5, pb: 2, borderBottom: `1px solid ${C.border}` }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, mb: 2 }}>
-            <Box sx={{ width: 32, height: 32, borderRadius: "10px", background: `linear-gradient(135deg, ${C.accent}, ${C.accentHover})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Box component="i" className="ti ti-robot" sx={{ fontSize: 18, color: "#fff" }} />
+            <Box sx={{ width: 32, height: 32, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="32" height="32" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="gD_ai_sidebar" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#173A57" />
+                    <stop offset="1" stopColor="#0C2235" />
+                  </linearGradient>
+                </defs>
+                <rect x="4" y="4" width="112" height="112" rx="30" fill="url(#gD_ai_sidebar)" />
+                <rect x="4" y="4" width="112" height="112" rx="30" fill="none" stroke="#5BB8FF" strokeOpacity="0.25" strokeWidth="1.5" />
+                <rect x="30" y="32" width="60" height="13" rx="6.5" fill="#FFFFFF" />
+                <path d="M54 38 C54 64 52 78 70 92 C58 88 47 78 44 60 C43 50 44 42 47 38 Z" fill="#5BB8FF" />
+              </svg>
             </Box>
             <Box>
               <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>TuskFlow AI</Typography>
@@ -505,8 +516,19 @@ export default function AIAssistant() {
           {msgs.length === 0 && !loading && (
             <Box sx={{ maxWidth: 560, mx: "auto", width: "100%", mt: 4 }}>
               <Box sx={{ textAlign: "center", mb: 4 }}>
-                <Box sx={{ width: 60, height: 60, borderRadius: "18px", background: `linear-gradient(135deg, ${C.accent}, ${C.accentHover})`, display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 2, boxShadow: `0 8px 24px ${C.accent}40` }}>
-                  <Box component="i" className="ti ti-robot" sx={{ fontSize: 28, color: "#fff" }} />
+                <Box sx={{ width: 60, height: 60, borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 2, boxShadow: `0 8px 24px ${C.accent}40` }}>
+                  <svg width="60" height="60" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="gD_ai_welcome" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stopColor="#173A57" />
+                        <stop offset="1" stopColor="#0C2235" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="4" y="4" width="112" height="112" rx="30" fill="url(#gD_ai_welcome)" />
+                    <rect x="4" y="4" width="112" height="112" rx="30" fill="none" stroke="#5BB8FF" strokeOpacity="0.25" strokeWidth="1.5" />
+                    <rect x="30" y="32" width="60" height="13" rx="6.5" fill="#FFFFFF" />
+                    <path d="M54 38 C54 64 52 78 70 92 C58 88 47 78 44 60 C43 50 44 42 47 38 Z" fill="#5BB8FF" />
+                  </svg>
                 </Box>
                 <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "20px", fontWeight: 800, color: C.textPrimary, mb: 0.5 }}>
                   Bonjour {userName} !

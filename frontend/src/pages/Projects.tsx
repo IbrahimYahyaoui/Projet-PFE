@@ -35,7 +35,7 @@ interface Stats {
 
 // ─── Helpers ─────────────────────────────────────────────────
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
-const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+const getInitials = (name?: string | null) => (name ?? "?").split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2);
 const formatDate = (d: string) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) : "—";
 
 const PROJECT_COLORS = ["#5FC2BA", "#2563EB", "#7C3AED", "#EA580C", "#16A34A", "#DC2626", "#F59E0B"];
@@ -744,7 +744,7 @@ export default function Projects() {
                     return (
                       <Box key={member._id} sx={{ display: "flex", alignItems: "center", gap: 1.5, p: "8px 10px", borderRadius: "8px", "&:hover": { bgcolor: C.bgPage } }}>
                         <Avatar sx={{ width: 32, height: 32, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.72rem" }}>
-                          {getInitials(member.name)}
+                          {getInitials(member?.name)}
                         </Avatar>
                         <Box sx={{ flex: 1 }}>
                           <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.82rem", color: C.navy }}>{member.name}</Typography>

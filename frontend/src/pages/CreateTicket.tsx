@@ -10,7 +10,6 @@ import {
   Paper,
   Grid,
   Chip,
-  CircularProgress,
   Alert,
   Divider,
   IconButton,
@@ -19,7 +18,6 @@ import {
 import {
   ConfirmationNumber as TicketIcon,
   AttachFile as AttachIcon,
-  Send as SendIcon,
   ArrowBack as BackIcon,
   PriorityHigh as UrgentIcon,
   KeyboardArrowUp as HighIcon,
@@ -232,11 +230,11 @@ export default function CreateTicket() {
 
             {/* Attachments */}
             <Box>
-              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: C.textSecondary, mb: 1.5, fontSize: "0.875rem" }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: C.textPrimary, mb: 1.5, fontSize: "0.95rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Pièces jointes <span style={{ color: C.textMuted, fontWeight: 400 }}>(optionnel · max 5)</span>
               </Typography>
-              <Button component="label" variant="outlined" startIcon={<AttachIcon />} disabled={form.attachments.length >= 5}
-                sx={{ fontFamily: "Inter, sans-serif", borderColor: C.border, color: C.textSecondary, borderRadius: "10px", textTransform: "none", mb: 2, "&:hover": { borderColor: C.accent, color: C.accent, backgroundColor: C.accentLight } }}>
+              <Button component="label" variant="outlined" size="medium" startIcon={<AttachIcon />} disabled={form.attachments.length >= 5}
+                sx={{ fontFamily: "Inter, sans-serif", borderColor: C.border, color: C.textSecondary, borderRadius: "10px", textTransform: "none", mb: 2, py: "10px", px: "14px", "&:hover": { borderColor: C.accent, color: C.accent, backgroundColor: C.accentLight } }}>
                 Ajouter un fichier
                 <input type="file" hidden multiple accept="image/*,.pdf,.doc,.docx,.txt" onChange={handleFileChange} />
               </Button>
@@ -279,7 +277,7 @@ export default function CreateTicket() {
           </Paper>
 
           {/* Summary Card */}
-          <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3, mb: 3 }}>
+          <Paper sx={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", p: 3, mb: 1 }}>
             <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: C.textPrimary, mb: 2, fontSize: "0.95rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Résumé
             </Typography>
@@ -304,9 +302,8 @@ export default function CreateTicket() {
 
           {/* Submit */}
           <Button fullWidth variant="contained" size="large" onClick={handleSubmit} disabled={loading || success}
-            startIcon={loading ? <CircularProgress size={18} sx={{ color: C.navy }} /> : <SendIcon />}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.95rem", backgroundColor: C.accent, color: C.navy, borderRadius: "12px", py: 1.6, textTransform: "none", boxShadow: `0 4px 20px ${C.accent}40`, "&:hover": { backgroundColor: C.accentHover, boxShadow: `0 6px 24px ${C.accent}60` }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted, boxShadow: "none" } }}>
-            {loading ? "Création en cours…" : success ? "Ticket créé ✓" : "Créer le ticket"}
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.95rem", backgroundColor: C.accent, color: "#FFFFFF", borderRadius: "12px", py: 1.6, mt: 0, textTransform: "none", boxShadow: `0 4px 20px ${C.accent}40`, "&:hover": { backgroundColor: C.accentHover, boxShadow: `0 6px 24px ${C.accent}60` }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted, boxShadow: "none" } }}>
+            Créer le ticket
           </Button>
         </Grid>
       </Grid>

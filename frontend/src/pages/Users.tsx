@@ -82,8 +82,8 @@ const ROLE_ICONS: Record<Role, React.ReactNode> = {
   user:   <UserIcon   sx={{ fontSize: 14 }} />,
 };
 
-const getInitials = (name: string) =>
-  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+const getInitials = (name?: string | null) =>
+  (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
@@ -418,7 +418,7 @@ export default function Users() {
           </Box>
         </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}
-          sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 2.5, "&:hover": { backgroundColor: C.accentHover } }}>
+          sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: "#FFFFFF", borderRadius: "10px", textTransform: "none", px: 2.5, "&:hover": { backgroundColor: C.accentHover } }}>
           Nouvel utilisateur
         </Button>
       </Box>
@@ -734,7 +734,7 @@ export default function Users() {
           <Button onClick={closeDialog} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none", "&:hover": { backgroundColor: C.bgPage } }}>Annuler</Button>
           <Button variant="contained" onClick={handleSubmit} disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={16} sx={{ color: C.navy }} /> : undefined}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.accentHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: "#FFFFFF", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: C.accentHover }, "&.Mui-disabled": { backgroundColor: C.slate, color: C.textMuted } }}>
             {formLoading ? "Enregistrement…" : editUser ? "Mettre à jour" : "Créer"}
           </Button>
         </DialogActions>
@@ -762,7 +762,7 @@ export default function Users() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button variant="contained" onClick={closeCreatedPwd}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none", "&:hover": { backgroundColor: C.accentHover } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: "#FFFFFF", borderRadius: "10px", textTransform: "none", "&:hover": { backgroundColor: C.accentHover } }}>
             Fermer
           </Button>
         </DialogActions>
@@ -800,7 +800,7 @@ export default function Users() {
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
           {deleteWarning ? (
             <Button variant="contained" onClick={() => { setDeleteUser(null); setDeleteWarning(null); }}
-              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: C.navy, borderRadius: "10px", textTransform: "none" }}>
+              sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: C.accent, color: "#FFFFFF", borderRadius: "10px", textTransform: "none" }}>
               Fermer
             </Button>
           ) : (
@@ -888,7 +888,7 @@ export default function Users() {
           <Button onClick={() => setBulkAction(null)} sx={{ fontFamily: "Inter, sans-serif", color: C.textSecondary, borderRadius: "10px", textTransform: "none" }}>Annuler</Button>
           <Button variant="contained" onClick={handleBulkConfirm} disabled={bulkLoading}
             startIcon={bulkLoading ? <CircularProgress size={16} /> : undefined}
-            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: bulkAction === "delete" ? C.danger : C.accent, color: bulkAction === "delete" ? "#fff" : C.navy, borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: bulkAction === "delete" ? C.dangerHover : C.accentHover } }}>
+            sx={{ fontFamily: "Inter, sans-serif", fontWeight: 600, backgroundColor: bulkAction === "delete" ? C.danger : C.accent, color: bulkAction === "delete" ? "#fff" : "#FFFFFF", borderRadius: "10px", textTransform: "none", px: 3, "&:hover": { backgroundColor: bulkAction === "delete" ? C.dangerHover : C.accentHover } }}>
             {bulkLoading ? "En cours…" : "Confirmer"}
           </Button>
         </DialogActions>

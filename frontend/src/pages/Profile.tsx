@@ -51,8 +51,8 @@ const ROLE_ICONS: Record<Role, React.ReactNode> = {
   user: <PersonIcon sx={{ fontSize: 14 }} />,
 };
 
-const getInitials = (name: string) =>
-  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+const getInitials = (name?: string | null) =>
+  (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", {

@@ -27,7 +27,7 @@ interface MemberWithTeam {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const getInitials = (n: string) => n.split(" ").map(p => p[0]).join("").toUpperCase().slice(0, 2);
+const getInitials = (n?: string | null) => (n ?? "?").split(" ").filter(Boolean).map(p => p[0]).join("").toUpperCase().slice(0, 2);
 
 const AVAIL = {
   available: { color: C.success, bg: C.successBg,  label: "Disponible" },

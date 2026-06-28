@@ -28,7 +28,7 @@ interface Task {
 
 // ─── Shared constants (mirrored from Projects.tsx) ───────────
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
-const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+const getInitials = (name?: string | null) => (name ?? "?").split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2);
 const formatDate = (d: string) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) : "—";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -112,7 +112,7 @@ function TaskCard({ task, index, onDragStart, onClick, dragDisabled }: {
         ) : <Box />}
         {task.assignedTo ? (
           <Avatar sx={{ width: 22, height: 22, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "9px", ml: "auto" }}>
-            {getInitials(task.assignedTo.name)}
+            {getInitials(task.assignedTo?.name)}
           </Avatar>
         ) : (
           <Box sx={{ width: 22, height: 22, borderRadius: "50%", border: `1.5px dashed ${C.border}`, ml: "auto" }} />
@@ -569,9 +569,9 @@ export default function ProjectDetail() {
                   {task.assignedTo ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                       <Avatar sx={{ width: 22, height: 22, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.6rem" }}>
-                        {getInitials(task.assignedTo.name)}
+                        {getInitials(task.assignedTo?.name)}
                       </Avatar>
-                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.72rem", color: C.textSecondary }}>{task.assignedTo.name.split(" ")[0]}</Typography>
+                      <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.72rem", color: C.textSecondary }}>{task.assignedTo?.name?.split(" ")[0] ?? "—"}</Typography>
                     </Box>
                   ) : <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.72rem", color: C.textMuted, fontStyle: "italic" }}>—</Typography>}
                 </Box>
@@ -603,7 +603,7 @@ export default function ProjectDetail() {
                   <Paper key={member._id} sx={{ bgcolor: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", p: 2.5 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1.5 }}>
                       <Avatar sx={{ width: 40, height: 40, bgcolor: av.bg, color: av.color, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px" }}>
-                        {getInitials(member.name)}
+                        {getInitials(member?.name)}
                       </Avatar>
                       <Box sx={{ flex: 1 }}>
                         <Typography sx={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "14px", color: C.navy }}>{member.name}</Typography>

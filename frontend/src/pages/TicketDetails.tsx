@@ -72,8 +72,8 @@ interface HistoryItem {
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-const getInitials = (name: string) =>
-  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+const getInitials = (name?: string | null) =>
+  (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const getStatusLabel = (s: string) => ({
   open: "Ouvert", assigned: "Assigné", in_progress: "En cours", waiting: "En attente", resolved: "Résolu", closed: "Fermé"
@@ -639,10 +639,10 @@ export default function TicketDetails() {
               {/* 1. Créateur */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
                 <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(124,58,237,0.12)", color: "#7C3AED", fontSize: "11px", fontWeight: 700 }}>
-                  {getInitials(ticket.createdBy.name)}
+                  {getInitials(ticket.createdBy?.name)}
                 </Avatar>
                 <Box>
-                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.createdBy.name}</Typography>
+                  <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "12px", fontWeight: 600, color: C.textPrimary }}>{ticket.createdBy?.name ?? "Utilisateur supprimé"}</Typography>
                   <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "10px", color: C.textMuted }}>Créateur</Typography>
                 </Box>
               </Box>

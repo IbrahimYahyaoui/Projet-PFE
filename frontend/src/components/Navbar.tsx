@@ -210,8 +210,8 @@ export const Navbar = ({ onToggleSidebar }: NavbarProps) => {
     return "/tickets/my";
   };
 
-  const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  const getInitials = (name?: string | null) =>
+    (name ?? "?").split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   const isModuleActive = (mod: Module) => {
     if (mod.id === "dashboard") return location.pathname === "/dashboard";
