@@ -59,7 +59,7 @@ const getAdminAnalytics = async (startDate) => {
       { $group: { _id: "$category", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
-    User.find({ role: { $in: ['tech', 'leader'] } }).select('name email role'),
+    User.find({ role: { $in: ['tech', 'leader'] } }).select('name email role avatar'),
   ]);
 
   const avgResolutionTime = calcAvgResolution(resolvedWithTime);
@@ -73,7 +73,7 @@ const getAdminAnalytics = async (startDate) => {
         Ticket.find({ assignedTo: tech._id, status: { $in: ['resolved', 'closed'] }, createdAt: { $gte: startDate } }).select('createdAt resolvedAt updatedAt'),
       ]);
       return {
-        _id: tech._id, name: tech.name, email: tech.email, role: tech.role,
+        _id: tech._id, name: tech.name, email: tech.email, role: tech.role, avatar: tech.avatar,
         assigned, resolved, active,
         successRate: assigned > 0 ? Math.round((resolved / assigned) * 100) : 0,
         avgResolutionTime: calcAvgResolution(resolvedList),
@@ -121,7 +121,7 @@ const getLeaderAnalytics = async (userId, startDate) => {
   const avgResolutionTime = calcAvgResolution(resolvedWithTime);
 
   // Team member performance
-  const members = team ? await User.find({ _id: { $in: team.members } }).select('name email role') : [];
+  const members = team ? await User.find({ _id: { $in: team.members } }).select('name email role avatar') : [];
   const techPerformance = await Promise.all(
     members.map(async (m) => {
       const [assigned, resolved, active, resolvedList] = await Promise.all([
@@ -131,7 +131,7 @@ const getLeaderAnalytics = async (userId, startDate) => {
         Ticket.find({ assignedTo: m._id, status: { $in: ['resolved', 'closed'] }, createdAt: { $gte: startDate } }).select('createdAt resolvedAt updatedAt'),
       ]);
       return {
-        _id: m._id, name: m.name, email: m.email, role: m.role,
+        _id: m._id, name: m.name, email: m.email, role: m.role, avatar: m.avatar,
         assigned, resolved, active,
         successRate: assigned > 0 ? Math.round((resolved / assigned) * 100) : 0,
         avgResolutionTime: calcAvgResolution(resolvedList),

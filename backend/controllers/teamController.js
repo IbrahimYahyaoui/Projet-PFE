@@ -12,7 +12,7 @@ const getMemberWorkload = async (member) => {
   ]);
   const chargePercent = assigned > 0 ? Math.round((active / assigned) * 100) : 0;
   const availability  = chargePercent >= 80 ? 'overloaded' : chargePercent >= 50 ? 'busy' : 'available';
-  return { _id: member._id, name: member.name, email: member.email, role: member.role, assigned, resolved, active, chargePercent, availability };
+  return { _id: member._id, name: member.name, email: member.email, role: member.role, avatar: member.avatar, assigned, resolved, active, chargePercent, availability };
 };
 
 const buildTeamStats = async (teamId, members) => {
