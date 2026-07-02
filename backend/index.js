@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
+const User               = require('./schemas/user');
 const authRoutes         = require("./routes/auth");
 const userRoutes         = require('./routes/user');
 const profileRoutes      = require('./routes/profile');
@@ -42,6 +43,24 @@ mongoose
 
     // Start background escalation job after DB is ready
     startEscalationJob();
+
+    // Bootstrap: create first admin if no users exist
+    (async () => {
+      try {
+        const userCount = await User.countDocuments();
+        if (userCount === 0) {
+          await User.create({
+            name: "Admin",
+            email: "aziz@tusk.com",
+            password: "admin123",
+            role: "admin",
+          });
+          console.log("✅ First admin created: aziz@tusk.com / admin123");
+        }
+      } catch (err) {
+        console.error("Bootstrap admin error:", err.message);
+      }
+    })();
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
